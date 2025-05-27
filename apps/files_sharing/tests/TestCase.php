@@ -145,6 +145,7 @@ abstract class TestCase extends \Test\TestCase {
 		$this->userSession->completeLogin($user, ['loginName' => $uid, 'password' => $uid], false);
 
 		$this->rootFolder->newFolder('/' . $uid . '/files');
+		// Filesystem::initMountPoints($user);
 	}
 
 	/**
