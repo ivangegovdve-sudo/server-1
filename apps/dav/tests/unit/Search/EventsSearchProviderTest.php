@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace OCA\DAV\Tests\unit\Search;
 
+use OC\Search\Filter\DateTimeFilter;
+use OC\Search\Filter\StringFilter;
 use OCA\DAV\CalDAV\CalDavBackend;
 use OCA\DAV\Search\EventsSearchProvider;
 use OCP\App\IAppManager;
@@ -208,6 +210,22 @@ class EventsSearchProviderTest extends TestCase {
 		. 'DTSTART;TZID=Europe/Berlin:20160816T090000' . PHP_EOL
 		. 'DTSTAMP:20160809T163632Z' . PHP_EOL
 		. 'SEQUENCE:0' . PHP_EOL
+		. 'END:VEVENT' . PHP_EOL
+		. 'END:VCALENDAR';
+
+	// Stored in a non-UTC timezone on purpose: expand() rewrites occurrences to UTC,
+	// so this exercises that the result is converted back to the event's local time.
+	private static string $vEvent8 = 'BEGIN:VCALENDAR' . PHP_EOL
+		. 'VERSION:2.0' . PHP_EOL
+		. 'PRODID:-//Tests//' . PHP_EOL
+		. 'CALSCALE:GREGORIAN' . PHP_EOL
+		. 'BEGIN:VEVENT' . PHP_EOL
+		. 'UID:recurring-yearly@example.com' . PHP_EOL
+		. 'DTSTAMP:20240601T080000Z' . PHP_EOL
+		. 'DTSTART;TZID=Europe/Berlin:20240601T090000' . PHP_EOL
+		. 'DTEND;TZID=Europe/Berlin:20240601T100000' . PHP_EOL
+		. 'RRULE:FREQ=YEARLY' . PHP_EOL
+		. 'SUMMARY:Recurring yearly event' . PHP_EOL
 		. 'END:VEVENT' . PHP_EOL
 		. 'END:VCALENDAR';
 
@@ -468,5 +486,95 @@ class EventsSearchProviderTest extends TestCase {
 			[self::$vEvent2, '08-16 09:00 - 08-17 10:00 (My Calendar)', ['{DAV:}displayname' => 'My Calendar']],
 			[self::$vEvent1, '08-16 09:00 - 10:00', ['{DAV:}displayname' => '']],
 		];
+	}
+
+	public function testSearchSince(): void {
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('john.doe');
+		$query = $this->createMock(ISearchQuery::class);
+		$query->method('getFilter')->willReturnCallback(function ($name) {
+			return match ($name) {
+				'term' => new StringFilter('search term'),
+				'since' => new DateTimeFilter('2026-05-15'),
+				'until' => new DateTimeFilter('2026-06-14'),
+				default => null,
+			};
+		});
+		$query->method('getLimit')->willReturn(5);
+		$query->method('getCursor')->willReturn(20);
+		$this->appManager->expects($this->once())
+			->method('isEnabledForUser')
+			->with('calendar', $user)
+			->willReturn(true);
+		$this->l10n->method('t')->willReturnArgument(0);
+		$this->l10n->method('l')
+			->willReturnCallback(static function (string $type, \DateTime $date, $_): string {
+				if ($type === 'time') {
+					return $date->format('H:i');
+				}
+				return $date->format('m-d');
+			});
+		$this->backend->expects($this->once())
+			->method('getCalendarsForUser')
+			->with('principals/users/john.doe')
+			->willReturn([
+				[
+					'id' => 99,
+					'principaluri' => 'principals/users/john.doe',
+					'uri' => 'calendar-uri-99',
+					'{DAV:}displayname' => 'My Calendar',
+				]
+			]);
+		$this->backend->expects($this->once())
+			->method('getSubscriptionsForUser')
+			->with('principals/users/john.doe')
+			->willReturn([]);
+		$this->backend->expects($this->once())
+			->method('searchPrincipalUri')
+			->with('principals/users/john.doe', 'search term', ['VEVENT'],
+				['SUMMARY', 'LOCATION', 'DESCRIPTION', 'ATTENDEE', 'ORGANIZER', 'CATEGORIES'],
+				['ATTENDEE' => ['CN'], 'ORGANIZER' => ['CN']],
+				['limit' => 5, 'offset' => 20, 'timerange' => ['start' => new \DateTimeImmutable('2026-05-15 00:00:00'), 'end' => new \DateTimeImmutable('2026-06-14 00:00:00')]])
+			->willReturn([
+				[
+					'calendarid' => 99,
+					'calendartype' => CalDavBackend::CALENDAR_TYPE_CALENDAR,
+					'uri' => 'recurring-yearly-event.ics',
+					'calendardata' => self::$vEvent8,
+				]
+			]);
+		$this->urlGenerator->expects($this->once())
+			->method('linkTo')
+			->with('', 'remote.php')
+			->willReturn('link-to-remote.php');
+		$this->urlGenerator->expects($this->once())
+			->method('linkToRoute')
+			->with('calendar.view.index')
+			->willReturn('link-to-route-calendar/');
+		$this->urlGenerator->expects($this->once())
+			->method('getAbsoluteURL')
+			->with('link-to-route-calendar/edit/bGluay10by1yZW1vdGUucGhwL2Rhdi9jYWxlbmRhcnMvam9obi5kb2UvY2FsZW5kYXItdXJpLTk5L3JlY3VycmluZy15ZWFybHktZXZlbnQuaWNz')
+			->willReturn('deep-link-to-calendar');
+
+		$actual = $this->provider->search($user, $query);
+
+		$data = $actual->jsonSerialize();
+		$this->assertInstanceOf(SearchResult::class, $actual);
+		$this->assertEquals('Events', $data['name']);
+		$this->assertCount(1, $data['entries']);
+		$this->assertTrue($data['isPaginated']);
+		$this->assertEquals(21, $data['cursor']);
+		$result0 = $data['entries'][0];
+		$result0Data = $result0->jsonSerialize();
+		$this->assertInstanceOf(SearchResultEntry::class, $result0);
+		$this->assertEmpty($result0Data['thumbnailUrl']);
+		$this->assertEquals('Recurring yearly event', $result0Data['title']);
+		// The occurrence is shown in the event's local time (Europe/Berlin, 09:00),
+		// not in the UTC time that expand() produces (07:00).
+		$this->assertEquals('06-01 09:00 - 10:00 (My Calendar)', $result0Data['subline']);
+		$this->assertEquals('deep-link-to-calendar', $result0Data['resourceUrl']);
+		$this->assertEquals('icon-calendar-dark', $result0Data['icon']);
+		$this->assertFalse($result0Data['rounded']);
+		$this->assertEquals('1780297200', $result0Data['attributes']['createdAt']);
 	}
 }

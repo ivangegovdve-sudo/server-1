@@ -15,6 +15,8 @@ use OCP\IL10N;
 use OCP\IURLGenerator;
 use OCP\Search\IProvider;
 use Sabre\VObject\Component;
+use Sabre\VObject\Component\VCalendar;
+use Sabre\VObject\InvalidDataException;
 use Sabre\VObject\Reader;
 
 /**
@@ -87,10 +89,41 @@ abstract class ACalendarSearchProvider implements IProvider {
 	 * @param string $componentName
 	 * @return Component
 	 */
-	protected function getPrimaryComponent(string $calendarData, string $componentName): Component {
+	protected function getPrimaryComponent(string $calendarData, string $componentName, \DateTimeInterface|null $since, \DateTimeInterface|null $until): Component {
 		$vCalendar = Reader::read($calendarData, Reader::OPTION_FORGIVING);
 
-		$components = $vCalendar->select($componentName);
+		$originalTimeZone = null;
+		if ($vCalendar instanceof VCalendar && isset($since, $until)) {
+			// expand() rewrites every occurrence's DTSTART/DTEND to UTC, so remember
+			// the event's original timezone to display the occurrence in local time.
+			$baseComponent = $vCalendar->getBaseComponent($componentName);
+			if ($baseComponent !== null && isset($baseComponent->DTSTART) && $baseComponent->DTSTART->hasTime()) {
+				$originalTimeZone = $baseComponent->DTSTART->getDateTime()->getTimezone();
+			}
+
+			try {
+				$vCalendar = $vCalendar->expand($since, $until);
+			} catch (InvalidDataException $e) {
+				// fallback to the original event without expanding, leave its timezone untouched
+				$originalTimeZone = null;
+			}
+		}
+
+		$component = $this->selectPrimaryComponent($vCalendar->select($componentName));
+
+		if ($originalTimeZone !== null) {
+			$this->applyTimeZone($component, $originalTimeZone);
+		}
+
+		return $component;
+	}
+
+	/**
+	 * @param Component[] $components
+	 */
+	private function selectPrimaryComponent(array $components): Component {
+		// Expanded results: every instance has a RECURRENCE-ID; just take the first in-range occurrence.
+		// Stored objects: a recurrence-set is the master (no RECURRENCE-ID) plus override exceptions.
 		if (count($components) === 1) {
 			return $components[0];
 		}
@@ -105,5 +138,19 @@ abstract class ACalendarSearchProvider implements IProvider {
 
 		// In case of error, just fallback to the first element in the set
 		return $components[0];
+	}
+
+	/**
+	 * Move the occurrence back into the event's original timezone after expand()
+	 * has rewritten it to UTC, so the rendered time matches the user's local time.
+	 */
+	private function applyTimeZone(Component $component, \DateTimeZone $timeZone): void {
+		foreach (['DTSTART', 'DTEND'] as $name) {
+			if (isset($component->$name) && $component->$name->hasTime()) {
+				$component->$name->setDateTime(
+					$component->$name->getDateTime()->setTimezone($timeZone),
+				);
+			}
+		}
 	}
 }
