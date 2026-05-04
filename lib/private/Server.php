@@ -1147,6 +1147,9 @@ class Server extends ServerContainer implements IServerContainer {
 			return $c->get(FileSequence::class);
 		}, false);
 
+		$this->registerAlias(\OCP\Sharing\IRegistry::class, \OC\Sharing\Registry::class);
+		$this->registerAlias(\OCP\Sharing\IManager::class, \OC\Sharing\Manager::class);
+
 		$this->connectDispatcher();
 	}
 
