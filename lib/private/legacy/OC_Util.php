@@ -21,7 +21,7 @@ use OCP\HintException;
 use OCP\IConfig;
 use OCP\IGroupManager;
 use OCP\IRequest;
-use OCP\ISession;
+use OCP\ICacheFactory;
 use OCP\IURLGenerator;
 use OCP\IUser;
 use OCP\IUserManager;
@@ -261,7 +261,7 @@ class OC_Util {
 	 */
 	public static function checkServer(SystemConfig $config) {
 		$l = \OC::$server->getL10N('lib');
-		$localCache = \OCP\Server::get(\OCP\ICacheFactory::class)->createLocal('system');
+		$localCache = Server::get(ICacheFactory::class)->createLocal('system');
 		$errors = [];
 		$CONFIG_DATADIRECTORY = $config->getValue('datadirectory', OC::$SERVERROOT . '/data');
 
