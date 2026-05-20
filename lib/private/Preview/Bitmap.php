@@ -10,6 +10,8 @@ namespace OC\Preview;
 use Imagick;
 use OCP\Files\File;
 use OCP\IImage;
+use OCP\Image;
+use OCP\Server;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -33,10 +35,11 @@ abstract class Bitmap extends ProviderV2 {
 	/**
 	 * {@inheritDoc}
 	 */
+	#[\Override]
 	public function getThumbnail(File $file, int $maxX, int $maxY): ?IImage {
 		$tmpPath = $this->getLocalFile($file);
 		if ($tmpPath === false) {
-			\OC::$server->get(LoggerInterface::class)->error(
+			Server::get(LoggerInterface::class)->error(
 				'Failed to get thumbnail for: ' . $file->getPath(),
 				['app' => 'core']
 			);
@@ -47,7 +50,7 @@ abstract class Bitmap extends ProviderV2 {
 		try {
 			$bp = $this->getResizedPreview($tmpPath, $maxX, $maxY);
 		} catch (\Exception $e) {
-			\OC::$server->get(LoggerInterface::class)->info(
+			Server::get(LoggerInterface::class)->info(
 				'File: ' . $file->getPath() . ' Imagick says:',
 				[
 					'exception' => $e,
@@ -60,7 +63,7 @@ abstract class Bitmap extends ProviderV2 {
 		$this->cleanTmpFiles();
 
 		//new bitmap image object
-		$image = new \OCP\Image();
+		$image = new Image();
 		$image->loadFromData((string)$bp);
 		//check if image object is valid
 		return $image->valid() ? $image : null;

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -26,6 +27,7 @@ class RequestUserAgent extends AbstractStringCheck {
 	 * @param string $value
 	 * @return bool
 	 */
+	#[\Override]
 	public function executeCheck($operator, $value) {
 		$actualValue = $this->getActualValue();
 		if (in_array($operator, ['is', '!is'], true)) {
@@ -58,10 +60,12 @@ class RequestUserAgent extends AbstractStringCheck {
 	/**
 	 * @return string
 	 */
+	#[\Override]
 	protected function getActualValue() {
 		return $this->request->getHeader('User-Agent');
 	}
 
+	#[\Override]
 	public function isAvailableForScope(int $scope): bool {
 		return true;
 	}

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -51,6 +52,7 @@ class Provider implements IProvider {
 	 * @throws UnknownActivityException
 	 * @since 11.0.0
 	 */
+	#[\Override]
 	public function parse($language, IEvent $event, ?IEvent $previousEvent = null) {
 		if ($event->getApp() !== 'files') {
 			throw new UnknownActivityException();
@@ -500,7 +502,7 @@ class Provider implements IProvider {
 			'strict_search' => true,
 		]);
 		foreach ($addressBookContacts as $contact) {
-			if (isset($contact['isLocalSystemBook'])) {
+			if (isset($contact['isLocalSystemBook']) || isset($contact['isVirtualAddressbook'])) {
 				continue;
 			}
 

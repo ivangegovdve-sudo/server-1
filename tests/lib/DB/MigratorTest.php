@@ -24,10 +24,10 @@ use OCP\Server;
 /**
  * Class MigratorTest
  *
- * @group DB
  *
  * @package Test\DB
  */
+#[\PHPUnit\Framework\Attributes\Group('DB')]
 class MigratorTest extends \Test\TestCase {
 	/**
 	 * @var \Doctrine\DBAL\Connection $connection
@@ -45,6 +45,7 @@ class MigratorTest extends \Test\TestCase {
 	/** @var string */
 	private $tableNameTmp;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -69,6 +70,7 @@ class MigratorTest extends \Test\TestCase {
 		return strtolower($this->getUniqueID($this->config->getSystemValueString('dbtableprefix', 'oc_') . 'test_'));
 	}
 
+	#[\Override]
 	protected function tearDown(): void {
 		// Try to delete if exists (IF EXISTS NOT SUPPORTED IN ORACLE)
 		try {
@@ -279,13 +281,13 @@ class MigratorTest extends \Test\TestCase {
 	}
 
 	/**
-	 * @dataProvider dataNotNullEmptyValuesFailOracle
 	 *
 	 * @param int $parameterType
 	 * @param bool|int|string $value
 	 * @param string $columnType
 	 * @param bool $oracleThrows
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataNotNullEmptyValuesFailOracle')]
 	public function testNotNullEmptyValuesFailOracle(int $parameterType, $value, string $columnType, bool $oracleThrows): void {
 		$startSchema = new Schema([], [], $this->getSchemaConfig());
 		$table = $startSchema->createTable($this->tableName);

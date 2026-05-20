@@ -52,6 +52,20 @@ interface IManager {
 	public function publish(IEvent $event): void;
 
 	/**
+	 * Bulk publish an event for multiple users
+	 * taking into account the app specific activity settings
+	 *
+	 * Make sure to call at least the following methods before sending an Event:
+	 *  - setApp()
+	 *  - setType()
+	 *
+	 * @param IEvent $event
+	 * @throws IncompleteActivityException if required values have not been set
+	 * @since 32.0.0
+	 */
+	public function bulkPublish(IEvent $event, array $affectedUserIds, ISetting $setting): void;
+
+	/**
 	 * In order to improve lazy loading a closure can be registered which will be called in case
 	 * activity consumers are actually requested
 	 *
@@ -118,10 +132,11 @@ interface IManager {
 
 	/**
 	 * @param string $type
-	 * @param int $id
+	 * @param int|numeric-string $id
 	 * @since 8.2.0
+	 * @since 33.0.0 $id can also be a string
 	 */
-	public function setFormattingObject(string $type, int $id): void;
+	public function setFormattingObject(string $type, int|string $id): void;
 
 	/**
 	 * @return bool

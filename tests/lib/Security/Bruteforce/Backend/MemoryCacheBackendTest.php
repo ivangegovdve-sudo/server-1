@@ -26,6 +26,7 @@ class MemoryCacheBackendTest extends TestCase {
 	private $cache;
 	private IBackend $backend;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -67,9 +68,7 @@ class MemoryCacheBackendTest extends TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider dataGetAttempts
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataGetAttempts')]
 	public function testGetAttempts(int $maxAge, ?string $action, ?array $metadata, int $expected): void {
 		$this->cache
 			->expects($this->once())

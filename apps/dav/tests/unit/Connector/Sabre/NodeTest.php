@@ -29,9 +29,9 @@ use PHPUnit\Framework\MockObject\MockObject;
 /**
  * Class NodeTest
  *
- * @group DB
  * @package OCA\DAV\Tests\unit\Connector\Sabre
  */
+#[\PHPUnit\Framework\Attributes\Group(name: 'DB')]
 class NodeTest extends \Test\TestCase {
 	public static function davPermissionsProvider(): array {
 		return [
@@ -42,7 +42,7 @@ class NodeTest extends \Test\TestCase {
 			[Constants::PERMISSION_ALL, 'file', true, Constants::PERMISSION_ALL, true, '' , 'SRMGDNVW'],
 			[Constants::PERMISSION_ALL, 'file', true, Constants::PERMISSION_ALL - Constants::PERMISSION_UPDATE, true, '' , 'SRMGDNV'],
 			[Constants::PERMISSION_ALL - Constants::PERMISSION_SHARE, 'file', true, Constants::PERMISSION_ALL, false, 'test', 'SGDNVW'],
-			[Constants::PERMISSION_ALL - Constants::PERMISSION_UPDATE, 'file', false, Constants::PERMISSION_ALL, false, 'test', 'RGD'],
+			[Constants::PERMISSION_ALL - Constants::PERMISSION_UPDATE, 'file', false, Constants::PERMISSION_ALL, false, 'test', 'RGDN'],
 			[Constants::PERMISSION_ALL - Constants::PERMISSION_DELETE, 'file', false, Constants::PERMISSION_ALL, false, 'test', 'RGNVW'],
 			[Constants::PERMISSION_ALL - Constants::PERMISSION_CREATE, 'file', false, Constants::PERMISSION_ALL, false, 'test', 'RGDNVW'],
 			[Constants::PERMISSION_ALL - Constants::PERMISSION_READ, 'file', false, Constants::PERMISSION_ALL, false, 'test', 'RDNVW'],
@@ -51,9 +51,7 @@ class NodeTest extends \Test\TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider davPermissionsProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'davPermissionsProvider')]
 	public function testDavPermissions(int $permissions, string $type, bool $shared, int $shareRootPermissions, bool $mounted, string $internalPath, string $expected): void {
 		$info = $this->getMockBuilder(FileInfo::class)
 			->disableOriginalConstructor()
@@ -96,8 +94,16 @@ class NodeTest extends \Test\TestCase {
 		$info->method('getStorage')
 			->willReturn($storage);
 		$view = $this->createMock(View::class);
+		$view
+			->method('getRelativePath')
+			->with(null)
+			->willReturn('');
+		$view
+			->method('getAbsolutePath')
+			->with(null)
+			->willReturn('');
 
-		$node = new  File($view, $info);
+		$node = new File($view, $info);
 		$this->assertEquals($expected, $node->getDavPermissions());
 	}
 
@@ -141,9 +147,7 @@ class NodeTest extends \Test\TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider sharePermissionsProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'sharePermissionsProvider')]
 	public function testSharePermissions(string $type, ?string $user, int $permissions, int $expected): void {
 		$storage = $this->createMock(IStorage::class);
 		$storage->method('getPermissions')->willReturn($permissions);
@@ -173,6 +177,10 @@ class NodeTest extends \Test\TestCase {
 		$info->method('getPermissions')->willReturn($permissions);
 
 		$view = $this->createMock(View::class);
+		$view
+			->method('getRelativePath')
+			->with(null)
+			->willReturn('');
 
 		$node = new File($view, $info);
 		$this->invokePrivate($node, 'shareManager', [$shareManager]);
@@ -208,6 +216,10 @@ class NodeTest extends \Test\TestCase {
 
 		/** @var View&MockObject $view */
 		$view = $this->createMock(View::class);
+		$view
+			->method('getRelativePath')
+			->with(null)
+			->willReturn('');
 
 		$node = new File($view, $info);
 		$this->invokePrivate($node, 'shareManager', [$shareManager]);
@@ -229,6 +241,10 @@ class NodeTest extends \Test\TestCase {
 
 		/** @var View&MockObject */
 		$view = $this->createMock(View::class);
+		$view
+			->method('getRelativePath')
+			->with(null)
+			->willReturn('');
 
 		$node = new File($view, $info);
 		$this->invokePrivate($node, 'shareManager', [$shareManager]);
@@ -242,13 +258,15 @@ class NodeTest extends \Test\TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider sanitizeMtimeProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'sanitizeMtimeProvider')]
 	public function testSanitizeMtime(string|int $mtime, int $expected): void {
 		$view = $this->getMockBuilder(View::class)
 			->disableOriginalConstructor()
 			->getMock();
+		$view
+			->method('getRelativePath')
+			->with(null)
+			->willReturn('');
 		$info = $this->getMockBuilder(FileInfo::class)
 			->disableOriginalConstructor()
 			->getMock();
@@ -264,13 +282,16 @@ class NodeTest extends \Test\TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider invalidSanitizeMtimeProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'invalidSanitizeMtimeProvider')]
 	public function testInvalidSanitizeMtime(int|string $mtime): void {
 		$this->expectException(\InvalidArgumentException::class);
 
 		$view = $this->createMock(View::class);
+		$view
+			->method('getRelativePath')
+			->with(null)
+			->willReturn('');
+
 		$info = $this->createMock(FileInfo::class);
 
 		$node = new File($view, $info);

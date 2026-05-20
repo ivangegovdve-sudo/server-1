@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -8,9 +10,11 @@
 
 namespace Test\Activity;
 
+use OC\Activity\Manager;
 use OCP\Activity\Exceptions\IncompleteActivityException;
 use OCP\Activity\IConsumer;
 use OCP\Activity\IEvent;
+use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IConfig;
 use OCP\IL10N;
 use OCP\IRequest;
@@ -22,15 +26,16 @@ use PHPUnit\Framework\MockObject\MockObject;
 use Test\TestCase;
 
 class ManagerTest extends TestCase {
-	/** @var \OC\Activity\Manager */
-	private $activityManager;
+	private Manager $activityManager;
 
 	protected IRequest&MockObject $request;
 	protected IUserSession&MockObject $session;
 	protected IConfig&MockObject $config;
 	protected IValidator&MockObject $validator;
 	protected IRichTextFormatter&MockObject $richTextFormatter;
+	private ITimeFactory&MockObject $time;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -39,14 +44,16 @@ class ManagerTest extends TestCase {
 		$this->config = $this->createMock(IConfig::class);
 		$this->validator = $this->createMock(IValidator::class);
 		$this->richTextFormatter = $this->createMock(IRichTextFormatter::class);
+		$this->time = $this->createMock(ITimeFactory::class);
 
-		$this->activityManager = new \OC\Activity\Manager(
+		$this->activityManager = new Manager(
 			$this->request,
 			$this->session,
 			$this->config,
 			$this->validator,
 			$this->richTextFormatter,
-			$this->createMock(IL10N::class)
+			$this->createMock(IL10N::class),
+			$this->time,
 		);
 
 		$this->assertSame([], self::invokePrivate($this->activityManager, 'getConsumers'));
@@ -88,11 +95,11 @@ class ManagerTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider getUserFromTokenThrowInvalidTokenData
 	 *
 	 * @param string $token
 	 * @param array $users
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('getUserFromTokenThrowInvalidTokenData')]
 	public function testGetUserFromTokenThrowInvalidToken($token, $users): void {
 		$this->expectException(\UnexpectedValueException::class);
 
@@ -109,12 +116,12 @@ class ManagerTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider getUserFromTokenData
 	 *
 	 * @param string $userLoggedIn
 	 * @param string $token
 	 * @param string $expected
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('getUserFromTokenData')]
 	public function testGetUserFromToken($userLoggedIn, $token, $expected): void {
 		if ($userLoggedIn !== null) {
 			$this->mockUserSession($userLoggedIn);
@@ -200,10 +207,10 @@ class ManagerTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider dataPublish
 	 * @param string|null $author
 	 * @param string $expected
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataPublish')]
 	public function testPublish($author, $expected): void {
 		if ($author !== null) {
 			$authorObject = $this->getMockBuilder(IUser::class)
@@ -216,6 +223,11 @@ class ManagerTest extends TestCase {
 				->method('getUser')
 				->willReturn($authorObject);
 		}
+
+		$time = time();
+		$this->time
+			->method('getTime')
+			->willReturn($time);
 
 		$event = $this->activityManager->generateEvent();
 		$event->setApp('test')
@@ -230,9 +242,8 @@ class ManagerTest extends TestCase {
 		$consumer->expects($this->once())
 			->method('receive')
 			->with($event)
-			->willReturnCallback(function (IEvent $event) use ($expected): void {
-				$this->assertLessThanOrEqual(time() + 2, $event->getTimestamp(), 'Timestamp not set correctly');
-				$this->assertGreaterThanOrEqual(time() - 2, $event->getTimestamp(), 'Timestamp not set correctly');
+			->willReturnCallback(function (IEvent $event) use ($expected, $time): void {
+				$this->assertEquals($time, $event->getTimestamp(), 'Timestamp not set correctly');
 				$this->assertSame($expected, $event->getAuthor(), 'Author name not set correctly');
 			});
 		$this->activityManager->registerConsumer(function () use ($consumer) {
@@ -284,6 +295,7 @@ class ManagerTest extends TestCase {
 }
 
 class NoOpConsumer implements IConsumer {
+	#[\Override]
 	public function receive(IEvent $event) {
 	}
 }

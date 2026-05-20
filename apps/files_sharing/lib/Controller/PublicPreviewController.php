@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -7,6 +8,7 @@ namespace OCA\Files_Sharing\Controller;
 
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
+use OCP\AppFramework\Http\Attribute\NoSameSiteCookieRequired;
 use OCP\AppFramework\Http\Attribute\OpenAPI;
 use OCP\AppFramework\Http\Attribute\PublicPage;
 use OCP\AppFramework\Http\DataResponse;
@@ -40,10 +42,12 @@ class PublicPreviewController extends PublicShareController {
 		parent::__construct($appName, $request, $session);
 	}
 
+	#[\Override]
 	protected function getPasswordHash(): ?string {
 		return $this->share->getPassword();
 	}
 
+	#[\Override]
 	public function isValidToken(): bool {
 		try {
 			$this->share = $this->shareManager->getShareByToken($this->getToken());
@@ -53,6 +57,7 @@ class PublicPreviewController extends PublicShareController {
 		}
 	}
 
+	#[\Override]
 	protected function isPasswordProtected(): bool {
 		return $this->share->getPassword() !== null;
 	}
@@ -102,9 +107,9 @@ class PublicPreviewController extends PublicShareController {
 			return new DataResponse([], Http::STATUS_FORBIDDEN);
 		}
 
-		$attributes = $share->getAttributes();
 		// Only explicitly set to false will forbid the download!
-		$downloadForbidden = $attributes?->getAttribute('permissions', 'download') === false;
+		$downloadForbidden = !$share->canSeeContent();
+
 		// Is this header is set it means our UI is doing a preview for no-download shares
 		// we check a header so we at least prevent people from using the link directly (obfuscation)
 		$isPublicPreview = $this->request->getHeader('x-nc-preview') === 'true';
@@ -143,8 +148,6 @@ class PublicPreviewController extends PublicShareController {
 	}
 
 	/**
-	 * @NoSameSiteCookieRequired
-	 *
 	 * Get a direct link preview for a shared file
 	 *
 	 * @param string $token Token of the share
@@ -158,6 +161,7 @@ class PublicPreviewController extends PublicShareController {
 	#[PublicPage]
 	#[NoCSRFRequired]
 	#[OpenAPI(scope: OpenAPI::SCOPE_DEFAULT)]
+	#[NoSameSiteCookieRequired]
 	public function directLink(string $token) {
 		// No token no image
 		if ($token === '') {
@@ -181,8 +185,7 @@ class PublicPreviewController extends PublicShareController {
 			return new DataResponse([], Http::STATUS_FORBIDDEN);
 		}
 
-		$attributes = $share->getAttributes();
-		if ($attributes !== null && $attributes->getAttribute('permissions', 'download') === false) {
+		if (!$share->canSeeContent()) {
 			return new DataResponse([], Http::STATUS_FORBIDDEN);
 		}
 

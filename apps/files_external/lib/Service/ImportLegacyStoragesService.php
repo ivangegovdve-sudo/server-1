@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
  * SPDX-License-Identifier: AGPL-3.0-only
@@ -24,6 +27,7 @@ class ImportLegacyStoragesService extends LegacyStoragesService {
 	 *
 	 * @return array list of mount configs
 	 */
+	#[\Override]
 	protected function readLegacyConfig() {
 		return $this->data;
 	}

@@ -14,16 +14,15 @@ use OCP\Notification\INotifier;
 use OCP\Notification\UnknownNotificationException;
 
 class Notifier implements INotifier {
-	/** @var IL10nFactory */
-	private $factory;
-
-	public function __construct(IL10nFactory $l10nFactory) {
-		$this->factory = $l10nFactory;
+	public function __construct(
+		private IL10nFactory $factory,
+	) {
 	}
 
 	/**
 	 * @inheritDoc
 	 */
+	#[\Override]
 	public function prepare(INotification $notification, string $languageCode): INotification {
 		if ($notification->getApp() !== 'auth') {
 			// Not my app => throw
@@ -62,6 +61,7 @@ class Notifier implements INotifier {
 	 * @return string
 	 * @since 17.0.0
 	 */
+	#[\Override]
 	public function getID(): string {
 		return 'auth';
 	}
@@ -72,6 +72,7 @@ class Notifier implements INotifier {
 	 * @return string
 	 * @since 17.0.0
 	 */
+	#[\Override]
 	public function getName(): string {
 		return $this->factory->get('lib')->t('Authentication');
 	}

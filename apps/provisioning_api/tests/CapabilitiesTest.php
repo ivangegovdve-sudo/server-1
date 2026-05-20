@@ -19,8 +19,8 @@ use Test\TestCase;
  * Note: group DB needed because of usage of overwriteService()
  *
  * @package OCA\Provisioning_API\Tests
- * @group DB
  */
+#[\PHPUnit\Framework\Attributes\Group(name: 'DB')]
 class CapabilitiesTest extends TestCase {
 
 	protected IAppManager&MockObject $appManager;
@@ -48,16 +48,14 @@ class CapabilitiesTest extends TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider getCapabilitiesProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'getCapabilitiesProvider')]
 	public function testGetCapabilities(bool $federationAppEnabled, bool $federatedFileSharingAppEnabled, bool $lookupServerEnabled, bool $expectedFederatedScopeEnabled, bool $expectedPublishedScopeEnabled): void {
 		$this->appManager->expects($this->any())
 			->method('isEnabledForUser')
-			->will($this->returnValueMap([
+			->willReturnMap([
 				['federation', null, $federationAppEnabled],
 				['federatedfilesharing', null, $federatedFileSharingAppEnabled],
-			]));
+			]);
 
 		$federatedShareProvider = $this->createMock(FederatedShareProvider::class);
 		$this->overwriteService(FederatedShareProvider::class, $federatedShareProvider);

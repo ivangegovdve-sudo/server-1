@@ -8,7 +8,10 @@
 namespace OCA\Comments\Tests\Unit\Notification;
 
 use OCA\Comments\Notification\Listener;
-use OCP\Comments\CommentsEvent;
+use OCP\Comments\Events\BeforeCommentUpdatedEvent;
+use OCP\Comments\Events\CommentAddedEvent;
+use OCP\Comments\Events\CommentDeletedEvent;
+use OCP\Comments\Events\CommentUpdatedEvent;
 use OCP\Comments\IComment;
 use OCP\IURLGenerator;
 use OCP\IUserManager;
@@ -23,6 +26,7 @@ class ListenerTest extends TestCase {
 	protected IURLGenerator&MockObject $urlGenerator;
 	protected Listener $listener;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -37,19 +41,19 @@ class ListenerTest extends TestCase {
 
 	public static function eventProvider(): array {
 		return [
-			[CommentsEvent::EVENT_ADD, 'notify'],
-			[CommentsEvent::EVENT_UPDATE, 'notify'],
-			[CommentsEvent::EVENT_PRE_UPDATE, 'markProcessed'],
-			[CommentsEvent::EVENT_DELETE, 'markProcessed']
+			['add', 'notify'],
+			['update', 'notify'],
+			['pre_update', 'markProcessed'],
+			['delete', 'markProcessed']
 		];
 	}
 
 	/**
-	 * @dataProvider eventProvider
 	 * @param string $eventType
 	 * @param string $notificationMethod
 	 */
-	public function testEvaluate($eventType, $notificationMethod): void {
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'eventProvider')]
+	public function testEvaluate(string $eventType, $notificationMethod): void {
 		/** @var IComment|MockObject $comment */
 		$comment = $this->createMock(IComment::class);
 		$comment->expects($this->any())
@@ -72,14 +76,12 @@ class ListenerTest extends TestCase {
 			->method('getId')
 			->willReturn('1234');
 
-		/** @var CommentsEvent|MockObject $event */
-		$event = $this->createMock(CommentsEvent::class);
-		$event->expects($this->once())
-			->method('getComment')
-			->willReturn($comment);
-		$event->expects(($this->any()))
-			->method(('getEvent'))
-			->willReturn($eventType);
+		$event = match ($eventType) {
+			'add' => new CommentAddedEvent($comment),
+			'pre_update' => new BeforeCommentUpdatedEvent($comment),
+			'update' => new CommentUpdatedEvent($comment),
+			'delete' => new CommentDeletedEvent($comment),
+		};
 
 		/** @var INotification|MockObject $notification */
 		$notification = $this->createMock(INotification::class);
@@ -110,9 +112,7 @@ class ListenerTest extends TestCase {
 		$this->listener->evaluate($event);
 	}
 
-	/**
-	 * @dataProvider eventProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'eventProvider')]
 	public function testEvaluateNoMentions(string $eventType): void {
 		/** @var IComment|MockObject $comment */
 		$comment = $this->createMock(IComment::class);
@@ -126,14 +126,12 @@ class ListenerTest extends TestCase {
 			->method('getMentions')
 			->willReturn([]);
 
-		/** @var CommentsEvent|MockObject $event */
-		$event = $this->createMock(CommentsEvent::class);
-		$event->expects($this->once())
-			->method('getComment')
-			->willReturn($comment);
-		$event->expects(($this->any()))
-			->method(('getEvent'))
-			->willReturn($eventType);
+		$event = match ($eventType) {
+			'add' => new CommentAddedEvent($comment),
+			'pre_update' => new BeforeCommentUpdatedEvent($comment),
+			'update' => new CommentUpdatedEvent($comment),
+			'delete' => new CommentDeletedEvent($comment),
+		};
 
 		$this->notificationManager->expects($this->never())
 			->method('createNotification');
@@ -164,14 +162,7 @@ class ListenerTest extends TestCase {
 			->method('getId')
 			->willReturn('1234');
 
-		/** @var CommentsEvent|MockObject $event */
-		$event = $this->createMock(CommentsEvent::class);
-		$event->expects($this->once())
-			->method('getComment')
-			->willReturn($comment);
-		$event->expects(($this->any()))
-			->method(('getEvent'))
-			->willReturn(CommentsEvent::EVENT_ADD);
+		$event = new CommentAddedEvent($comment);
 
 		/** @var INotification|MockObject $notification */
 		$notification = $this->createMock(INotification::class);

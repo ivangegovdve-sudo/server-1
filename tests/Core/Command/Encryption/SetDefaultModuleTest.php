@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -27,6 +28,7 @@ class SetDefaultModuleTest extends TestCase {
 	/** @var \Symfony\Component\Console\Command\Command */
 	protected $command;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -52,7 +54,6 @@ class SetDefaultModuleTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider dataSetDefaultModule
 	 *
 	 * @param string $oldModule
 	 * @param string $newModule
@@ -60,6 +61,7 @@ class SetDefaultModuleTest extends TestCase {
 	 * @param bool $updateSuccess
 	 * @param string $expectedString
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataSetDefaultModule')]
 	public function testSetDefaultModule($oldModule, $newModule, $updateModule, $updateSuccess, $expectedString): void {
 		$this->consoleInput->expects($this->once())
 			->method('getArgument')
@@ -90,7 +92,6 @@ class SetDefaultModuleTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider dataSetDefaultModule
 	 *
 	 * @param string $oldModule
 	 * @param string $newModule
@@ -98,6 +99,7 @@ class SetDefaultModuleTest extends TestCase {
 	 * @param bool $updateSuccess
 	 * @param string $expectedString
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataSetDefaultModule')]
 	public function testMaintenanceMode($oldModule, $newModule, $updateModule, $updateSuccess, $expectedString): void {
 		$this->consoleInput->expects($this->never())
 			->method('getArgument')

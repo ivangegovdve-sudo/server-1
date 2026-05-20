@@ -3,7 +3,8 @@
  - SPDX-License-Identifier: AGPL-3.0-or-later
  -->
 <template>
-	<div class="files-list"
+	<div
+		class="files-list"
 		:class="{ 'files-list--grid': gridMode }"
 		data-cy-files-list
 		@scroll.passive="onScroll">
@@ -20,7 +21,20 @@
 			<slot name="header-overlay" />
 		</div>
 
-		<table class="files-list__table" :class="{ 'files-list__table--with-thead-overlay': !!$scopedSlots['header-overlay'] }">
+		<div
+			v-if="dataSources.length === 0"
+			class="files-list__empty">
+			<slot name="empty" />
+		</div>
+
+		<table
+			:aria-hidden="dataSources.length === 0"
+			:inert="dataSources.length === 0"
+			class="files-list__table"
+			:class="{
+				'files-list__table--with-thead-overlay': !!$scopedSlots['header-overlay'],
+				'files-list__table--hidden': dataSources.length === 0,
+			}">
 			<!-- Accessibility table caption for screen readers -->
 			<caption v-if="caption" class="hidden-visually">
 				{{ caption }}
@@ -32,11 +46,13 @@
 			</thead>
 
 			<!-- Body -->
-			<tbody :style="tbodyStyle"
+			<tbody
+				:style="tbodyStyle"
 				class="files-list__tbody"
 				data-cy-files-list-tbody>
-				<component :is="dataComponent"
-					v-for="({key, item}, i) in renderedItems"
+				<component
+					:is="dataComponent"
+					v-for="({ key, item }, i) in renderedItems"
 					:key="key"
 					:source="item"
 					:index="i"
@@ -44,7 +60,8 @@
 			</tbody>
 
 			<!-- Footer -->
-			<tfoot ref="footer"
+			<tfoot
+				ref="footer"
 				class="files-list__tfoot"
 				data-cy-files-list-tfoot>
 				<slot name="footer" />
@@ -57,15 +74,14 @@
 import type { File, Folder, Node } from '@nextcloud/files'
 import type { PropType } from 'vue'
 
-import { defineComponent } from 'vue'
 import debounce from 'debounce'
-
+import { defineComponent } from 'vue'
 import { useFileListWidth } from '../composables/useFileListWidth.ts'
-import logger from '../logger.ts'
+import { logger } from '../utils/logger.ts'
 
 interface RecycledPoolItem {
-	key: string,
-	item: Node,
+	key: string
+	item: Node
 }
 
 type DataSource = File | Folder
@@ -79,26 +95,32 @@ export default defineComponent({
 			type: [Object, Function],
 			required: true,
 		},
+
 		dataKey: {
 			type: String as PropType<DataSourceKey>,
 			required: true,
 		},
+
 		dataSources: {
 			type: Array as PropType<DataSource[]>,
 			required: true,
 		},
+
 		extraProps: {
 			type: Object as PropType<Record<string, unknown>>,
 			default: () => ({}),
 		},
+
 		scrollToIndex: {
 			type: Number,
 			default: 0,
 		},
+
 		gridMode: {
 			type: Boolean,
 			default: false,
 		},
+
 		/**
 		 * Visually hidden caption for the table accessibility
 		 */
@@ -109,7 +131,7 @@ export default defineComponent({
 	},
 
 	setup() {
-		const fileListWidth = useFileListWidth()
+		const { width: fileListWidth } = useFileListWidth()
 
 		return {
 			fileListWidth,
@@ -146,7 +168,7 @@ export default defineComponent({
 		itemHeight() {
 			// Align with css in FilesListVirtual
 			// 166px + 32px (name) + 16px (mtime) + 16px (padding top and bottom)
-			return this.gridMode ? (166 + 32 + 16 + 16 + 16) : 55
+			return this.gridMode ? (166 + 32 + 16 + 16 + 16) : 44
 		},
 
 		// Grid mode only
@@ -212,11 +234,11 @@ export default defineComponent({
 
 			const items = this.dataSources.slice(this.startIndex, this.startIndex + this.shownItems) as Node[]
 
-			const oldItems = items.filter(item => Object.values(this.$_recycledPool).includes(item[this.dataKey]))
-			const oldItemsKeys = oldItems.map(item => item[this.dataKey] as string)
-			const unusedKeys = Object.keys(this.$_recycledPool).filter(key => !oldItemsKeys.includes(this.$_recycledPool[key]))
+			const oldItems = items.filter((item) => Object.values(this.$_recycledPool).includes(item[this.dataKey]))
+			const oldItemsKeys = oldItems.map((item) => item[this.dataKey] as string)
+			const unusedKeys = Object.keys(this.$_recycledPool).filter((key) => !oldItemsKeys.includes(this.$_recycledPool[key]))
 
-			return items.map(item => {
+			return items.map((item) => {
 				const index = Object.values(this.$_recycledPool).indexOf(item[this.dataKey])
 				// If defined, let's keep the key
 				if (index !== -1) {
@@ -253,6 +275,7 @@ export default defineComponent({
 			}
 		},
 	},
+
 	watch: {
 		scrollToIndex(index) {
 			this.scrollTo(index)
@@ -309,7 +332,14 @@ export default defineComponent({
 
 	methods: {
 		scrollTo(index: number) {
-			if (!this.$el) {
+			if (!this.$el || this.index === index) {
+				return
+			}
+
+			// Skip scrolling if the target index is already visible
+			const lastVisibleIndex = this.index + (this.visibleRows * this.columnCount) - 1
+			if (index >= this.index && index <= lastVisibleIndex) {
+				logger.debug('VirtualList: Skip scrolling, index already visible', { index })
 				return
 			}
 
@@ -360,7 +390,12 @@ export default defineComponent({
 			this.$nextTick(() => {
 				this.$el.scrollTop = scrollTop
 				logger.debug(`VirtualList: scrolling to index ${index}`, {
-					clampedIndex, scrollTop, columnCount: this.columnCount, total: this.totalRowCount, visibleRows: this.visibleRows, beforeHeight: this.beforeHeight,
+					clampedIndex,
+					scrollTop,
+					columnCount: this.columnCount,
+					total: this.totalRowCount,
+					visibleRows: this.visibleRows,
+					beforeHeight: this.beforeHeight,
 				})
 			})
 		},

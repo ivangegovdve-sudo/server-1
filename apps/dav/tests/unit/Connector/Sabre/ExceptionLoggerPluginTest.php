@@ -42,9 +42,7 @@ class ExceptionLoggerPluginTest extends TestCase {
 		$this->plugin->initialize($this->server);
 	}
 
-	/**
-	 * @dataProvider providesExceptions
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'providesExceptions')]
 	public function testLogging(string $expectedLogLevel, \Throwable $e): void {
 		$this->init();
 

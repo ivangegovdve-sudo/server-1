@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2023 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -17,6 +18,7 @@ class OrEqualsToInTest extends TestCase {
 	private $optimizer;
 	private $simplifier;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 

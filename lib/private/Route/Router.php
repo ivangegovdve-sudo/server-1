@@ -74,6 +74,14 @@ class Router implements IRouter {
 		$this->root = $this->getCollection('root');
 	}
 
+	public function setContext(RequestContext $context): void {
+		$this->context = $context;
+	}
+
+	public function getRouteCollection() {
+		return $this->root;
+	}
+
 	/**
 	 * Get the files to load the routes from
 	 *
@@ -102,7 +110,7 @@ class Router implements IRouter {
 	 *
 	 * @param null|string $app
 	 */
-	public function loadRoutes($app = null) {
+	public function loadRoutes(?string $app = null, bool $skipLoadingCore = false): void {
 		if (is_string($app)) {
 			$app = $this->appManager->cleanAppId($app);
 		}
@@ -165,7 +173,7 @@ class Router implements IRouter {
 		}
 		$this->eventLogger->end('route:load:files');
 
-		if (!isset($this->loadedApps['core'])) {
+		if (!$skipLoadingCore && !isset($this->loadedApps['core'])) {
 			$this->loadedApps['core'] = true;
 			$this->useCollection('root');
 			$this->setupRoutes($this->getAttributeRoutes('core'), 'core');
@@ -225,6 +233,7 @@ class Router implements IRouter {
 	 * @param array $requirements An array of requirements for parameters (regexes)
 	 * @return \OC\Route\Route
 	 */
+	#[\Override]
 	public function create($name,
 		$pattern,
 		array $defaults = [],
@@ -257,6 +266,8 @@ class Router implements IRouter {
 			$app = $this->appManager->cleanAppId($app);
 			\OC::$REQUESTEDAPP = $app;
 			$this->loadRoutes($app);
+		} elseif (str_starts_with($url, '/settings/apps')) {
+			$this->loadRoutes('appstore');
 		} elseif (str_starts_with($url, '/settings/')) {
 			$this->loadRoutes('settings');
 		} elseif (str_starts_with($url, '/core/')) {
@@ -434,8 +445,8 @@ class Router implements IRouter {
 		if ($routeName === 'cloud_federation_api.requesthandlercontroller.receivenotification') {
 			return 'cloud_federation_api.requesthandler.receivenotification';
 		}
-		if ($routeName === 'core.ProfilePage.index') {
-			return 'profile.ProfilePage.index';
+		if ($routeName === 'core.profilepage.index') {
+			return 'profile.profilepage.index';
 		}
 		return $routeName;
 	}
@@ -472,7 +483,7 @@ class Router implements IRouter {
 			} catch (AppPathNotFoundException) {
 				return [];
 			}
-			$appNameSpace = App::buildAppNamespace($app);
+			$appNameSpace = $this->appManager->getAppNamespace($app);
 		}
 
 		if (!file_exists($appControllerPath)) {
@@ -542,7 +553,7 @@ class Router implements IRouter {
 	}
 
 	private function getApplicationClass(string $appName) {
-		$appNameSpace = App::buildAppNamespace($appName);
+		$appNameSpace = $this->appManager->getAppNamespace($appName);
 
 		$applicationClassName = $appNameSpace . '\\AppInfo\\Application';
 

@@ -20,26 +20,15 @@ use OCP\Files\NotPermittedException;
 use OCP\Files\SimpleFS\ISimpleFolder;
 
 class AppData implements IAppData {
-	private IRootFolder $rootFolder;
-	private SystemConfig $config;
-	private string $appId;
 	private ?Folder $folder = null;
 	/** @var CappedMemoryCache<ISimpleFolder|NotFoundException> */
 	private CappedMemoryCache $folders;
 
-	/**
-	 * AppData constructor.
-	 *
-	 * @param IRootFolder $rootFolder
-	 * @param SystemConfig $systemConfig
-	 * @param string $appId
-	 */
-	public function __construct(IRootFolder $rootFolder,
-		SystemConfig $systemConfig,
-		string $appId) {
-		$this->rootFolder = $rootFolder;
-		$this->config = $systemConfig;
-		$this->appId = $appId;
+	public function __construct(
+		private IRootFolder $rootFolder,
+		private SystemConfig $config,
+		private string $appId,
+	) {
 		$this->folders = new CappedMemoryCache();
 	}
 
@@ -96,6 +85,7 @@ class AppData implements IAppData {
 		return $this->folder;
 	}
 
+	#[\Override]
 	public function getFolder(string $name): ISimpleFolder {
 		$key = $this->appId . '/' . $name;
 		if ($cachedFolder = $this->folders->get($key)) {
@@ -124,6 +114,7 @@ class AppData implements IAppData {
 		return $folder;
 	}
 
+	#[\Override]
 	public function newFolder(string $name): ISimpleFolder {
 		$key = $this->appId . '/' . $name;
 		$folder = $this->getAppDataFolder()->newFolder($name);
@@ -133,6 +124,7 @@ class AppData implements IAppData {
 		return $simpleFolder;
 	}
 
+	#[\Override]
 	public function getDirectoryListing(): array {
 		$listing = $this->getAppDataFolder()->getDirectoryListing();
 

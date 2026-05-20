@@ -11,7 +11,6 @@ namespace OCP\Files\Config\Event;
 
 use OCP\EventDispatcher\Event;
 use OCP\Files\Config\ICachedMountInfo;
-use OCP\Files\Mount\IMountPoint;
 
 /**
  * Event emitted when a user mount was moved.
@@ -19,9 +18,12 @@ use OCP\Files\Mount\IMountPoint;
  * @since 32.0.0
  */
 class UserMountUpdatedEvent extends Event {
+	/**
+	 * @since 32.0.0
+	 */
 	public function __construct(
-		public readonly IMountPoint|ICachedMountInfo $oldMountPoint,
-		public readonly IMountPoint|ICachedMountInfo $newMountPoint,
+		public readonly ICachedMountInfo $oldMountPoint,
+		public readonly ICachedMountInfo $newMountPoint,
 	) {
 		parent::__construct();
 	}

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -19,8 +20,8 @@ use OCP\Util;
  * Class UtilTest
  *
  * @package Test
- * @group DB
  */
+#[\PHPUnit\Framework\Attributes\Group('DB')]
 class UtilTest extends \Test\TestCase {
 	public function testGetVersion(): void {
 		$version = Util::getVersion();
@@ -35,17 +36,11 @@ class UtilTest extends \Test\TestCase {
 			'While it is unusual to pass an array',
 			'this function actually <blink>supports</blink> it.',
 			'And therefore there needs to be a <script>alert("Unit"+\'test\')</script> for it!',
-			[
-				'And It Even May <strong>Nest</strong>',
-			],
 		];
 		$goodArray = [
 			'While it is unusual to pass an array',
 			'this function actually &lt;blink&gt;supports&lt;/blink&gt; it.',
 			'And therefore there needs to be a &lt;script&gt;alert(&quot;Unit&quot;+&#039;test&#039;)&lt;/script&gt; for it!',
-			[
-				'And It Even May &lt;strong&gt;Nest&lt;/strong&gt;'
-			],
 		];
 		$result = Util::sanitizeHTML($badArray);
 		$this->assertEquals($goodArray, $result);
@@ -173,6 +168,7 @@ class UtilTest extends \Test\TestCase {
 		$this->assertNotEmpty($errors);
 	}
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -180,6 +176,7 @@ class UtilTest extends \Test\TestCase {
 		self::invokePrivate(Util::class, 'scripts', [[]]);
 		self::invokePrivate(Util::class, 'scriptDeps', [[]]);
 	}
+	#[\Override]
 	protected function tearDown(): void {
 		parent::tearDown();
 
@@ -340,9 +337,7 @@ class UtilTest extends \Test\TestCase {
 		$this->assertEquals('🙈', Util::shortenMultibyteString('🙈🙊🙉', 16, 2));
 	}
 
-	/**
-	 * @dataProvider humanFileSizeProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('humanFileSizeProvider')]
 	public function testHumanFileSize($expected, $input): void {
 		$result = Util::humanFileSize($input);
 		$this->assertEquals($expected, $result);
@@ -360,9 +355,7 @@ class UtilTest extends \Test\TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider providesComputerFileSize
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('providesComputerFileSize')]
 	public function testComputerFileSize($expected, $input): void {
 		$result = Util::computerFileSize($input);
 		$this->assertEquals($expected, $result);
@@ -404,19 +397,4 @@ class UtilTest extends \Test\TestCase {
 		$expected = $arrayResult;
 		$this->assertEquals($result, $expected);
 	}
-
-	public function testRecursiveArraySearch(): void {
-		$haystack = [
-			'Foo' => 'own',
-			'Bar' => 'Cloud',
-		];
-
-		$result = Util::recursiveArraySearch($haystack, 'own');
-		$expected = 'Foo';
-		$this->assertEquals($result, $expected);
-
-		$result = Util::recursiveArraySearch($haystack, 'NotFound');
-		$this->assertFalse($result);
-	}
-
 }

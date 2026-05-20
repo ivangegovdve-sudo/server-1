@@ -74,25 +74,30 @@ class ViewOnlyPluginTest extends TestCase {
 	public static function providesDataForCanGet(): array {
 		return [
 			// has attribute permissions-download enabled - can get file
-			[false, true, true],
+			[false, true, true, true],
 			// has no attribute permissions-download - can get file
-			[false, null, true],
-			// has attribute permissions-download disabled- cannot get the file
-			[false, false, false],
+			[false, null, true, true],
 			// has attribute permissions-download enabled - can get file version
-			[true, true, true],
+			[true, true, true, true],
 			// has no attribute permissions-download - can get file version
-			[true, null, true],
-			// has attribute permissions-download disabled- cannot get the file version
-			[true, false, false],
+			[true, null, true, true],
+			// has attribute permissions-download disabled - cannot get the file
+			[false, false, false, false],
+			// has attribute permissions-download disabled - cannot get the file version
+			[true, false, false, false],
+
+			// Has global allowViewWithoutDownload option enabled
+			// has attribute permissions-download disabled - can get file
+			[false, false, false, true],
+			// has attribute permissions-download disabled - can get file version
+			[true, false, false, true],
 		];
 	}
 
-	/**
-	 * @dataProvider providesDataForCanGet
-	 */
-	public function testCanGet(bool $isVersion, ?bool $attrEnabled, bool $expectCanDownloadFile): void {
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'providesDataForCanGet')]
+	public function testCanGet(bool $isVersion, ?bool $attrEnabled, bool $expectCanDownloadFile, bool $allowViewWithoutDownload): void {
 		$nodeInfo = $this->createMock(File::class);
+		$nodeInfo->method('getId')->willReturn(42);
 		if ($isVersion) {
 			$davPath = 'versions/alice/versions/117/123456';
 			$version = $this->createMock(IVersion::class);
@@ -118,8 +123,9 @@ class ViewOnlyPluginTest extends TestCase {
 				->method('getUID')
 				->willReturn('bob');
 			$this->userFolder->expects($this->once())
-				->method('getById')
-				->willReturn([$nodeInfo]);
+				->method('getFirstNodeById')
+				->with(42)
+				->willReturn($nodeInfo);
 			$this->userFolder->expects($this->once())
 				->method('getOwner')
 				->willReturn($owner);
@@ -150,6 +156,10 @@ class ViewOnlyPluginTest extends TestCase {
 			->method('getAttribute')
 			->with('permissions', 'download')
 			->willReturn($attrEnabled);
+
+		$share->expects($this->once())
+			->method('canSeeContent')
+			->willReturn($allowViewWithoutDownload);
 
 		if (!$expectCanDownloadFile) {
 			$this->expectException(Forbidden::class);

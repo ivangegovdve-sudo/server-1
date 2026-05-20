@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -12,14 +13,15 @@ use OCA\Files_Sharing\External\Storage;
 use OCP\Http\Client\IClient;
 use OCP\Http\Client\IClientService;
 use OCP\Http\Client\IResponse;
+use OCP\ICertificateManager;
+use OCP\Server;
 
 /**
  * Tests for the external Storage class for remote shares.
- *
- * @group DB
  */
+#[\PHPUnit\Framework\Attributes\Group(name: 'DB')]
 class ExternalStorageTest extends \Test\TestCase {
-	public function optionsProvider() {
+	public static function optionsProvider(): array {
 		return [
 			[
 				'http://remoteserver:8080/owncloud',
@@ -54,7 +56,7 @@ class ExternalStorageTest extends \Test\TestCase {
 	}
 
 	private function getTestStorage($uri) {
-		$certificateManager = \OC::$server->getCertificateManager();
+		$certificateManager = Server::get(ICertificateManager::class);
 		$httpClientService = $this->createMock(IClientService::class);
 		$manager = $this->createMock(ExternalShareManager::class);
 		$client = $this->createMock(IClient::class);
@@ -87,9 +89,7 @@ class ExternalStorageTest extends \Test\TestCase {
 		);
 	}
 
-	/**
-	 * @dataProvider optionsProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'optionsProvider')]
 	public function testStorageMountOptions($inputUri, $baseUri): void {
 		$storage = $this->getTestStorage($inputUri);
 		$this->assertEquals($baseUri, $storage->getBaseUri());

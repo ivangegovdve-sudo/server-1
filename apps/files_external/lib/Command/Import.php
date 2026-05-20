@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2017-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -34,6 +35,7 @@ class Import extends Base {
 		parent::__construct();
 	}
 
+	#[\Override]
 	protected function configure(): void {
 		$this
 			->setName('files_external:import')
@@ -58,6 +60,7 @@ class Import extends Base {
 		parent::configure();
 	}
 
+	#[\Override]
 	protected function execute(InputInterface $input, OutputInterface $output): int {
 		$user = (string)$input->getOption('user');
 		$path = $input->getArgument('path');
@@ -112,10 +115,10 @@ class Import extends Base {
 		foreach ($mounts as $mount) {
 			foreach ($existingMounts as $existingMount) {
 				if (
-					$existingMount->getMountPoint() === $mount->getMountPoint() &&
-					$existingMount->getApplicableGroups() === $mount->getApplicableGroups() &&
-					$existingMount->getApplicableUsers() === $mount->getApplicableUsers() &&
-					$existingMount->getBackendOptions() === $mount->getBackendOptions()
+					$existingMount->getMountPoint() === $mount->getMountPoint()
+					&& $existingMount->getApplicableGroups() === $mount->getApplicableGroups()
+					&& $existingMount->getApplicableUsers() === $mount->getApplicableUsers()
+					&& $existingMount->getBackendOptions() === $mount->getBackendOptions()
 				) {
 					$output->writeln('<error>Duplicate mount (' . $mount->getMountPoint() . ')</error>');
 					return self::FAILURE;

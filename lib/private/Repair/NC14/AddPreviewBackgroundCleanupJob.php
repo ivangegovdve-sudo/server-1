@@ -14,17 +14,17 @@ use OCP\Migration\IOutput;
 use OCP\Migration\IRepairStep;
 
 class AddPreviewBackgroundCleanupJob implements IRepairStep {
-	/** @var IJobList */
-	private $jobList;
-
-	public function __construct(IJobList $jobList) {
-		$this->jobList = $jobList;
+	public function __construct(
+		private readonly IJobList $jobList,
+	) {
 	}
 
+	#[\Override]
 	public function getName(): string {
 		return 'Add preview background cleanup job';
 	}
 
+	#[\Override]
 	public function run(IOutput $output) {
 		$this->jobList->add(BackgroundCleanupJob::class);
 	}

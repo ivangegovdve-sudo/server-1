@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -11,7 +12,7 @@ use Psr\Http\Message\ResponseInterface;
 use Sabre\DAV\Client as SClient;
 use Sabre\DAV\Xml\Property\ResourceType;
 
-require __DIR__ . '/../../vendor/autoload.php';
+require __DIR__ . '/autoload.php';
 
 
 trait WebDav {
@@ -32,14 +33,14 @@ trait WebDav {
 	/**
 	 * @Given /^using dav path "([^"]*)"$/
 	 */
-	public function usingDavPath($davPath) {
+	public function usingDavPath(string $davPath): void {
 		$this->davPath = $davPath;
 	}
 
 	/**
 	 * @Given /^using old dav path$/
 	 */
-	public function usingOldDavPath() {
+	public function usingOldDavPath(): void {
 		$this->davPath = 'remote.php/webdav';
 		$this->usingOldDavPath = true;
 	}
@@ -47,7 +48,7 @@ trait WebDav {
 	/**
 	 * @Given /^using new dav path$/
 	 */
-	public function usingNewDavPath() {
+	public function usingNewDavPath(): void {
 		$this->davPath = 'remote.php/dav';
 		$this->usingOldDavPath = false;
 	}
@@ -55,7 +56,7 @@ trait WebDav {
 	/**
 	 * @Given /^using new public dav path$/
 	 */
-	public function usingNewPublicDavPath() {
+	public function usingNewPublicDavPath(): void {
 		$this->davPath = 'public.php/dav';
 		$this->usingOldDavPath = false;
 	}
@@ -437,7 +438,7 @@ trait WebDav {
 		}
 
 		foreach ($table->getRows() as $row) {
-			$key = array_search($row[0], $foundTypes);
+			$key = array_search($row[0], $foundTypes, true);
 			if ($key === false) {
 				throw new \Exception('Expected type ' . $row[0] . ' not found');
 			}
@@ -1010,7 +1011,7 @@ trait WebDav {
 	 */
 	public function connectingToDavEndpoint() {
 		try {
-			$this->response = $this->makeDavRequest(null, 'PROPFIND', '', []);
+			$this->response = $this->makeDavRequest($this->currentUser, 'PROPFIND', '', []);
 		} catch (\GuzzleHttp\Exception\ClientException $e) {
 			$this->response = $e->getResponse();
 		}

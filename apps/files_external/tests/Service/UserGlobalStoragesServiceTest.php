@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -19,9 +20,7 @@ use OCP\Server;
 use PHPUnit\Framework\MockObject\MockObject;
 use Test\Traits\UserTrait;
 
-/**
- * @group DB
- */
+#[\PHPUnit\Framework\Attributes\Group(name: 'DB')]
 class UserGlobalStoragesServiceTest extends GlobalStoragesServiceTest {
 	use UserTrait;
 
@@ -72,8 +71,8 @@ class UserGlobalStoragesServiceTest extends GlobalStoragesServiceTest {
 			$this->dbConfig,
 			$userSession,
 			$this->groupManager,
-			$this->mountCache,
 			$this->eventDispatcher,
+			$this->appConfig,
 		);
 	}
 
@@ -97,9 +96,7 @@ class UserGlobalStoragesServiceTest extends GlobalStoragesServiceTest {
 		];
 	}
 
-	/**
-	 * @dataProvider applicableStorageProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'applicableStorageProvider')]
 	public function testGetStorageWithApplicable($applicableUsers, $applicableGroups, $isVisible): void {
 		$backend = $this->backendService->getBackend('identifier:\OCA\Files_External\Lib\Backend\SMB');
 		$authMechanism = $this->backendService->getAuthMechanism('identifier:\Auth\Mechanism');
@@ -111,6 +108,7 @@ class UserGlobalStoragesServiceTest extends GlobalStoragesServiceTest {
 		$storage->setBackendOptions(['password' => 'testPassword']);
 		$storage->setApplicableUsers($applicableUsers);
 		$storage->setApplicableGroups($applicableGroups);
+		$storage->setPriority(0);
 
 		$newStorage = $this->globalStoragesService->addStorage($storage);
 
@@ -173,9 +171,7 @@ class UserGlobalStoragesServiceTest extends GlobalStoragesServiceTest {
 		$this->ActualNonExistingStorageTest();
 	}
 
-	/**
-	 * @dataProvider deleteStorageDataProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'deleteStorageDataProvider')]
 	public function testDeleteStorage($backendOptions, $rustyStorageId): void {
 		$this->expectException(\DomainException::class);
 
@@ -229,9 +225,7 @@ class UserGlobalStoragesServiceTest extends GlobalStoragesServiceTest {
 		];
 	}
 
-	/**
-	 * @dataProvider getUniqueStoragesProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'getUniqueStoragesProvider')]
 	public function testGetUniqueStorages(
 		$priority1, $applicableUsers1, $applicableGroups1,
 		$priority2, $applicableUsers2, $applicableGroups2,

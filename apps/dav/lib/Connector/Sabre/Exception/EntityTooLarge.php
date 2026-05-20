@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -20,6 +22,7 @@ class EntityTooLarge extends \Sabre\DAV\Exception {
 	 *
 	 * @return int
 	 */
+	#[\Override]
 	public function getHTTPCode() {
 		return 413;
 	}

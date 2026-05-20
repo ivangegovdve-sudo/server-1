@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -16,6 +17,7 @@ class DetectionTest extends \Test\TestCase {
 	/** @var Detection */
 	private $detection;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 		$this->detection = new Detection(
@@ -46,11 +48,11 @@ class DetectionTest extends \Test\TestCase {
 	}
 
 	/**
-	 * @dataProvider dataDetectPath
 	 *
 	 * @param string $path
 	 * @param string $expected
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataDetectPath')]
 	public function testDetectPath(string $path, string $expected): void {
 		$this->assertEquals($expected, $this->detection->detectPath($path));
 	}
@@ -66,11 +68,11 @@ class DetectionTest extends \Test\TestCase {
 	}
 
 	/**
-	 * @dataProvider dataDetectContent
 	 *
 	 * @param string $path
 	 * @param string $expected
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataDetectContent')]
 	public function testDetectContent(string $path, string $expected): void {
 		$this->assertEquals($expected, $this->detection->detectContent(\OC::$SERVERROOT . '/tests/data' . $path));
 	}
@@ -86,11 +88,11 @@ class DetectionTest extends \Test\TestCase {
 	}
 
 	/**
-	 * @dataProvider dataDetect
 	 *
 	 * @param string $path
 	 * @param string $expected
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataDetect')]
 	public function testDetect(string $path, string $expected): void {
 		$this->assertEquals($expected, $this->detection->detect(\OC::$SERVERROOT . '/tests/data' . $path));
 	}
@@ -110,30 +112,78 @@ class DetectionTest extends \Test\TestCase {
 	}
 
 	/**
-	 * @dataProvider dataMimeTypeCustom
 	 *
 	 * @param string $ext
 	 * @param string $mime
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataMimeTypeCustom')]
 	public function testDetectMimeTypeCustom(string $ext, string $mime): void {
-		$confDir = sys_get_temp_dir();
-		file_put_contents($confDir . '/mimetypemapping.dist.json', json_encode([]));
+		$tmpDir = sys_get_temp_dir() . '/nc-detect-' . uniqid('', true);
+		mkdir($tmpDir, 0700);
 
-		/** @var IURLGenerator $urlGenerator */
-		$urlGenerator = $this->getMockBuilder(IURLGenerator::class)
-			->disableOriginalConstructor()
-			->getMock();
+		try {
+			// Create a default / shipped mapping file (dist)
+			file_put_contents($tmpDir . '/mimetypemapping.dist.json', json_encode([]));
 
-		/** @var LoggerInterface $logger */
-		$logger = $this->createMock(LoggerInterface::class);
+			// Create new custom mapping file that should be picked up by Detection
+			file_put_contents($tmpDir . '/mimetypemapping.json', json_encode([$ext => [$mime]]));
 
-		// Create new mapping file
-		file_put_contents($confDir . '/mimetypemapping.dist.json', json_encode([$ext => [$mime]]));
+			/** @var IURLGenerator $urlGenerator */
+			$urlGenerator = $this->getMockBuilder(IURLGenerator::class)
+				->disableOriginalConstructor()
+				->getMock();
 
-		$detection = new Detection($urlGenerator, $logger, $confDir, $confDir);
-		$mappings = $detection->getAllMappings();
-		$this->assertArrayHasKey($ext, $mappings);
-		$this->assertEquals($mime, $detection->detectPath('foo.' . $ext));
+			/** @var LoggerInterface $logger */
+			$logger = $this->createMock(LoggerInterface::class);
+
+			$detection = new Detection($urlGenerator, $logger, $tmpDir, $tmpDir);
+			$mappings = $detection->getAllMappings();
+
+			$this->assertArrayHasKey($ext, $mappings);
+			$this->assertEquals($mime, $detection->detectPath('foo.' . $ext));
+		} finally {
+			// cleanup
+			@unlink($tmpDir . '/mimetypemapping.json');
+			@unlink($tmpDir . '/mimetypemapping.dist.json');
+			@rmdir($tmpDir);
+		}
+	}
+
+	public function testDetectMimeTypePreservesLeadingZeroKeys(): void {
+		$tmpDir = sys_get_temp_dir() . '/nc-detect-' . uniqid();
+		mkdir($tmpDir, 0700);
+		try {
+			// Create a default / shipped mapping file (dist)
+			file_put_contents($tmpDir . '/mimetypemapping.dist.json', json_encode([]));
+
+			// Create new custom mapping file with potentially problematic keys
+			$mappings = [
+				'001' => ['application/x-zeroone', null],
+				'1' => ['application/x-one', null],
+			];
+			file_put_contents($tmpDir . '/mimetypemapping.json', json_encode($mappings));
+
+			/** @var IURLGenerator $urlGenerator */
+			$urlGenerator = $this->getMockBuilder(IURLGenerator::class)
+				->disableOriginalConstructor()
+				->getMock();
+
+			/** @var LoggerInterface $logger */
+			$logger = $this->createMock(LoggerInterface::class);
+
+			$detection = new Detection($urlGenerator, $logger, $tmpDir, $tmpDir);
+			$mappings = $detection->getAllMappings();
+
+			$this->assertArrayHasKey('001', $mappings, 'Expected mapping to contain key "001"');
+			$this->assertArrayHasKey('1', $mappings, 'Expected mapping to contain key "1"');
+
+			$this->assertEquals('application/x-zeroone', $detection->detectPath('foo.001'));
+			$this->assertEquals('application/x-one', $detection->detectPath('foo.1'));
+		} finally {
+			@unlink($tmpDir . '/mimetypemapping.json');
+			@unlink($tmpDir . '/mimetypemapping.dist.json');
+			@rmdir($tmpDir);
+		}
 	}
 
 	public static function dataGetSecureMimeType(): array {
@@ -144,11 +194,11 @@ class DetectionTest extends \Test\TestCase {
 	}
 
 	/**
-	 * @dataProvider dataGetSecureMimeType
 	 *
 	 * @param string $mimeType
 	 * @param string $expected
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataGetSecureMimeType')]
 	public function testGetSecureMimeType(string $mimeType, string $expected): void {
 		$this->assertEquals($expected, $this->detection->getSecureMimeType($mimeType));
 	}

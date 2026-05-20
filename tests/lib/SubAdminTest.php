@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -12,32 +13,33 @@ use OCP\EventDispatcher\IEventDispatcher;
 use OCP\Group\Events\SubAdminAddedEvent;
 use OCP\Group\Events\SubAdminRemovedEvent;
 use OCP\IDBConnection;
+use OCP\IGroup;
 use OCP\IGroupManager;
+use OCP\IUser;
 use OCP\IUserManager;
 use OCP\Server;
 
-/**
- * @group DB
- */
+#[\PHPUnit\Framework\Attributes\Group('DB')]
 class SubAdminTest extends \Test\TestCase {
-	/** @var \OCP\IUserManager */
+	/** @var IUserManager */
 	private $userManager;
 
-	/** @var \OCP\IGroupManager */
+	/** @var IGroupManager */
 	private $groupManager;
 
-	/** @var \OCP\IDBConnection */
+	/** @var IDBConnection */
 	private $dbConn;
 
 	/** @var IEventDispatcher */
 	private $eventDispatcher;
 
-	/** @var \OCP\IUser[] */
+	/** @var IUser[] */
 	private $users;
 
-	/** @var \OCP\IGroup[] */
+	/** @var IGroup[] */
 	private $groups;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -68,21 +70,22 @@ class SubAdminTest extends \Test\TestCase {
 				'gid' => $qb->createNamedParameter($this->groups[0]->getGID()),
 				'uid' => $qb->createNamedParameter('orphanedUser')
 			])
-			->execute();
+			->executeStatement();
 		$qb->insert('group_admin')
 			->values([
 				'gid' => $qb->createNamedParameter('orphanedGroup'),
 				'uid' => $qb->createNamedParameter('orphanedUser')
 			])
-			->execute();
+			->executeStatement();
 		$qb->insert('group_admin')
 			->values([
 				'gid' => $qb->createNamedParameter('orphanedGroup'),
 				'uid' => $qb->createNamedParameter($this->users[0]->getUID())
 			])
-			->execute();
+			->executeStatement();
 	}
 
+	#[\Override]
 	protected function tearDown(): void {
 		foreach ($this->users as $user) {
 			$user->delete();
@@ -96,7 +99,7 @@ class SubAdminTest extends \Test\TestCase {
 		$qb->delete('group_admin')
 			->where($qb->expr()->eq('uid', $qb->createNamedParameter('orphanedUser')))
 			->orWhere($qb->expr()->eq('gid', $qb->createNamedParameter('orphanedGroup')))
-			->execute();
+			->executeStatement();
 	}
 
 	public function testCreateSubAdmin(): void {
@@ -109,8 +112,8 @@ class SubAdminTest extends \Test\TestCase {
 			->from('group_admin')
 			->where($qb->expr()->eq('gid', $qb->createNamedParameter($this->groups[0]->getGID())))
 			->andWHere($qb->expr()->eq('uid', $qb->createNamedParameter($this->users[0]->getUID())))
-			->execute()
-			->fetch();
+			->executeQuery()
+			->fetchAssociative();
 		$this->assertEquals(
 			[
 				'gid' => $this->groups[0]->getGID(),
@@ -118,10 +121,10 @@ class SubAdminTest extends \Test\TestCase {
 			], $result);
 
 		// Delete subadmin
-		$result = $qb->delete('*PREFIX*group_admin')
+		$qb->delete('group_admin')
 			->where($qb->expr()->eq('gid', $qb->createNamedParameter($this->groups[0]->getGID())))
 			->andWHere($qb->expr()->eq('uid', $qb->createNamedParameter($this->users[0]->getUID())))
-			->execute();
+			->executeStatement();
 	}
 
 	public function testDeleteSubAdmin(): void {
@@ -135,8 +138,8 @@ class SubAdminTest extends \Test\TestCase {
 			->from('group_admin')
 			->where($qb->expr()->eq('gid', $qb->createNamedParameter($this->groups[0]->getGID())))
 			->andWHere($qb->expr()->eq('uid', $qb->createNamedParameter($this->users[0]->getUID())))
-			->execute()
-			->fetch();
+			->executeQuery()
+			->fetchAssociative();
 		$this->assertEmpty($result);
 	}
 

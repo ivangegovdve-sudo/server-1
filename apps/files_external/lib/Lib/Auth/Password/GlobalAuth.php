@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2015 ownCloud, Inc.
@@ -61,6 +62,7 @@ class GlobalAuth extends AuthMechanism {
 	/**
 	 * @return void
 	 */
+	#[\Override]
 	public function manipulateStorageConfig(StorageConfig &$storage, ?IUser $user = null) {
 		if ($storage->getType() === StorageConfig::MOUNT_TYPE_ADMIN) {
 			$uid = '';

@@ -27,21 +27,17 @@ use Psr\Log\LoggerInterface;
 
 #[OpenAPI(scope: OpenAPI::SCOPE_IGNORE)]
 class CheckSetupController extends Controller {
-	/** @var Checker */
-	private $checker;
-
 	public function __construct(
-		$AppName,
+		$appName,
 		IRequest $request,
 		private IConfig $config,
 		private IURLGenerator $urlGenerator,
 		private IL10N $l10n,
-		Checker $checker,
+		private Checker $checker,
 		private LoggerInterface $logger,
 		private ISetupCheckManager $setupCheckManager,
 	) {
-		parent::__construct($AppName, $request);
-		$this->checker = $checker;
+		parent::__construct($appName, $request);
 	}
 
 	/**
@@ -129,10 +125,6 @@ Raw output
 	 */
 	#[AuthorizedAdminSetting(settings: Overview::class)]
 	public function check() {
-		return new DataResponse(
-			[
-				'generic' => $this->setupCheckManager->runAll(),
-			]
-		);
+		return new DataResponse($this->setupCheckManager->runAll());
 	}
 }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -10,30 +11,32 @@ namespace Test;
 use OC\Tagging\TagMapper;
 use OC\TagManager;
 use OCP\EventDispatcher\IEventDispatcher;
+use OCP\Files\Folder;
+use OCP\Files\IRootFolder;
+use OCP\Files\Node;
 use OCP\IDBConnection;
 use OCP\IUser;
 use OCP\IUserManager;
 use OCP\IUserSession;
 use OCP\Server;
+use PHPUnit\Framework\MockObject\MockObject;
 use Psr\Log\LoggerInterface;
 
 /**
  * Class TagsTest
- *
- * @group DB
  */
+#[\PHPUnit\Framework\Attributes\Group('DB')]
 class TagsTest extends \Test\TestCase {
 	protected $objectType;
-	/** @var \OCP\IUser */
-	protected $user;
-	/** @var \OCP\IUserSession */
-	protected $userSession;
-	protected $backupGlobals = false;
-	/** @var \OC\Tagging\TagMapper */
-	protected $tagMapper;
-	/** @var \OCP\ITagManager */
-	protected $tagMgr;
+	protected IUser&MockObject $user;
+	protected IUserSession&MockObject $userSession;
+	protected IUserManager&MockObject $userManager;
+	protected IRootFolder&MockObject $rootFolder;
 
+	protected TagMapper $tagMapper;
+	protected TagManager $tagMgr;
+
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -45,17 +48,43 @@ class TagsTest extends \Test\TestCase {
 		$this->user = $this->createMock(IUser::class);
 		$this->user->method('getUID')
 			->willReturn($userId);
+		$this->userManager = $this->createMock(IUserManager::class);
+		$this->userManager
+			->expects($this->any())
+			->method('getExistingUser')
+			->willReturn($this->user);
 		$this->userSession = $this->createMock(IUserSession::class);
 		$this->userSession
 			->expects($this->any())
 			->method('getUser')
 			->willReturn($this->user);
+		$userFolder = $this->createMock(Folder::class);
+		$node = $this->createMock(Node::class);
+		$this->rootFolder = $this->createMock(IRootFolder::class);
+		$this->rootFolder
+			->method('getUserFolder')
+			->willReturnCallback(fn () => $userFolder);
+		$userFolder
+			->method('getFirstNodeById')
+			->willReturnCallback(fn () => $node);
+		$node
+			->method('getPath')
+			->willReturnCallback(fn () => 'file.txt');
 
 		$this->objectType = $this->getUniqueID('type_');
 		$this->tagMapper = new TagMapper(Server::get(IDBConnection::class));
-		$this->tagMgr = new TagManager($this->tagMapper, $this->userSession, Server::get(IDBConnection::class), Server::get(LoggerInterface::class), Server::get(IEventDispatcher::class));
+		$this->tagMgr = new TagManager(
+			$this->tagMapper,
+			$this->userSession,
+			$this->userManager,
+			Server::get(IDBConnection::class),
+			Server::get(LoggerInterface::class),
+			Server::get(IEventDispatcher::class),
+			$this->rootFolder
+		);
 	}
 
+	#[\Override]
 	protected function tearDown(): void {
 		$conn = Server::get(IDBConnection::class);
 		$conn->executeQuery('DELETE FROM `*PREFIX*vcategory_to_object`');
@@ -70,7 +99,15 @@ class TagsTest extends \Test\TestCase {
 			->expects($this->any())
 			->method('getUser')
 			->willReturn(null);
-		$this->tagMgr = new TagManager($this->tagMapper, $this->userSession, Server::get(IDBConnection::class), Server::get(LoggerInterface::class), Server::get(IEventDispatcher::class));
+		$this->tagMgr = new TagManager(
+			$this->tagMapper,
+			$this->userSession,
+			$this->userManager,
+			Server::get(IDBConnection::class),
+			Server::get(LoggerInterface::class),
+			Server::get(IEventDispatcher::class),
+			$this->rootFolder
+		);
 		$this->assertNull($this->tagMgr->load($this->objectType));
 	}
 
@@ -198,9 +235,9 @@ class TagsTest extends \Test\TestCase {
 
 		$conn = Server::get(IDBConnection::class);
 		$statement = $conn->prepare(
-			'INSERT INTO `*PREFIX*vcategory_to_object` ' .
-			'(`objid`, `categoryid`, `type`) VALUES ' .
-			'(?, ?, ?)'
+			'INSERT INTO `*PREFIX*vcategory_to_object` '
+			. '(`objid`, `categoryid`, `type`) VALUES '
+			. '(?, ?, ?)'
 		);
 
 		// insert lots of entries
@@ -251,9 +288,7 @@ class TagsTest extends \Test\TestCase {
 		$this->assertEquals(9, count($tagger->getIdsForTag('Family')));
 	}
 
-	/**
-	 * @depends testTagAs
-	 */
+	#[\PHPUnit\Framework\Attributes\Depends('testTagAs')]
 	public function testUnTag(): void {
 		$objIds = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 

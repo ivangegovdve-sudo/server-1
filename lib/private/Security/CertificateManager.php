@@ -32,8 +32,9 @@ class CertificateManager implements ICertificateManager {
 	/**
 	 * Returns all certificates trusted by the user
 	 *
-	 * @return \OCP\ICertificate[]
+	 * @return ICertificate[]
 	 */
+	#[\Override]
 	public function listCertificates(): array {
 		if (!$this->config->getSystemValueBool('installed', false)) {
 			return [];
@@ -49,7 +50,7 @@ class CertificateManager implements ICertificateManager {
 			return [];
 		}
 		while (false !== ($file = readdir($handle))) {
-			if ($file != '.' && $file != '..') {
+			if ($file !== '.' && $file !== '..') {
 				try {
 					$content = $this->view->file_get_contents($path . $file);
 					if ($content !== false) {
@@ -100,7 +101,7 @@ class CertificateManager implements ICertificateManager {
 			$this->view->mkdir($path);
 		}
 
-		$defaultCertificates = file_get_contents(\OC::$SERVERROOT . '/resources/config/ca-bundle.crt');
+		$defaultCertificates = file_get_contents($this->getDefaultCertificatesBundlePath());
 		if (strlen($defaultCertificates) < 1024) { // sanity check to verify that we have some content for our bundle
 			// log as exception so we have a stacktrace
 			$e = new \Exception('Shipped ca-bundle is empty, refusing to create certificate bundle');
@@ -148,6 +149,7 @@ class CertificateManager implements ICertificateManager {
 	 * @param string $name the filename for the certificate
 	 * @throws \Exception If the certificate could not get added
 	 */
+	#[\Override]
 	public function addCertificate(string $certificate, string $name): ICertificate {
 		$path = $this->getPathToCertificates() . 'uploads/' . $name;
 		$directory = dirname($path);
@@ -172,6 +174,7 @@ class CertificateManager implements ICertificateManager {
 	/**
 	 * Remove the certificate and re-generate the certificate bundle
 	 */
+	#[\Override]
 	public function removeCertificate(string $name): bool {
 		$path = $this->getPathToCertificates() . 'uploads/' . $name;
 
@@ -192,6 +195,7 @@ class CertificateManager implements ICertificateManager {
 	/**
 	 * Get the path to the certificate bundle
 	 */
+	#[\Override]
 	public function getCertificateBundle(): string {
 		return $this->getPathToCertificates() . 'rootcerts.crt';
 	}
@@ -200,11 +204,12 @@ class CertificateManager implements ICertificateManager {
 	 * Get the full local path to the certificate bundle
 	 * @throws \Exception when getting bundle path fails
 	 */
+	#[\Override]
 	public function getAbsoluteBundlePath(): string {
 		try {
 			if ($this->bundlePath === null) {
 				if (!$this->hasCertificates()) {
-					$this->bundlePath = \OC::$SERVERROOT . '/resources/config/ca-bundle.crt';
+					$this->bundlePath = $this->getDefaultCertificatesBundlePath();
 				} else {
 					if ($this->needsRebundling()) {
 						$this->createCertificateBundle();
@@ -221,7 +226,7 @@ class CertificateManager implements ICertificateManager {
 			return $this->bundlePath;
 		} catch (\Exception $e) {
 			$this->logger->error('Failed to get absolute bundle path. Fallback to default ca-bundle.crt', ['exception' => $e]);
-			return \OC::$SERVERROOT . '/resources/config/ca-bundle.crt';
+			return $this->getDefaultCertificatesBundlePath();
 		}
 	}
 
@@ -246,6 +251,11 @@ class CertificateManager implements ICertificateManager {
 	 * get mtime of ca-bundle shipped by Nextcloud
 	 */
 	protected function getFilemtimeOfCaBundle(): int {
-		return filemtime(\OC::$SERVERROOT . '/resources/config/ca-bundle.crt');
+		return filemtime($this->getDefaultCertificatesBundlePath());
+	}
+
+	#[\Override]
+	public function getDefaultCertificatesBundlePath(): string {
+		return $this->config->getSystemValueString('default_certificates_bundle_path', \OC::$SERVERROOT . '/resources/config/ca-bundle.crt');
 	}
 }

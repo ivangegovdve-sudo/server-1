@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2019 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -42,8 +43,10 @@ class UserContext {
 		}
 		try {
 			$shareToken = $this->request->getParam('token');
-			$share = $this->shareManager->getShareByToken($shareToken);
-			return $share->getShareOwner();
+			if ($shareToken !== null) {
+				$share = $this->shareManager->getShareByToken($shareToken);
+				return $share->getShareOwner();
+			}
 		} catch (ShareNotFound $e) {
 		}
 

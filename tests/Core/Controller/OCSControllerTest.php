@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -35,6 +36,7 @@ class OCSControllerTest extends TestCase {
 	/** @var OCSController */
 	private $controller;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 

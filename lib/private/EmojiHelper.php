@@ -12,17 +12,18 @@ use OCP\IDBConnection;
 use OCP\IEmojiHelper;
 
 class EmojiHelper implements IEmojiHelper {
-	private IDBConnection $db;
-
-	public function __construct(IDBConnection $db) {
-		$this->db = $db;
+	public function __construct(
+		private IDBConnection $db,
+	) {
 	}
 
+	#[\Override]
 	public function doesPlatformSupportEmoji(): bool {
-		return $this->db->supports4ByteText() &&
-			\class_exists(\IntlBreakIterator::class);
+		return $this->db->supports4ByteText()
+			&& \class_exists(\IntlBreakIterator::class);
 	}
 
+	#[\Override]
 	public function isValidSingleEmoji(string $emoji): bool {
 		$intlBreakIterator = \IntlBreakIterator::createCharacterInstance();
 		$intlBreakIterator->setText($emoji);
@@ -48,17 +49,17 @@ class EmojiHelper implements IEmojiHelper {
 			if (strlen($emoji) >= 2) {
 				// If the current code-point is an emoji or a modifier (like a skin-tone)
 				// just continue and check the next character
-				if ($codePointType === \IntlChar::CHAR_CATEGORY_MODIFIER_SYMBOL ||
-					$codePointType === \IntlChar::CHAR_CATEGORY_MODIFIER_LETTER ||
-					$codePointType === \IntlChar::CHAR_CATEGORY_OTHER_SYMBOL ||
-					$codePointType === \IntlChar::CHAR_CATEGORY_FORMAT_CHAR ||          // i.e. 🏴󠁧󠁢󠁥󠁮󠁧󠁿 🏴󠁧󠁢󠁳󠁣󠁴󠁿
-					$codePointType === \IntlChar::CHAR_CATEGORY_OTHER_PUNCTUATION ||    // i.e. ‼️ ⁉️ #⃣
-					$codePointType === \IntlChar::CHAR_CATEGORY_LOWERCASE_LETTER ||     // i.e. ℹ️
-					$codePointType === \IntlChar::CHAR_CATEGORY_MATH_SYMBOL ||          // i.e. ↔️ ◻️ ⤴️ ⤵️
-					$codePointType === \IntlChar::CHAR_CATEGORY_ENCLOSING_MARK ||       // i.e. 0⃣..9⃣
-					$codePointType === \IntlChar::CHAR_CATEGORY_DECIMAL_DIGIT_NUMBER || // i.e. 0⃣..9⃣
-					$codePointType === \IntlChar::CHAR_CATEGORY_DASH_PUNCTUATION ||     // i.e. 〰️
-					$codePointType === \IntlChar::CHAR_CATEGORY_GENERAL_OTHER_TYPES
+				if ($codePointType === \IntlChar::CHAR_CATEGORY_MODIFIER_SYMBOL
+					|| $codePointType === \IntlChar::CHAR_CATEGORY_MODIFIER_LETTER
+					|| $codePointType === \IntlChar::CHAR_CATEGORY_OTHER_SYMBOL
+					|| $codePointType === \IntlChar::CHAR_CATEGORY_FORMAT_CHAR          // i.e. 🏴󠁧󠁢󠁥󠁮󠁧󠁿 🏴󠁧󠁢󠁳󠁣󠁴󠁿
+					|| $codePointType === \IntlChar::CHAR_CATEGORY_OTHER_PUNCTUATION    // i.e. ‼️ ⁉️ #⃣
+					|| $codePointType === \IntlChar::CHAR_CATEGORY_LOWERCASE_LETTER     // i.e. ℹ️
+					|| $codePointType === \IntlChar::CHAR_CATEGORY_MATH_SYMBOL          // i.e. ↔️ ◻️ ⤴️ ⤵️
+					|| $codePointType === \IntlChar::CHAR_CATEGORY_ENCLOSING_MARK       // i.e. 0⃣..9⃣
+					|| $codePointType === \IntlChar::CHAR_CATEGORY_DECIMAL_DIGIT_NUMBER // i.e. 0⃣..9⃣
+					|| $codePointType === \IntlChar::CHAR_CATEGORY_DASH_PUNCTUATION     // i.e. 〰️
+					|| $codePointType === \IntlChar::CHAR_CATEGORY_GENERAL_OTHER_TYPES
 				) {
 					continue;
 				}

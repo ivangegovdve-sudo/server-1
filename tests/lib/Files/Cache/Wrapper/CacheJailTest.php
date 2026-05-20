@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -7,6 +8,7 @@
 
 namespace Test\Files\Cache\Wrapper;
 
+use OC\Files\Cache\Cache;
 use OC\Files\Cache\Wrapper\CacheJail;
 use OC\Files\Cache\Wrapper\CacheWrapper;
 use OC\Files\Search\SearchComparison;
@@ -21,16 +23,17 @@ use Test\Files\Cache\CacheTest;
 /**
  * Class CacheJail
  *
- * @group DB
  *
  * @package Test\Files\Cache\Wrapper
  */
+#[\PHPUnit\Framework\Attributes\Group('DB')]
 class CacheJailTest extends CacheTest {
 	/**
-	 * @var \OC\Files\Cache\Cache $sourceCache
+	 * @var Cache $sourceCache
 	 */
 	protected $sourceCache;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 		$this->storage->mkdir('jail');
@@ -121,6 +124,7 @@ class CacheJailTest extends CacheTest {
 		$this->assertTrue($this->sourceCache->inCache('folder/foobar'));
 	}
 
+	#[\Override]
 	public function testGetById(): void {
 		$data1 = ['size' => 100, 'mtime' => 50, 'mimetype' => ICacheEntry::DIRECTORY_MIMETYPE];
 		$id = $this->sourceCache->put('jail/bar', $data1);
@@ -135,6 +139,7 @@ class CacheJailTest extends CacheTest {
 		$this->assertEquals('jail/bar', $path);
 	}
 
+	#[\Override]
 	public function testGetIncomplete(): void {
 		//not supported
 		$this->addToAssertionCount(1);

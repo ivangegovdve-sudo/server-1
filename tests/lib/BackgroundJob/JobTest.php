@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2017-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -16,6 +17,7 @@ class JobTest extends \Test\TestCase {
 	private ITimeFactory $timeFactory;
 	private LoggerInterface $logger;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 		$this->run = false;

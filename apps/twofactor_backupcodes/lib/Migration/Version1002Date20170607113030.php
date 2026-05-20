@@ -30,6 +30,7 @@ class Version1002Date20170607113030 extends SimpleMigrationStep {
 	 * @param array $options
 	 * @since 13.0.0
 	 */
+	#[\Override]
 	public function preSchemaChange(IOutput $output, \Closure $schemaClosure, array $options) {
 		/** @var ISchemaWrapper $schema */
 		$schema = $schemaClosure();
@@ -52,10 +53,10 @@ class Version1002Date20170607113030 extends SimpleMigrationStep {
 		$query->select('*')
 			->from('twofactor_backup_codes')
 			->orderBy('id', 'ASC');
-		$result = $query->execute();
+		$result = $query->executeQuery();
 
 		$output->startProgress();
-		while ($row = $result->fetch()) {
+		while ($row = $result->fetchAssociative()) {
 			$output->advance();
 
 			$insert
@@ -63,7 +64,7 @@ class Version1002Date20170607113030 extends SimpleMigrationStep {
 				->setParameter('user_id', $row['user_id'], IQueryBuilder::PARAM_STR)
 				->setParameter('code', $row['code'], IQueryBuilder::PARAM_STR)
 				->setParameter('used', $row['used'], IQueryBuilder::PARAM_INT)
-				->execute();
+				->executeStatement();
 		}
 		$output->finishProgress();
 	}
@@ -75,6 +76,7 @@ class Version1002Date20170607113030 extends SimpleMigrationStep {
 	 * @return null|ISchemaWrapper
 	 * @since 13.0.0
 	 */
+	#[\Override]
 	public function changeSchema(IOutput $output, \Closure $schemaClosure, array $options) {
 		/** @var ISchemaWrapper $schema */
 		$schema = $schemaClosure();

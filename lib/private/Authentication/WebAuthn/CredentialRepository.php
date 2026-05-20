@@ -16,13 +16,12 @@ use Webauthn\PublicKeyCredentialSourceRepository;
 use Webauthn\PublicKeyCredentialUserEntity;
 
 class CredentialRepository implements PublicKeyCredentialSourceRepository {
-	/** @var PublicKeyCredentialMapper */
-	private $credentialMapper;
-
-	public function __construct(PublicKeyCredentialMapper $credentialMapper) {
-		$this->credentialMapper = $credentialMapper;
+	public function __construct(
+		private PublicKeyCredentialMapper $credentialMapper,
+	) {
 	}
 
+	#[\Override]
 	public function findOneByCredentialId(string $publicKeyCredentialId): ?PublicKeyCredentialSource {
 		try {
 			$entity = $this->credentialMapper->findOneByCredentialId($publicKeyCredentialId);
@@ -35,6 +34,7 @@ class CredentialRepository implements PublicKeyCredentialSourceRepository {
 	/**
 	 * @return PublicKeyCredentialSource[]
 	 */
+	#[\Override]
 	public function findAllForUserEntity(PublicKeyCredentialUserEntity $publicKeyCredentialUserEntity): array {
 		$uid = $publicKeyCredentialUserEntity->getId();
 		$entities = $this->credentialMapper->findAllForUid($uid);
@@ -75,6 +75,7 @@ class CredentialRepository implements PublicKeyCredentialSourceRepository {
 		return $this->credentialMapper->insertOrUpdate($entity);
 	}
 
+	#[\Override]
 	public function saveCredentialSource(PublicKeyCredentialSource $publicKeyCredentialSource, ?string $name = null): void {
 		$this->saveAndReturnCredentialSource($publicKeyCredentialSource, $name);
 	}

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -19,15 +20,16 @@ use Test\TestCase;
 /**
  * Tests for repairing invalid shares
  *
- * @group DB
  *
  * @see \OC\Repair\RepairInvalidShares
  */
+#[\PHPUnit\Framework\Attributes\Group('DB')]
 class RepairInvalidSharesTest extends TestCase {
 
 	private RepairInvalidShares $repair;
 	private IDBConnection $connection;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -45,6 +47,7 @@ class RepairInvalidSharesTest extends TestCase {
 		$this->repair = new RepairInvalidShares($config, $this->connection);
 	}
 
+	#[\Override]
 	protected function tearDown(): void {
 		$this->deleteAllShares();
 
@@ -103,7 +106,7 @@ class RepairInvalidSharesTest extends TestCase {
 			->from('share')
 			->orderBy('id', 'ASC')
 			->executeQuery();
-		$rows = $result->fetchAll();
+		$rows = $result->fetchAllAssociative();
 		$this->assertEquals([['id' => $parent], ['id' => $validChild], ['id' => $invalidChild]], $rows);
 		$result->closeCursor();
 
@@ -119,7 +122,7 @@ class RepairInvalidSharesTest extends TestCase {
 			->from('share')
 			->orderBy('id', 'ASC')
 			->executeQuery();
-		$rows = $result->fetchAll();
+		$rows = $result->fetchAllAssociative();
 		$this->assertEquals([['id' => $parent], ['id' => $validChild]], $rows);
 		$result->closeCursor();
 	}
@@ -149,9 +152,8 @@ class RepairInvalidSharesTest extends TestCase {
 
 	/**
 	 * Test adjusting file share permissions
-	 *
-	 * @dataProvider fileSharePermissionsProvider
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('fileSharePermissionsProvider')]
 	public function testFileSharePermissions($itemType, $testPerms, $expectedPerms): void {
 		$qb = $this->connection->getQueryBuilder();
 		$qb->insert('share')
@@ -180,7 +182,7 @@ class RepairInvalidSharesTest extends TestCase {
 			->from('share')
 			->orderBy('permissions', 'ASC')
 			->executeQuery()
-			->fetchAll();
+			->fetchAllAssociative();
 
 		$this->assertCount(1, $results);
 

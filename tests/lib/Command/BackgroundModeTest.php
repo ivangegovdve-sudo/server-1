@@ -16,14 +16,13 @@ use Symfony\Component\Console\Input\InputDefinition;
 use Symfony\Component\Console\Tester\CommandTester;
 use Test\TestCase;
 
-/**
- * @group DB
- */
+#[\PHPUnit\Framework\Attributes\Group('DB')]
 class BackgroundModeTest extends TestCase {
 	private IAppConfig $appConfig;
 
 	private Mode $command;
 
+	#[\Override]
 	public function setUp(): void {
 		$this->appConfig = $this->createMock(IAppConfig::class);
 
@@ -35,9 +34,7 @@ class BackgroundModeTest extends TestCase {
 		$this->command->setDefinition($inputDefinition);
 	}
 
-	/**
-	 * @dataProvider dataModeCommand
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataModeCommand')]
 	public function testModeCommand(string $mode): void {
 		$this->appConfig->expects($this->once())
 			->method('setValueString')

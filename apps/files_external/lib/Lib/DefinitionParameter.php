@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2019-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -164,6 +167,7 @@ class DefinitionParameter implements \JsonSerializable {
 	/**
 	 * Serialize into JSON for client-side JS
 	 */
+	#[\Override]
 	public function jsonSerialize(): array {
 		$result = [
 			'value' => $this->getText(),

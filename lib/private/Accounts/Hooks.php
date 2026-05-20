@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -49,6 +50,7 @@ class Hooks implements IEventListener {
 		}
 	}
 
+	#[\Override]
 	public function handle(Event $event): void {
 		if (!$event instanceof UserChangedEvent) {
 			return;

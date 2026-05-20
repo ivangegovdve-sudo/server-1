@@ -7,16 +7,25 @@
  */
 namespace OC\Share20;
 
-use OC\Files\Mount\MoveableMount;
+use ArrayIterator;
+use OC\Core\AppInfo\ConfigLexicon;
+use OC\Files\Filesystem;
 use OC\KnownUser\KnownUserService;
+use OC\Share\Constants as ShareConstants;
 use OC\Share20\Exception\ProviderException;
+use OCA\Circles\Api\v1\Circles;
 use OCA\Files_Sharing\AppInfo\Application;
 use OCA\Files_Sharing\SharedStorage;
+use OCA\ShareByMail\ShareByMailProvider;
+use OCP\Constants;
+use OCP\DB\QueryBuilder\IQueryBuilder;
+use OCP\EventDispatcher\Event;
 use OCP\EventDispatcher\IEventDispatcher;
 use OCP\Files\File;
 use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
 use OCP\Files\Mount\IMountManager;
+use OCP\Files\Mount\IMovableMount;
 use OCP\Files\Mount\IShareOwnerlessMount;
 use OCP\Files\Node;
 use OCP\Files\NotFoundException;
@@ -24,35 +33,40 @@ use OCP\HintException;
 use OCP\IAppConfig;
 use OCP\IConfig;
 use OCP\IDateTimeZone;
+use OCP\IDBConnection;
 use OCP\IGroupManager;
 use OCP\IL10N;
-use OCP\IURLGenerator;
 use OCP\IUser;
 use OCP\IUserManager;
 use OCP\IUserSession;
 use OCP\L10N\IFactory;
-use OCP\Mail\IMailer;
 use OCP\Security\Events\ValidatePasswordPolicyEvent;
 use OCP\Security\IHasher;
 use OCP\Security\ISecureRandom;
 use OCP\Security\PasswordContext;
 use OCP\Share;
+use OCP\Share\Events\BeforeShareCreatedEvent;
 use OCP\Share\Events\BeforeShareDeletedEvent;
 use OCP\Share\Events\ShareAcceptedEvent;
 use OCP\Share\Events\ShareCreatedEvent;
 use OCP\Share\Events\ShareDeletedEvent;
 use OCP\Share\Events\ShareDeletedFromSelfEvent;
+use OCP\Share\Events\ShareMovedEvent;
 use OCP\Share\Exceptions\AlreadySharedException;
 use OCP\Share\Exceptions\GenericShareException;
 use OCP\Share\Exceptions\ShareNotFound;
 use OCP\Share\Exceptions\ShareTokenException;
 use OCP\Share\IManager;
+use OCP\Share\IPartialShareProvider;
 use OCP\Share\IProviderFactory;
 use OCP\Share\IShare;
 use OCP\Share\IShareProvider;
+use OCP\Share\IShareProviderGetUsers;
 use OCP\Share\IShareProviderSupportsAccept;
 use OCP\Share\IShareProviderSupportsAllSharesInFolder;
 use OCP\Share\IShareProviderWithNotification;
+use OCP\Util;
+use Override;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -74,15 +88,13 @@ class Manager implements IManager {
 		private IProviderFactory $factory,
 		private IUserManager $userManager,
 		private IRootFolder $rootFolder,
-		private IMailer $mailer,
-		private IURLGenerator $urlGenerator,
-		private \OC_Defaults $defaults,
 		private IEventDispatcher $dispatcher,
 		private IUserSession $userSession,
 		private KnownUserService $knownUserService,
 		private ShareDisableChecker $shareDisableChecker,
 		private IDateTimeZone $dateTimeZone,
 		private IAppConfig $appConfig,
+		private IDBConnection $connection,
 	) {
 		$this->l = $this->l10nFactory->get('lib');
 		// The constructor of LegacyHooks registers the listeners of share events
@@ -93,20 +105,18 @@ class Manager implements IManager {
 	/**
 	 * Convert from a full share id to a tuple (providerId, shareId)
 	 *
-	 * @param string $id
 	 * @return string[]
 	 */
-	private function splitFullId($id) {
+	private function splitFullId(string $id): array {
 		return explode(':', $id, 2);
 	}
 
 	/**
 	 * Verify if a password meets all requirements
 	 *
-	 * @param string $password
 	 * @throws HintException
 	 */
-	protected function verifyPassword($password) {
+	protected function verifyPassword(?string $password): void {
 		if ($password === null) {
 			// No password is set, check if this is allowed.
 			if ($this->shareApiLinkEnforcePassword()) {
@@ -135,7 +145,7 @@ class Manager implements IManager {
 	 *
 	 * @suppress PhanUndeclaredClassMethod
 	 */
-	protected function generalCreateChecks(IShare $share, bool $isUpdate = false) {
+	protected function generalCreateChecks(IShare $share, bool $isUpdate = false): void {
 		if ($share->getShareType() === IShare::TYPE_USER) {
 			// We expect a valid user as sharedWith for user shares
 			if (!$this->userManager->userExists($share->getSharedWith())) {
@@ -164,14 +174,12 @@ class Manager implements IManager {
 				throw new \InvalidArgumentException($this->l->t('Share recipient should not be empty'));
 			}
 		} elseif ($share->getShareType() === IShare::TYPE_CIRCLE) {
-			$circle = \OCA\Circles\Api\v1\Circles::detailsCircle($share->getSharedWith());
+			/** @psalm-suppress UndefinedClass */
+			$circle = Circles::detailsCircle($share->getSharedWith());
 			if ($circle === null) {
 				throw new \InvalidArgumentException($this->l->t('Share recipient is not a valid circle'));
 			}
-		} elseif ($share->getShareType() === IShare::TYPE_ROOM) {
-		} elseif ($share->getShareType() === IShare::TYPE_DECK) {
-		} elseif ($share->getShareType() === IShare::TYPE_SCIENCEMESH) {
-		} else {
+		} elseif ($share->getShareType() !== IShare::TYPE_ROOM && $share->getShareType() !== IShare::TYPE_DECK) {
 			// We cannot handle other types yet
 			throw new \InvalidArgumentException($this->l->t('Unknown share type'));
 		}
@@ -182,19 +190,21 @@ class Manager implements IManager {
 		}
 
 		// Cannot share with yourself
-		if ($share->getShareType() === IShare::TYPE_USER &&
-			$share->getSharedWith() === $share->getSharedBy()) {
+		if ($share->getShareType() === IShare::TYPE_USER
+			&& $share->getSharedWith() === $share->getSharedBy()) {
 			throw new \InvalidArgumentException($this->l->t('Cannot share with yourself'));
 		}
 
 		// The path should be set
-		if ($share->getNode() === null) {
+		try {
+			$share->getNode();
+		} catch (NotFoundException $e) {
 			throw new \InvalidArgumentException($this->l->t('Shared path must be set'));
 		}
 
 		// And it should be a file or a folder
-		if (!($share->getNode() instanceof \OCP\Files\File) &&
-			!($share->getNode() instanceof \OCP\Files\Folder)) {
+		if (!($share->getNode() instanceof File)
+			&& !($share->getNode() instanceof Folder)) {
 			throw new \InvalidArgumentException($this->l->t('Shared path must be either a file or a folder'));
 		}
 
@@ -219,20 +229,20 @@ class Manager implements IManager {
 		}
 
 		// Permissions must be valid
-		if ($share->getPermissions() < 0 || $share->getPermissions() > \OCP\Constants::PERMISSION_ALL) {
+		if ($share->getPermissions() < 0 || $share->getPermissions() > Constants::PERMISSION_ALL) {
 			throw new \InvalidArgumentException($this->l->t('Valid permissions are required for sharing'));
 		}
 
 		// Single file shares should never have delete or create permissions
 		if (($share->getNode() instanceof File)
-			&& (($share->getPermissions() & (\OCP\Constants::PERMISSION_CREATE | \OCP\Constants::PERMISSION_DELETE)) !== 0)) {
+			&& (($share->getPermissions() & (Constants::PERMISSION_CREATE | Constants::PERMISSION_DELETE)) !== 0)) {
 			throw new \InvalidArgumentException($this->l->t('File shares cannot have create or delete permissions'));
 		}
 
 		$permissions = 0;
 		$nodesForUser = $userFolder->getById($share->getNodeId());
 		foreach ($nodesForUser as $node) {
-			if ($node->getInternalPath() === '' && !$node->getMountPoint() instanceof MoveableMount) {
+			if ($node->getInternalPath() === '' && !$node->getMountPoint() instanceof IMovableMount) {
 				// for the root of non-movable mount, the permissions we see if limited by the mount itself,
 				// so we instead use the "raw" permissions from the storage
 				$permissions |= $node->getStorage()->getPermissions('');
@@ -251,16 +261,16 @@ class Manager implements IManager {
 		// Link shares are allowed to have no read permissions to allow upload to hidden folders
 		$noReadPermissionRequired = $share->getShareType() === IShare::TYPE_LINK
 			|| $share->getShareType() === IShare::TYPE_EMAIL;
-		if (!$noReadPermissionRequired &&
-			($share->getPermissions() & \OCP\Constants::PERMISSION_READ) === 0) {
+		if (!$noReadPermissionRequired
+			&& ($share->getPermissions() & Constants::PERMISSION_READ) === 0) {
 			throw new \InvalidArgumentException($this->l->t('Shares need at least read permissions'));
 		}
 
-		if ($share->getNode() instanceof \OCP\Files\File) {
-			if ($share->getPermissions() & \OCP\Constants::PERMISSION_DELETE) {
+		if ($share->getNode() instanceof File) {
+			if ($share->getPermissions() & Constants::PERMISSION_DELETE) {
 				throw new GenericShareException($this->l->t('Files cannot be shared with delete permissions'));
 			}
-			if ($share->getPermissions() & \OCP\Constants::PERMISSION_CREATE) {
+			if ($share->getPermissions() & Constants::PERMISSION_CREATE) {
 				throw new GenericShareException($this->l->t('Files cannot be shared with create permissions'));
 			}
 		}
@@ -275,7 +285,7 @@ class Manager implements IManager {
 	 * @throws \InvalidArgumentException
 	 * @throws \Exception
 	 */
-	protected function validateExpirationDateInternal(IShare $share) {
+	protected function validateExpirationDateInternal(IShare $share): IShare {
 		$isRemote = $share->getShareType() === IShare::TYPE_REMOTE || $share->getShareType() === IShare::TYPE_REMOTE_GROUP;
 
 		$expirationDate = $share->getExpirationDate();
@@ -297,7 +307,7 @@ class Manager implements IManager {
 		if (!$share->getNoExpirationDate() || $isEnforced) {
 			if ($expirationDate !== null) {
 				$expirationDate->setTimezone($this->dateTimeZone->getTimeZone());
-				$expirationDate->setTime(0, 0, 0);
+				$expirationDate->setTime(23, 59, 59);
 
 				$date = new \DateTime('now', $this->dateTimeZone->getTimeZone());
 				$date->setTime(0, 0, 0);
@@ -316,7 +326,7 @@ class Manager implements IManager {
 
 			if ($fullId === null && $expirationDate === null && $defaultExpireDate) {
 				$expirationDate = new \DateTime('now', $this->dateTimeZone->getTimeZone());
-				$expirationDate->setTime(0, 0, 0);
+				$expirationDate->setTime(23, 59, 59);
 				$days = (int)$this->config->getAppValue('core', $configProp, (string)$defaultExpireDays);
 				if ($days > $defaultExpireDays) {
 					$days = $defaultExpireDays;
@@ -331,7 +341,7 @@ class Manager implements IManager {
 				}
 
 				$date = new \DateTime('now', $this->dateTimeZone->getTimeZone());
-				$date->setTime(0, 0, 0);
+				$date->setTime(23, 59, 59);
 				$date->add(new \DateInterval('P' . $defaultExpireDays . 'D'));
 				if ($date < $expirationDate) {
 					throw new GenericShareException($this->l->n('Cannot set expiration date more than %n day in the future', 'Cannot set expiration date more than %n days in the future', $defaultExpireDays), code: 404);
@@ -341,7 +351,7 @@ class Manager implements IManager {
 
 		$accepted = true;
 		$message = '';
-		\OCP\Util::emitHook('\OC\Share', 'verifyExpirationDate', [
+		Util::emitHook('\OC\Share', 'verifyExpirationDate', [
 			'expirationDate' => &$expirationDate,
 			'accepted' => &$accepted,
 			'message' => &$message,
@@ -366,7 +376,7 @@ class Manager implements IManager {
 	 * @throws \InvalidArgumentException
 	 * @throws \Exception
 	 */
-	protected function validateExpirationDateLink(IShare $share) {
+	protected function validateExpirationDateLink(IShare $share): IShare {
 		$expirationDate = $share->getExpirationDate();
 		$isEnforced = $this->shareApiLinkDefaultExpireDateEnforced();
 
@@ -375,7 +385,7 @@ class Manager implements IManager {
 		if (!($share->getNoExpirationDate() && !$isEnforced)) {
 			if ($expirationDate !== null) {
 				$expirationDate->setTimezone($this->dateTimeZone->getTimeZone());
-				$expirationDate->setTime(0, 0, 0);
+				$expirationDate->setTime(23, 59, 59);
 
 				$date = new \DateTime('now', $this->dateTimeZone->getTimeZone());
 				$date->setTime(0, 0, 0);
@@ -394,7 +404,7 @@ class Manager implements IManager {
 
 			if ($fullId === null && $expirationDate === null && $this->shareApiLinkDefaultExpireDate()) {
 				$expirationDate = new \DateTime('now', $this->dateTimeZone->getTimeZone());
-				$expirationDate->setTime(0, 0, 0);
+				$expirationDate->setTime(23, 59, 59);
 
 				$days = (int)$this->config->getAppValue('core', 'link_defaultExpDays', (string)$this->shareApiLinkDefaultExpireDays());
 				if ($days > $this->shareApiLinkDefaultExpireDays()) {
@@ -410,7 +420,7 @@ class Manager implements IManager {
 				}
 
 				$date = new \DateTime('now', $this->dateTimeZone->getTimeZone());
-				$date->setTime(0, 0, 0);
+				$date->setTime(23, 59, 59);
 				$date->add(new \DateInterval('P' . $this->shareApiLinkDefaultExpireDays() . 'D'));
 				if ($date < $expirationDate) {
 					throw new GenericShareException(
@@ -424,7 +434,7 @@ class Manager implements IManager {
 
 		$accepted = true;
 		$message = '';
-		\OCP\Util::emitHook('\OC\Share', 'verifyExpirationDate', [
+		Util::emitHook('\OC\Share', 'verifyExpirationDate', [
 			'expirationDate' => &$expirationDate,
 			'accepted' => &$accepted,
 			'message' => &$message,
@@ -443,10 +453,9 @@ class Manager implements IManager {
 	/**
 	 * Check for pre share requirements for user shares
 	 *
-	 * @param IShare $share
 	 * @throws \Exception
 	 */
-	protected function userCreateChecks(IShare $share) {
+	protected function userCreateChecks(IShare $share): void {
 		// Check if we can share with group members only
 		if ($this->shareWithGroupMembersOnly()) {
 			$sharedBy = $this->userManager->get($share->getSharedBy());
@@ -505,10 +514,9 @@ class Manager implements IManager {
 	/**
 	 * Check for pre share requirements for group shares
 	 *
-	 * @param IShare $share
 	 * @throws \Exception
 	 */
-	protected function groupCreateChecks(IShare $share) {
+	protected function groupCreateChecks(IShare $share): void {
 		// Verify group shares are allowed
 		if (!$this->allowGroupSharing()) {
 			throw new \Exception($this->l->t('Group sharing is now allowed'));
@@ -551,18 +559,17 @@ class Manager implements IManager {
 	/**
 	 * Check for pre share requirements for link shares
 	 *
-	 * @param IShare $share
 	 * @throws \Exception
 	 */
-	protected function linkCreateChecks(IShare $share) {
+	protected function linkCreateChecks(IShare $share): void {
 		// Are link shares allowed?
 		if (!$this->shareApiAllowLinks()) {
 			throw new \Exception($this->l->t('Link sharing is not allowed'));
 		}
 
 		// Check if public upload is allowed
-		if ($share->getNodeType() === 'folder' && !$this->shareApiLinkAllowPublicUpload() &&
-			($share->getPermissions() & (\OCP\Constants::PERMISSION_CREATE | \OCP\Constants::PERMISSION_UPDATE | \OCP\Constants::PERMISSION_DELETE))) {
+		if ($share->getNodeType() === 'folder' && !$this->shareApiLinkAllowPublicUpload()
+			&& ($share->getPermissions() & (Constants::PERMISSION_CREATE | Constants::PERMISSION_UPDATE | Constants::PERMISSION_DELETE))) {
 			throw new \InvalidArgumentException($this->l->t('Public upload is not allowed'));
 		}
 	}
@@ -575,26 +582,18 @@ class Manager implements IManager {
 	 * See: https://github.com/owncloud/core/issues/22295
 	 *
 	 * FIXME: Remove once multiple link shares can be properly displayed
-	 *
-	 * @param IShare $share
 	 */
-	protected function setLinkParent(IShare $share) {
-		// No sense in checking if the method is not there.
-		if (method_exists($share, 'setParent')) {
-			$storage = $share->getNode()->getStorage();
-			if ($storage->instanceOfStorage(SharedStorage::class)) {
-				/** @var \OCA\Files_Sharing\SharedStorage $storage */
-				$share->setParent($storage->getShareId());
-			}
+	protected function setLinkParent(IShare $share): void {
+		$storage = $share->getNode()->getStorage();
+		if ($storage->instanceOfStorage(SharedStorage::class)) {
+			/** @var SharedStorage $storage */
+			$share->setParent((int)$storage->getShareId());
 		}
 	}
 
-	/**
-	 * @param File|Folder $path
-	 */
-	protected function pathCreateChecks($path) {
+	protected function pathCreateChecks(Node $path): void {
 		// Make sure that we do not share a path that contains a shared mountpoint
-		if ($path instanceof \OCP\Files\Folder) {
+		if ($path instanceof Folder) {
 			$mounts = $this->mountManager->findIn($path->getPath());
 			foreach ($mounts as $mount) {
 				if ($mount->getStorage()->instanceOfStorage('\OCA\Files_Sharing\ISharedStorage')) {
@@ -611,10 +610,9 @@ class Manager implements IManager {
 	/**
 	 * Check if the user that is sharing can actually share
 	 *
-	 * @param IShare $share
 	 * @throws \Exception
 	 */
-	protected function canShare(IShare $share) {
+	protected function canShare(IShare $share): void {
 		if (!$this->shareApiEnabled()) {
 			throw new \Exception($this->l->t('Sharing is disabled'));
 		}
@@ -624,16 +622,9 @@ class Manager implements IManager {
 		}
 	}
 
-	/**
-	 * Share a path
-	 *
-	 * @param IShare $share
-	 * @return IShare The share object
-	 * @throws \Exception
-	 *
-	 * TODO: handle link share permissions or check them
-	 */
-	public function createShare(IShare $share) {
+	#[Override]
+	public function createShare(IShare $share): IShare {
+		// TODO: handle link share permissions or check them
 		$this->canShare($share);
 
 		$this->generalCreateChecks($share);
@@ -698,27 +689,27 @@ class Manager implements IManager {
 			}
 
 			// Cannot share with the owner
-			if ($share->getShareType() === IShare::TYPE_USER &&
-				$share->getSharedWith() === $share->getShareOwner()) {
+			if ($share->getShareType() === IShare::TYPE_USER
+				&& $share->getSharedWith() === $share->getShareOwner()) {
 				throw new \InvalidArgumentException($this->l->t('Cannot share with the share owner'));
 			}
 
 			// Generate the target
-			$defaultShareFolder = $this->config->getSystemValue('share_folder', '/');
-			$allowCustomShareFolder = $this->config->getSystemValueBool('sharing.allow_custom_share_folder', true);
-			if ($allowCustomShareFolder) {
-				$shareFolder = $this->config->getUserValue($share->getSharedWith(), Application::APP_ID, 'share_folder', $defaultShareFolder);
-			} else {
-				$shareFolder = $defaultShareFolder;
+			$shareFolder = $this->config->getSystemValue('share_folder', '/');
+			if ($share->getShareType() === IShare::TYPE_USER) {
+				$allowCustomShareFolder = $this->config->getSystemValueBool('sharing.allow_custom_share_folder', true);
+				if ($allowCustomShareFolder) {
+					$shareFolder = $this->config->getUserValue($share->getSharedWith(), Application::APP_ID, 'share_folder', $shareFolder);
+				}
 			}
 
 			$target = $shareFolder . '/' . $share->getNode()->getName();
-			$target = \OC\Files\Filesystem::normalizePath($target);
+			$target = Filesystem::normalizePath($target);
 			$share->setTarget($target);
 
 			// Pre share event
-			$event = new Share\Events\BeforeShareCreatedEvent($share);
-			$this->dispatcher->dispatchTyped($event);
+			$event = new BeforeShareCreatedEvent($share);
+			$this->dispatchEvent($event, 'before share created');
 			if ($event->isPropagationStopped() && $event->getError()) {
 				throw new \Exception($event->getError());
 			}
@@ -745,7 +736,7 @@ class Manager implements IManager {
 		}
 
 		// Post share event
-		$this->dispatcher->dispatchTyped(new ShareCreatedEvent($share));
+		$this->dispatchEvent(new ShareCreatedEvent($share), 'share created');
 
 		// Send email if needed
 		if ($this->config->getSystemValueBool('sharing.enable_share_mail', true)) {
@@ -766,15 +757,8 @@ class Manager implements IManager {
 		return $share;
 	}
 
-	/**
-	 * Update a share
-	 *
-	 * @param IShare $share
-	 * @return IShare The share object
-	 * @throws \InvalidArgumentException
-	 * @throws HintException
-	 */
-	public function updateShare(IShare $share, bool $onlyValid = true) {
+	#[Override]
+	public function updateShare(IShare $share, bool $onlyValid = true): IShare {
 		$expirationDateUpdated = false;
 
 		$this->canShare($share);
@@ -791,14 +775,14 @@ class Manager implements IManager {
 		}
 
 		// We can only change the recipient on user shares
-		if ($share->getSharedWith() !== $originalShare->getSharedWith() &&
-			$share->getShareType() !== IShare::TYPE_USER) {
+		if ($share->getSharedWith() !== $originalShare->getSharedWith()
+			&& $share->getShareType() !== IShare::TYPE_USER) {
 			throw new \InvalidArgumentException($this->l->t('Can only update recipient on user shares'));
 		}
 
 		// Cannot share with the owner
-		if ($share->getShareType() === IShare::TYPE_USER &&
-			$share->getSharedWith() === $share->getShareOwner()) {
+		if ($share->getShareType() === IShare::TYPE_USER
+			&& $share->getSharedWith() === $share->getShareOwner()) {
 			throw new \InvalidArgumentException($this->l->t('Cannot share with the share owner'));
 		}
 
@@ -807,7 +791,7 @@ class Manager implements IManager {
 		if ($share->getShareType() === IShare::TYPE_USER) {
 			$this->userCreateChecks($share);
 
-			if ($share->getExpirationDate() != $originalShare->getExpirationDate()) {
+			if ($share->getExpirationDate() !== $originalShare->getExpirationDate()) {
 				// Verify the expiration date
 				$this->validateExpirationDateInternal($share);
 				$expirationDateUpdated = true;
@@ -815,7 +799,7 @@ class Manager implements IManager {
 		} elseif ($share->getShareType() === IShare::TYPE_GROUP) {
 			$this->groupCreateChecks($share);
 
-			if ($share->getExpirationDate() != $originalShare->getExpirationDate()) {
+			if ($share->getExpirationDate() !== $originalShare->getExpirationDate()) {
 				// Verify the expiration date
 				$this->validateExpirationDateInternal($share);
 				$expirationDateUpdated = true;
@@ -851,13 +835,13 @@ class Manager implements IManager {
 				}
 			}
 
-			if ($share->getExpirationDate() != $originalShare->getExpirationDate()) {
+			if ($share->getExpirationDate() !== $originalShare->getExpirationDate()) {
 				// Verify the expiration date
 				$this->validateExpirationDateLink($share);
 				$expirationDateUpdated = true;
 			}
 		} elseif ($share->getShareType() === IShare::TYPE_REMOTE || $share->getShareType() === IShare::TYPE_REMOTE_GROUP) {
-			if ($share->getExpirationDate() != $originalShare->getExpirationDate()) {
+			if ($share->getExpirationDate() !== $originalShare->getExpirationDate()) {
 				// Verify the expiration date
 				$this->validateExpirationDateInternal($share);
 				$expirationDateUpdated = true;
@@ -869,6 +853,7 @@ class Manager implements IManager {
 		// Now update the share!
 		$provider = $this->factory->getProviderForType($share->getShareType());
 		if ($share->getShareType() === IShare::TYPE_EMAIL) {
+			/** @var ShareByMailProvider $provider */
 			$share = $provider->update($share, $plainTextPassword);
 		} else {
 			$share = $provider->update($share);
@@ -876,7 +861,7 @@ class Manager implements IManager {
 
 		if ($expirationDateUpdated === true) {
 			\OC_Hook::emit(Share::class, 'post_set_expiration_date', [
-				'itemType' => $share->getNode() instanceof \OCP\Files\File ? 'file' : 'folder',
+				'itemType' => $share->getNode() instanceof File ? 'file' : 'folder',
 				'itemSource' => $share->getNode()->getId(),
 				'date' => $share->getExpirationDate(),
 				'uidOwner' => $share->getSharedBy(),
@@ -885,7 +870,7 @@ class Manager implements IManager {
 
 		if ($share->getPassword() !== $originalShare->getPassword()) {
 			\OC_Hook::emit(Share::class, 'post_update_password', [
-				'itemType' => $share->getNode() instanceof \OCP\Files\File ? 'file' : 'folder',
+				'itemType' => $share->getNode() instanceof File ? 'file' : 'folder',
 				'itemSource' => $share->getNode()->getId(),
 				'uidOwner' => $share->getSharedBy(),
 				'token' => $share->getToken(),
@@ -900,7 +885,7 @@ class Manager implements IManager {
 				$userFolder = $this->rootFolder->getUserFolder($share->getSharedBy());
 			}
 			\OC_Hook::emit(Share::class, 'post_update_permissions', [
-				'itemType' => $share->getNode() instanceof \OCP\Files\File ? 'file' : 'folder',
+				'itemType' => $share->getNode() instanceof File ? 'file' : 'folder',
 				'itemSource' => $share->getNode()->getId(),
 				'shareType' => $share->getShareType(),
 				'shareWith' => $share->getSharedWith(),
@@ -914,15 +899,7 @@ class Manager implements IManager {
 		return $share;
 	}
 
-	/**
-	 * Accept a share.
-	 *
-	 * @param IShare $share
-	 * @param string $recipientId
-	 * @return IShare The share object
-	 * @throws \InvalidArgumentException Thrown if the provider does not implement `IShareProviderSupportsAccept`
-	 * @since 9.0.0
-	 */
+	#[Override]
 	public function acceptShare(IShare $share, string $recipientId): IShare {
 		[$providerId,] = $this->splitFullId($share->getFullId());
 		$provider = $this->factory->getProvider($providerId);
@@ -934,7 +911,7 @@ class Manager implements IManager {
 		$provider->acceptShare($share, $recipientId);
 
 		$event = new ShareAcceptedEvent($share);
-		$this->dispatcher->dispatchTyped($event);
+		$this->dispatchEvent($event, 'share accepted');
 
 		return $share;
 	}
@@ -946,14 +923,14 @@ class Manager implements IManager {
 	 * @param IShare $share the share to update its password.
 	 * @param IShare $originalShare the original share to compare its
 	 *                              password with.
-	 * @return boolean whether the password was updated or not.
+	 * @return bool whether the password was updated or not.
 	 */
-	private function updateSharePasswordIfNeeded(IShare $share, IShare $originalShare) {
-		$passwordsAreDifferent = ($share->getPassword() !== $originalShare->getPassword()) &&
-			(($share->getPassword() !== null && $originalShare->getPassword() === null) ||
-				($share->getPassword() === null && $originalShare->getPassword() !== null) ||
-				($share->getPassword() !== null && $originalShare->getPassword() !== null &&
-					!$this->hasher->verify($share->getPassword(), $originalShare->getPassword())));
+	private function updateSharePasswordIfNeeded(IShare $share, IShare $originalShare): bool {
+		$passwordsAreDifferent = ($share->getPassword() !== $originalShare->getPassword())
+			&& (($share->getPassword() !== null && $originalShare->getPassword() === null)
+				|| ($share->getPassword() === null && $originalShare->getPassword() !== null)
+				|| ($share->getPassword() !== null && $originalShare->getPassword() !== null
+					&& !$this->hasher->verify($share->getPassword(), $originalShare->getPassword())));
 
 		// Password updated.
 		if ($passwordsAreDifferent) {
@@ -1006,24 +983,23 @@ class Manager implements IManager {
 
 	/**
 	 * Delete all the children of this share
-	 * FIXME: remove once https://github.com/owncloud/core/pull/21660 is in
 	 *
 	 * @param IShare $share
-	 * @return IShare[] List of deleted shares
+	 * @return list<IShare> List of deleted shares
 	 */
-	protected function deleteChildren(IShare $share) {
+	protected function deleteChildren(IShare $share): array {
 		$deletedShares = [];
 
 		$provider = $this->factory->getProviderForType($share->getShareType());
 
 		foreach ($provider->getChildren($share) as $child) {
-			$this->dispatcher->dispatchTyped(new BeforeShareDeletedEvent($child));
+			$this->dispatchEvent(new BeforeShareDeletedEvent($child), 'before share deleted');
 
 			$deletedChildren = $this->deleteChildren($child);
 			$deletedShares = array_merge($deletedShares, $deletedChildren);
 
 			$provider->delete($child);
-			$this->dispatcher->dispatchTyped(new ShareDeletedEvent($child));
+			$this->dispatchEvent(new ShareDeletedEvent($child), 'share deleted');
 			$deletedShares[] = $child;
 		}
 
@@ -1068,35 +1044,76 @@ class Manager implements IManager {
 			IShare::TYPE_EMAIL,
 		];
 
-		foreach ($userIds as $userId) {
-			foreach ($shareTypes as $shareType) {
+		// Figure out which users has some shares with which providers
+		$qb = $this->connection->getQueryBuilder();
+		$qb->select('uid_initiator', 'share_type', 'uid_owner', 'file_source')
+			->from('share')
+			->andWhere($qb->expr()->in('item_type', $qb->createNamedParameter(['file', 'folder'], IQueryBuilder::PARAM_STR_ARRAY)))
+			->andWhere($qb->expr()->in('share_type', $qb->createNamedParameter($shareTypes, IQueryBuilder::PARAM_INT_ARRAY)))
+			->andWhere(
+				$qb->expr()->orX(
+					$qb->expr()->in('uid_initiator', $qb->createNamedParameter($userIds, IQueryBuilder::PARAM_STR_ARRAY)),
+					// Special case for old shares created via the web UI
+					$qb->expr()->andX(
+						$qb->expr()->in('uid_owner', $qb->createNamedParameter($userIds, IQueryBuilder::PARAM_STR_ARRAY)),
+						$qb->expr()->isNull('uid_initiator')
+					)
+				)
+			);
+
+		if (!$node instanceof Folder) {
+			$qb->andWhere($qb->expr()->eq('file_source', $qb->createNamedParameter($node->getId(), IQueryBuilder::PARAM_INT)));
+		}
+
+		$qb->orderBy('id');
+
+		$cursor = $qb->executeQuery();
+		/** @var array<string, list<array{IShare::TYPE_*, Node}>> $rawShare */
+		$rawShares = [];
+		while ($data = $cursor->fetch()) {
+			if (!isset($rawShares[$data['uid_initiator']])) {
+				$rawShares[$data['uid_initiator']] = [];
+			}
+			if (!in_array($data['share_type'], $rawShares[$data['uid_initiator']], true)) {
+				if ($node instanceof Folder) {
+					if ($data['file_source'] === null || $data['uid_owner'] === null) {
+						/* Ignore share of non-existing node */
+						continue;
+					}
+
+					// for federated shares the owner can be a remote user, in this
+					// case we use the initiator
+					if ($this->userManager->userExists($data['uid_owner'])) {
+						$userFolder = $this->rootFolder->getUserFolder($data['uid_owner']);
+					} else {
+						$userFolder = $this->rootFolder->getUserFolder($data['uid_initiator']);
+					}
+					$sharedNode = $userFolder->getFirstNodeById((int)$data['file_source']);
+					if (!$sharedNode) {
+						continue;
+					}
+					if ($node->getRelativePath($sharedNode->getPath()) !== null) {
+						$rawShares[$data['uid_initiator']][] = [(int)$data['share_type'], $sharedNode];
+					}
+				} elseif ($node instanceof File) {
+					$rawShares[$data['uid_initiator']][] = [(int)$data['share_type'], $node];
+				}
+			}
+		}
+		$cursor->closeCursor();
+
+		foreach ($rawShares as $userId => $shareInfos) {
+			foreach ($shareInfos as $shareInfo) {
+				[$shareType, $sharedNode] = $shareInfo;
 				try {
 					$provider = $this->factory->getProviderForType($shareType);
-				} catch (ProviderException $e) {
+				} catch (ProviderException) {
 					continue;
 				}
 
-				if ($node instanceof Folder) {
-					/* We need to get all shares by this user to get subshares */
-					$shares = $provider->getSharesBy($userId, $shareType, null, false, -1, 0);
-
-					foreach ($shares as $share) {
-						try {
-							$path = $share->getNode()->getPath();
-						} catch (NotFoundException) {
-							/* Ignore share of non-existing node */
-							continue;
-						}
-						if ($node->getRelativePath($path) !== null) {
-							/* If relative path is not null it means the shared node is the same or in a subfolder */
-							$reshareRecords[] = $share;
-						}
-					}
-				} else {
-					$shares = $provider->getSharesBy($userId, $shareType, $node, false, -1, 0);
-					foreach ($shares as $child) {
-						$reshareRecords[] = $child;
-					}
+				$shares = $provider->getSharesBy($userId, $shareType, $sharedNode, false, -1, 0);
+				foreach ($shares as $child) {
+					$reshareRecords[] = $child;
 				}
 			}
 		}
@@ -1118,21 +1135,15 @@ class Manager implements IManager {
 		}
 	}
 
-	/**
-	 * Delete a share
-	 *
-	 * @param IShare $share
-	 * @throws ShareNotFound
-	 * @throws \InvalidArgumentException
-	 */
-	public function deleteShare(IShare $share) {
+	#[Override]
+	public function deleteShare(IShare $share): void {
 		try {
 			$share->getFullId();
 		} catch (\UnexpectedValueException $e) {
 			throw new \InvalidArgumentException($this->l->t('Share does not have a full ID'));
 		}
 
-		$this->dispatcher->dispatchTyped(new BeforeShareDeletedEvent($share));
+		$this->dispatchEvent(new BeforeShareDeletedEvent($share), 'before share deleted');
 
 		// Get all children and delete them as well
 		$this->deleteChildren($share);
@@ -1141,31 +1152,23 @@ class Manager implements IManager {
 		$provider = $this->factory->getProviderForType($share->getShareType());
 		$provider->delete($share);
 
-		$this->dispatcher->dispatchTyped(new ShareDeletedEvent($share));
+		$this->dispatchEvent(new ShareDeletedEvent($share), 'share deleted');
 
 		// Promote reshares of the deleted share
 		$this->promoteReshares($share);
 	}
 
-
-	/**
-	 * Unshare a file as the recipient.
-	 * This can be different from a regular delete for example when one of
-	 * the users in a groups deletes that share. But the provider should
-	 * handle this.
-	 *
-	 * @param IShare $share
-	 * @param string $recipientId
-	 */
-	public function deleteFromSelf(IShare $share, $recipientId) {
+	#[Override]
+	public function deleteFromSelf(IShare $share, string $recipientId): void {
 		[$providerId,] = $this->splitFullId($share->getFullId());
 		$provider = $this->factory->getProvider($providerId);
 
 		$provider->deleteFromSelf($share, $recipientId);
 		$event = new ShareDeletedFromSelfEvent($share);
-		$this->dispatcher->dispatchTyped($event);
+		$this->dispatchEvent($event, 'leave share');
 	}
 
+	#[Override]
 	public function restoreShare(IShare $share, string $recipientId): IShare {
 		[$providerId,] = $this->splitFullId($share->getFullId());
 		$provider = $this->factory->getProvider($providerId);
@@ -1173,10 +1176,8 @@ class Manager implements IManager {
 		return $provider->restore($share, $recipientId);
 	}
 
-	/**
-	 * @inheritdoc
-	 */
-	public function moveShare(IShare $share, $recipientId) {
+	#[Override]
+	public function moveShare(IShare $share, string $recipientId): IShare {
 		if ($share->getShareType() === IShare::TYPE_LINK
 			|| $share->getShareType() === IShare::TYPE_EMAIL) {
 			throw new \InvalidArgumentException($this->l->t('Cannot change target of link share'));
@@ -1185,13 +1186,16 @@ class Manager implements IManager {
 		if ($share->getShareType() === IShare::TYPE_USER && $share->getSharedWith() !== $recipientId) {
 			throw new \InvalidArgumentException($this->l->t('Invalid share recipient'));
 		}
+		$recipient = $this->userManager->get($recipientId);
+		if (!$recipient) {
+			throw new \InvalidArgumentException($this->l->t('Unknown share recipient'));
+		}
 
 		if ($share->getShareType() === IShare::TYPE_GROUP) {
 			$sharedWith = $this->groupManager->get($share->getSharedWith());
 			if (is_null($sharedWith)) {
 				throw new \InvalidArgumentException($this->l->t('Group "%s" does not exist', [$share->getSharedWith()]));
 			}
-			$recipient = $this->userManager->get($recipientId);
 			if (!$sharedWith->inGroup($recipient)) {
 				throw new \InvalidArgumentException($this->l->t('Invalid share recipient'));
 			}
@@ -1200,10 +1204,15 @@ class Manager implements IManager {
 		[$providerId,] = $this->splitFullId($share->getFullId());
 		$provider = $this->factory->getProvider($providerId);
 
-		return $provider->move($share, $recipientId);
+		$result = $provider->move($share, $recipientId);
+
+		$this->dispatchEvent(new ShareMovedEvent($share, $recipient), 'share moved');
+
+		return $result;
 	}
 
-	public function getSharesInFolder($userId, Folder $node, $reshares = false, $shallow = true) {
+	#[Override]
+	public function getSharesInFolder($userId, Folder $node, bool $reshares = false, bool $shallow = true): array {
 		$providers = $this->factory->getAllProviders();
 		if (!$shallow) {
 			throw new \Exception('non-shallow getSharesInFolder is no longer supported');
@@ -1233,13 +1242,11 @@ class Manager implements IManager {
 		return $shares;
 	}
 
-	/**
-	 * @inheritdoc
-	 */
-	public function getSharesBy($userId, $shareType, $path = null, $reshares = false, $limit = 50, $offset = 0, bool $onlyValid = true) {
-		if ($path !== null &&
-			!($path instanceof \OCP\Files\File) &&
-			!($path instanceof \OCP\Files\Folder)) {
+	#[Override]
+	public function getSharesBy(string $userId, int $shareType, ?Node $path = null, bool $reshares = false, int $limit = 50, int $offset = 0, bool $onlyValid = true): array {
+		if ($path !== null
+			&& !($path instanceof File)
+			&& !($path instanceof Folder)) {
 			throw new \InvalidArgumentException($this->l->t('Invalid path'));
 		}
 
@@ -1265,16 +1272,16 @@ class Manager implements IManager {
 		while (true) {
 			$added = 0;
 			foreach ($shares as $share) {
+				$added++;
 				if ($onlyValid) {
 					try {
-						$this->checkShare($share);
+						$this->checkShare($share, $added);
 					} catch (ShareNotFound $e) {
 						// Ignore since this basically means the share is deleted
 						continue;
 					}
 				}
 
-				$added++;
 				$shares2[] = $share;
 
 				if (count($shares2) === $limit) {
@@ -1317,10 +1324,8 @@ class Manager implements IManager {
 		return $shares;
 	}
 
-	/**
-	 * @inheritdoc
-	 */
-	public function getSharedWith($userId, $shareType, $node = null, $limit = 50, $offset = 0) {
+	#[Override]
+	public function getSharedWith(string $userId, int $shareType, ?Node $node = null, int $limit = 50, int $offset = 0): array {
 		try {
 			$provider = $this->factory->getProviderForType($shareType);
 		} catch (ProviderException $e) {
@@ -1342,28 +1347,57 @@ class Manager implements IManager {
 	}
 
 	/**
-	 * @inheritdoc
+	 * @inheritDoc
 	 */
-	public function getDeletedSharedWith($userId, $shareType, $node = null, $limit = 50, $offset = 0) {
-		$shares = $this->getSharedWith($userId, $shareType, $node, $limit, $offset);
+	#[\Override]
+	public function getSharedWithByPath(string $userId, int $shareType, string $path, bool $forChildren, int $limit = 50, int $offset = 0): iterable {
+		try {
+			$provider = $this->factory->getProviderForType($shareType);
+		} catch (ProviderException $e) {
+			return [];
+		}
 
-		// Only get deleted shares
-		$shares = array_filter($shares, function (IShare $share) {
-			return $share->getPermissions() === 0;
+		if (!$provider instanceof IPartialShareProvider) {
+			throw new \RuntimeException(\get_class($provider) . ' must implement IPartialShareProvider');
+		}
+
+		$shares = $provider->getSharedWithByPath(
+			$userId,
+			$shareType,
+			$path,
+			$forChildren,
+			$limit,
+			$offset,
+		);
+
+		if (\is_array($shares)) {
+			$shares = new ArrayIterator($shares);
+		} elseif (!$shares instanceof \Iterator) {
+			$shares = new \IteratorIterator($shares);
+		}
+
+		return new \CallbackFilterIterator($shares, function (IShare $share) {
+			// remove all shares which are already expired
+			try {
+				$this->checkShare($share);
+				return true;
+			} catch (ShareNotFound $e) {
+				return false;
+			}
 		});
-
-		// Only get shares where the owner still exists
-		$shares = array_filter($shares, function (IShare $share) {
-			return $this->userManager->userExists($share->getShareOwner());
-		});
-
-		return $shares;
 	}
 
-	/**
-	 * @inheritdoc
-	 */
-	public function getShareById($id, $recipient = null, bool $onlyValid = true) {
+	#[Override]
+	public function getDeletedSharedWith(string $userId, int $shareType, ?Node $node = null, int $limit = 50, int $offset = 0): array {
+		$shares = $this->getSharedWith($userId, $shareType, $node, $limit, $offset);
+
+		// Only get shares deleted shares and where the owner still exists
+		return array_filter($shares, fn (IShare $share): bool => $share->getPermissions() === 0
+			&& $this->userManager->userExists($share->getShareOwner()));
+	}
+
+	#[Override]
+	public function getShareById($id, $recipient = null, bool $onlyValid = true): IShare {
 		if ($id === null) {
 			throw new ShareNotFound();
 		}
@@ -1385,40 +1419,19 @@ class Manager implements IManager {
 		return $share;
 	}
 
-	/**
-	 * Get all the shares for a given path
-	 *
-	 * @param \OCP\Files\Node $path
-	 * @param int $page
-	 * @param int $perPage
-	 *
-	 * @return Share[]
-	 */
-	public function getSharesByPath(\OCP\Files\Node $path, $page = 0, $perPage = 50) {
-		return [];
-	}
-
-	/**
-	 * Get the share by token possible with password
-	 *
-	 * @param string $token
-	 * @return IShare
-	 *
-	 * @throws ShareNotFound
-	 */
-	public function getShareByToken($token) {
-		// tokens cannot be valid local user names
+	#[Override]
+	public function getShareByToken(string $token): IShare {
+		// tokens cannot be valid local usernames
 		if ($this->userManager->userExists($token)) {
 			throw new ShareNotFound();
 		}
 		$share = null;
 		try {
-			if ($this->shareApiAllowLinks()) {
+			if ($this->config->getAppValue('core', 'shareapi_allow_links', 'yes') === 'yes') {
 				$provider = $this->factory->getProviderForType(IShare::TYPE_LINK);
 				$share = $provider->getShareByToken($token);
 			}
-		} catch (ProviderException $e) {
-		} catch (ShareNotFound $e) {
+		} catch (ProviderException|ShareNotFound) {
 		}
 
 
@@ -1427,8 +1440,7 @@ class Manager implements IManager {
 			try {
 				$provider = $this->factory->getProviderForType(IShare::TYPE_REMOTE);
 				$share = $provider->getShareByToken($token);
-			} catch (ProviderException $e) {
-			} catch (ShareNotFound $e) {
+			} catch (ProviderException|ShareNotFound) {
 			}
 		}
 
@@ -1437,8 +1449,7 @@ class Manager implements IManager {
 			try {
 				$provider = $this->factory->getProviderForType(IShare::TYPE_EMAIL);
 				$share = $provider->getShareByToken($token);
-			} catch (ProviderException $e) {
-			} catch (ShareNotFound $e) {
+			} catch (ProviderException|ShareNotFound) {
 			}
 		}
 
@@ -1446,8 +1457,7 @@ class Manager implements IManager {
 			try {
 				$provider = $this->factory->getProviderForType(IShare::TYPE_CIRCLE);
 				$share = $provider->getShareByToken($token);
-			} catch (ProviderException $e) {
-			} catch (ShareNotFound $e) {
+			} catch (ProviderException|ShareNotFound) {
 			}
 		}
 
@@ -1455,8 +1465,7 @@ class Manager implements IManager {
 			try {
 				$provider = $this->factory->getProviderForType(IShare::TYPE_ROOM);
 				$share = $provider->getShareByToken($token);
-			} catch (ProviderException $e) {
-			} catch (ShareNotFound $e) {
+			} catch (ProviderException|ShareNotFound) {
 			}
 		}
 
@@ -1471,7 +1480,7 @@ class Manager implements IManager {
 		 */
 		if (($share->getShareType() === IShare::TYPE_LINK || $share->getShareType() === IShare::TYPE_EMAIL)
 			&& $share->getNodeType() === 'folder' && !$this->shareApiLinkAllowPublicUpload()) {
-			$share->setPermissions($share->getPermissions() & ~(\OCP\Constants::PERMISSION_CREATE | \OCP\Constants::PERMISSION_UPDATE));
+			$share->setPermissions($share->getPermissions() & ~(Constants::PERMISSION_CREATE | Constants::PERMISSION_UPDATE));
 		}
 
 		return $share;
@@ -1480,11 +1489,14 @@ class Manager implements IManager {
 	/**
 	 * Check expire date and disabled owner
 	 *
+	 * @param int &$added If given, will be decremented if the share is deleted
 	 * @throws ShareNotFound
 	 */
-	protected function checkShare(IShare $share): void {
+	private function checkShare(IShare $share, int &$added = 1): void {
 		if ($share->isExpired()) {
 			$this->deleteShare($share);
+			// Remove 1 to added, because this share was deleted
+			$added--;
 			throw new ShareNotFound($this->l->t('The requested share does not exist anymore'));
 		}
 		if ($this->config->getAppValue('files_sharing', 'hide_disabled_user_shares', 'no') === 'yes') {
@@ -1492,20 +1504,25 @@ class Manager implements IManager {
 			foreach ($uids as $uid) {
 				$user = $this->userManager->get($uid);
 				if ($user?->isEnabled() === false) {
-					throw new ShareNotFound($this->l->t('The requested share comes from a disabled user'));
+					throw new ShareNotFound($this->l->t('The requested share does not exist anymore'));
 				}
+			}
+		}
+
+		// For link and email shares, verify the share owner can still create such shares
+		if ($share->getShareType() === IShare::TYPE_LINK || $share->getShareType() === IShare::TYPE_EMAIL) {
+			$shareOwner = $this->userManager->get($share->getShareOwner());
+			if ($shareOwner === null) {
+				throw new ShareNotFound($this->l->t('The requested share does not exist anymore'));
+			}
+			if (!$this->userCanCreateLinkShares($shareOwner)) {
+				throw new ShareNotFound($this->l->t('The requested share does not exist anymore'));
 			}
 		}
 	}
 
-	/**
-	 * Verify the password of a public share
-	 *
-	 * @param IShare $share
-	 * @param ?string $password
-	 * @return bool
-	 */
-	public function checkPassword(IShare $share, $password) {
+	#[Override]
+	public function checkPassword(IShare $share, ?string $password): bool {
 
 		// if there is no password on the share object / passsword is null, there is nothing to check
 		if ($password === null || $share->getPassword() === null) {
@@ -1532,10 +1549,8 @@ class Manager implements IManager {
 		return true;
 	}
 
-	/**
-	 * @inheritdoc
-	 */
-	public function userDeleted($uid) {
+	#[Override]
+	public function userDeleted(string $uid): void {
 		$types = [IShare::TYPE_USER, IShare::TYPE_GROUP, IShare::TYPE_LINK, IShare::TYPE_REMOTE, IShare::TYPE_EMAIL];
 
 		foreach ($types as $type) {
@@ -1548,10 +1563,8 @@ class Manager implements IManager {
 		}
 	}
 
-	/**
-	 * @inheritdoc
-	 */
-	public function groupDeleted($gid) {
+	#[Override]
+	public function groupDeleted(string $gid): void {
 		foreach ([IShare::TYPE_GROUP, IShare::TYPE_REMOTE_GROUP] as $type) {
 			try {
 				$provider = $this->factory->getProviderForType($type);
@@ -1575,10 +1588,8 @@ class Manager implements IManager {
 		$this->config->setAppValue('core', 'shareapi_exclude_groups_list', json_encode($excludedGroups));
 	}
 
-	/**
-	 * @inheritdoc
-	 */
-	public function userDeletedFromGroup($uid, $gid) {
+	#[Override]
+	public function userDeletedFromGroup(string $uid, string $gid): void {
 		foreach ([IShare::TYPE_GROUP, IShare::TYPE_REMOTE_GROUP] as $type) {
 			try {
 				$provider = $this->factory->getProviderForType($type);
@@ -1589,55 +1600,8 @@ class Manager implements IManager {
 		}
 	}
 
-	/**
-	 * Get access list to a path. This means
-	 * all the users that can access a given path.
-	 *
-	 * Consider:
-	 * -root
-	 * |-folder1 (23)
-	 *  |-folder2 (32)
-	 *   |-fileA (42)
-	 *
-	 * fileA is shared with user1 and user1@server1 and email1@maildomain1
-	 * folder2 is shared with group2 (user4 is a member of group2)
-	 * folder1 is shared with user2 (renamed to "folder (1)") and user2@server2
-	 *                        and email2@maildomain2
-	 *
-	 * Then the access list to '/folder1/folder2/fileA' with $currentAccess is:
-	 * [
-	 *  users  => [
-	 *      'user1' => ['node_id' => 42, 'node_path' => '/fileA'],
-	 *      'user4' => ['node_id' => 32, 'node_path' => '/folder2'],
-	 *      'user2' => ['node_id' => 23, 'node_path' => '/folder (1)'],
-	 *  ],
-	 *  remote => [
-	 *      'user1@server1' => ['node_id' => 42, 'token' => 'SeCr3t'],
-	 *      'user2@server2' => ['node_id' => 23, 'token' => 'FooBaR'],
-	 *  ],
-	 *  public => bool
-	 *  mail => [
-	 *      'email1@maildomain1' => ['node_id' => 42, 'token' => 'aBcDeFg'],
-	 *      'email2@maildomain2' => ['node_id' => 23, 'token' => 'hIjKlMn'],
-	 *  ]
-	 * ]
-	 *
-	 * The access list to '/folder1/folder2/fileA' **without** $currentAccess is:
-	 * [
-	 *  users  => ['user1', 'user2', 'user4'],
-	 *  remote => bool,
-	 *  public => bool
-	 *  mail => ['email1@maildomain1', 'email2@maildomain2']
-	 * ]
-	 *
-	 * This is required for encryption/activity
-	 *
-	 * @param \OCP\Files\Node $path
-	 * @param bool $recursive Should we check all parent folders as well
-	 * @param bool $currentAccess Ensure the recipient has access to the file (e.g. did not unshare it)
-	 * @return array
-	 */
-	public function getAccessList(\OCP\Files\Node $path, $recursive = true, $currentAccess = false) {
+	#[\Override]
+	public function getAccessList(Node $path, $recursive = true, $currentAccess = false): array {
 		$owner = $path->getOwner();
 
 		if ($owner === null) {
@@ -1721,35 +1685,23 @@ class Manager implements IManager {
 		return $al;
 	}
 
-	/**
-	 * Create a new share
-	 *
-	 * @return IShare
-	 */
-	public function newShare() {
+	#[Override]
+	public function newShare(): IShare {
 		return new \OC\Share20\Share($this->rootFolder, $this->userManager);
 	}
 
-	/**
-	 * Is the share API enabled
-	 *
-	 * @return bool
-	 */
-	public function shareApiEnabled() {
+	#[Override]
+	public function shareApiEnabled(): bool {
 		return $this->config->getAppValue('core', 'shareapi_enabled', 'yes') === 'yes';
 	}
 
-	/**
-	 * Is public link sharing enabled
-	 *
-	 * @return bool
-	 */
-	public function shareApiAllowLinks() {
+	#[Override]
+	public function shareApiAllowLinks(?IUser $user = null): bool {
 		if ($this->config->getAppValue('core', 'shareapi_allow_links', 'yes') !== 'yes') {
 			return false;
 		}
 
-		$user = $this->userSession->getUser();
+		$user = $user ?? $this->userSession->getUser();
 		if ($user) {
 			$excludedGroups = json_decode($this->config->getAppValue('core', 'shareapi_allow_links_exclude_groups', '[]'));
 			if ($excludedGroups) {
@@ -1762,12 +1714,17 @@ class Manager implements IManager {
 	}
 
 	/**
-	 * Is password on public link requires
+	 * Check if a specific user can create link shares
 	 *
-	 * @param bool Check group membership exclusion
+	 * @param IUser $user The user to check
 	 * @return bool
 	 */
-	public function shareApiLinkEnforcePassword(bool $checkGroupMembership = true) {
+	protected function userCanCreateLinkShares(IUser $user): bool {
+		return $this->shareApiAllowLinks($user);
+	}
+
+	#[Override]
+	public function shareApiLinkEnforcePassword(bool $checkGroupMembership = true): bool {
 		$excludedGroups = $this->config->getAppValue('core', 'shareapi_enforce_links_password_excluded_groups', '');
 		if ($excludedGroups !== '' && $checkGroupMembership) {
 			$excludedGroups = json_decode($excludedGroups);
@@ -1779,121 +1736,69 @@ class Manager implements IManager {
 				}
 			}
 		}
-		return $this->config->getAppValue('core', 'shareapi_enforce_links_password', 'no') === 'yes';
+		return $this->appConfig->getValueBool('core', ConfigLexicon::SHARE_LINK_PASSWORD_ENFORCED);
 	}
 
-	/**
-	 * Is default link expire date enabled
-	 *
-	 * @return bool
-	 */
-	public function shareApiLinkDefaultExpireDate() {
-		return $this->config->getAppValue('core', 'shareapi_default_expire_date', 'no') === 'yes';
+	#[Override]
+	public function shareApiLinkDefaultExpireDate(): bool {
+		return $this->appConfig->getValueBool('core', ConfigLexicon::SHARE_LINK_EXPIRE_DATE_DEFAULT);
 	}
 
-	/**
-	 * Is default link expire date enforced
-	 *`
-	 *
-	 * @return bool
-	 */
-	public function shareApiLinkDefaultExpireDateEnforced() {
-		return $this->shareApiLinkDefaultExpireDate() &&
-			$this->config->getAppValue('core', 'shareapi_enforce_expire_date', 'no') === 'yes';
+	#[Override]
+	public function shareApiLinkDefaultExpireDateEnforced(): bool {
+		return $this->shareApiLinkDefaultExpireDate()
+			&& $this->appConfig->getValueBool('core', ConfigLexicon::SHARE_LINK_EXPIRE_DATE_ENFORCED);
 	}
 
-
-	/**
-	 * Number of default link expire days
-	 *
-	 * @return int
-	 */
-	public function shareApiLinkDefaultExpireDays() {
+	#[Override]
+	public function shareApiLinkDefaultExpireDays(): int {
 		return (int)$this->config->getAppValue('core', 'shareapi_expire_after_n_days', '7');
 	}
 
-	/**
-	 * Is default internal expire date enabled
-	 *
-	 * @return bool
-	 */
+	#[Override]
 	public function shareApiInternalDefaultExpireDate(): bool {
 		return $this->config->getAppValue('core', 'shareapi_default_internal_expire_date', 'no') === 'yes';
 	}
 
-	/**
-	 * Is default remote expire date enabled
-	 *
-	 * @return bool
-	 */
+	#[Override]
 	public function shareApiRemoteDefaultExpireDate(): bool {
 		return $this->config->getAppValue('core', 'shareapi_default_remote_expire_date', 'no') === 'yes';
 	}
 
-	/**
-	 * Is default expire date enforced
-	 *
-	 * @return bool
-	 */
+	#[Override]
 	public function shareApiInternalDefaultExpireDateEnforced(): bool {
-		return $this->shareApiInternalDefaultExpireDate() &&
-			$this->config->getAppValue('core', 'shareapi_enforce_internal_expire_date', 'no') === 'yes';
+		return $this->shareApiInternalDefaultExpireDate()
+			&& $this->config->getAppValue('core', 'shareapi_enforce_internal_expire_date', 'no') === 'yes';
 	}
 
-	/**
-	 * Is default expire date enforced for remote shares
-	 *
-	 * @return bool
-	 */
+	#[Override]
 	public function shareApiRemoteDefaultExpireDateEnforced(): bool {
-		return $this->shareApiRemoteDefaultExpireDate() &&
-			$this->config->getAppValue('core', 'shareapi_enforce_remote_expire_date', 'no') === 'yes';
+		return $this->shareApiRemoteDefaultExpireDate()
+			&& $this->config->getAppValue('core', 'shareapi_enforce_remote_expire_date', 'no') === 'yes';
 	}
 
-	/**
-	 * Number of default expire days
-	 *
-	 * @return int
-	 */
+	#[Override]
 	public function shareApiInternalDefaultExpireDays(): int {
 		return (int)$this->config->getAppValue('core', 'shareapi_internal_expire_after_n_days', '7');
 	}
 
-	/**
-	 * Number of default expire days for remote shares
-	 *
-	 * @return int
-	 */
+	#[Override]
 	public function shareApiRemoteDefaultExpireDays(): int {
 		return (int)$this->config->getAppValue('core', 'shareapi_remote_expire_after_n_days', '7');
 	}
 
-	/**
-	 * Allow public upload on link shares
-	 *
-	 * @return bool
-	 */
-	public function shareApiLinkAllowPublicUpload() {
+	#[Override]
+	public function shareApiLinkAllowPublicUpload(): bool {
 		return $this->config->getAppValue('core', 'shareapi_allow_public_upload', 'yes') === 'yes';
 	}
 
-	/**
-	 * check if user can only share with group members
-	 *
-	 * @return bool
-	 */
-	public function shareWithGroupMembersOnly() {
+	#[Override]
+	public function shareWithGroupMembersOnly(): bool {
 		return $this->config->getAppValue('core', 'shareapi_only_share_with_group_members', 'no') === 'yes';
 	}
 
-	/**
-	 * If shareWithGroupMembersOnly is enabled, return an optional
-	 * list of groups that must be excluded from the principle of
-	 * belonging to the same group.
-	 *
-	 * @return array
-	 */
-	public function shareWithGroupMembersOnlyExcludeGroupsList() {
+	#[Override]
+	public function shareWithGroupMembersOnlyExcludeGroupsList(): array {
 		if (!$this->shareWithGroupMembersOnly()) {
 			return [];
 		}
@@ -1901,45 +1806,64 @@ class Manager implements IManager {
 		return json_decode($excludeGroups, true) ?? [];
 	}
 
-	/**
-	 * Check if users can share with groups
-	 *
-	 * @return bool
-	 */
-	public function allowGroupSharing() {
+	#[Override]
+	public function allowGroupSharing(): bool {
 		return $this->config->getAppValue('core', 'shareapi_allow_group_sharing', 'yes') === 'yes';
 	}
 
+	#[Override]
 	public function allowEnumeration(): bool {
 		return $this->config->getAppValue('core', 'shareapi_allow_share_dialog_user_enumeration', 'yes') === 'yes';
 	}
 
+	#[Override]
 	public function limitEnumerationToGroups(): bool {
-		return $this->allowEnumeration() &&
-			$this->config->getAppValue('core', 'shareapi_restrict_user_enumeration_to_group', 'no') === 'yes';
+		return $this->allowEnumeration()
+			&& $this->config->getAppValue('core', 'shareapi_restrict_user_enumeration_to_group', 'no') === 'yes';
 	}
 
+	#[Override]
 	public function limitEnumerationToPhone(): bool {
-		return $this->allowEnumeration() &&
-			$this->config->getAppValue('core', 'shareapi_restrict_user_enumeration_to_phone', 'no') === 'yes';
+		return $this->allowEnumeration()
+			&& $this->config->getAppValue('core', 'shareapi_restrict_user_enumeration_to_phone', 'no') === 'yes';
 	}
 
+	#[Override]
 	public function allowEnumerationFullMatch(): bool {
 		return $this->config->getAppValue('core', 'shareapi_restrict_user_enumeration_full_match', 'yes') === 'yes';
 	}
 
+	#[Override]
 	public function matchEmail(): bool {
 		return $this->config->getAppValue('core', 'shareapi_restrict_user_enumeration_full_match_email', 'yes') === 'yes';
 	}
 
+	#[Override]
+	public function matchUserId(): bool {
+		return $this->config->getAppValue('core', 'shareapi_restrict_user_enumeration_full_match_user_id', 'yes') === 'yes';
+	}
+
+	#[\Override]
+	public function matchDisplayName(): bool {
+		return $this->config->getAppValue('core', 'shareapi_restrict_user_enumeration_full_match_displayname', 'yes') === 'yes';
+	}
+
+	#[Override]
 	public function ignoreSecondDisplayName(): bool {
 		return $this->config->getAppValue('core', 'shareapi_restrict_user_enumeration_full_match_ignore_second_dn', 'no') === 'yes';
 	}
 
+	#[Override]
 	public function allowCustomTokens(): bool {
-		return $this->appConfig->getValueBool('core', 'shareapi_allow_custom_tokens', false);
+		return $this->appConfig->getValueBool('core', ConfigLexicon::SHARE_CUSTOM_TOKEN);
 	}
 
+	#[Override]
+	public function allowViewWithoutDownload(): bool {
+		return $this->appConfig->getValueBool('core', 'shareapi_allow_view_without_download', true);
+	}
+
+	#[Override]
 	public function currentUserCanEnumerateTargetUser(?IUser $currentUser, IUser $targetUser): bool {
 		if ($this->allowEnumerationFullMatch()) {
 			return true;
@@ -1976,31 +1900,23 @@ class Manager implements IManager {
 		return false;
 	}
 
-	/**
-	 * Check if sharing is disabled for the current user
-	 */
+	#[Override]
 	public function sharingDisabledForUser(?string $userId): bool {
 		return $this->shareDisableChecker->sharingDisabledForUser($userId);
 	}
 
-	/**
-	 * @inheritdoc
-	 */
-	public function outgoingServer2ServerSharesAllowed() {
+	#[Override]
+	public function outgoingServer2ServerSharesAllowed(): bool {
 		return $this->config->getAppValue('files_sharing', 'outgoing_server2server_share_enabled', 'yes') === 'yes';
 	}
 
-	/**
-	 * @inheritdoc
-	 */
-	public function outgoingServer2ServerGroupSharesAllowed() {
+	#[Override]
+	public function outgoingServer2ServerGroupSharesAllowed(): bool {
 		return $this->config->getAppValue('files_sharing', 'outgoing_server2server_group_share_enabled', 'no') === 'yes';
 	}
 
-	/**
-	 * @inheritdoc
-	 */
-	public function shareProviderExists($shareType) {
+	#[Override]
+	public function shareProviderExists(int $shareType): bool {
 		try {
 			$this->factory->getProviderForType($shareType);
 		} catch (ProviderException $e) {
@@ -2010,10 +1926,12 @@ class Manager implements IManager {
 		return true;
 	}
 
+	#[\Override]
 	public function registerShareProvider(string $shareProviderClass): void {
 		$this->factory->registerProvider($shareProviderClass);
 	}
 
+	#[Override]
 	public function getAllShares(): iterable {
 		$providers = $this->factory->getAllProviders();
 
@@ -2022,9 +1940,18 @@ class Manager implements IManager {
 		}
 	}
 
+	private function getTokenLength(): int {
+		$tokenLength = $this->appConfig->getValueInt('core', 'shareapi_token_length', ShareConstants::DEFAULT_TOKEN_LENGTH);
+		$tokenLength = $tokenLength ?: ShareConstants::DEFAULT_TOKEN_LENGTH;
+
+		// Token length should be within the defined min and max limits
+		return max(ShareConstants::MIN_TOKEN_LENGTH, min($tokenLength, ShareConstants::MAX_TOKEN_LENGTH));
+	}
+
+	#[Override]
 	public function generateToken(): string {
 		// Initial token length
-		$tokenLength = \OC\Share\Helper::getTokenLength();
+		$tokenLength = $this->getTokenLength();
 
 		do {
 			$tokenExists = false;
@@ -2052,12 +1979,30 @@ class Manager implements IManager {
 				$tokenLength++;
 
 				// Check if the token length exceeds the maximum allowed length
-				if ($tokenLength > \OC\Share\Constants::MAX_TOKEN_LENGTH) {
+				if ($tokenLength > ShareConstants::MAX_TOKEN_LENGTH) {
 					throw new ShareTokenException('Unable to generate a unique share token. Maximum token length exceeded.');
 				}
 			}
 		} while ($tokenExists);
 
 		return $token;
+	}
+
+	private function dispatchEvent(Event $event, string $name): void {
+		try {
+			$this->dispatcher->dispatchTyped($event);
+		} catch (\Exception $e) {
+			$this->logger->error("Error while sending ' . $name . ' event", ['exception' => $e]);
+		}
+	}
+
+	#[\Override]
+	public function getUsersForShare(IShare $share): iterable {
+		$provider = $this->factory->getProviderForType($share->getShareType());
+		if ($provider instanceof IShareProviderGetUsers) {
+			return $provider->getUsersForShare($share);
+		} else {
+			return [];
+		}
 	}
 }

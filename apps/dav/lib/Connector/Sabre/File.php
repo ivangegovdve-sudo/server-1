@@ -18,6 +18,7 @@ use OCA\DAV\Connector\Sabre\Exception\FileLocked;
 use OCA\DAV\Connector\Sabre\Exception\Forbidden as DAVForbiddenException;
 use OCA\DAV\Connector\Sabre\Exception\UnsupportedMediaType;
 use OCP\App\IAppManager;
+use OCP\Constants;
 use OCP\Encryption\Exceptions\GenericEncryptionException;
 use OCP\Files;
 use OCP\Files\EntityTooLargeException;
@@ -108,6 +109,7 @@ class File extends Node implements IFile {
 	 * @throws FileLocked
 	 * @return string|null
 	 */
+	#[\Override]
 	public function put($data) {
 		try {
 			$exists = $this->fileView->file_exists($this->path);
@@ -204,6 +206,9 @@ class File extends Node implements IFile {
 				}
 			}
 
+			$lengthHeader = $this->request->getHeader('content-length');
+			$expected = $lengthHeader !== '' ? (int)$lengthHeader : null;
+
 			if ($partStorage->instanceOfStorage(IWriteStreamStorage::class)) {
 				$isEOF = false;
 				$wrappedData = CallbackWrapper::wrap($data, null, null, null, null, function ($stream) use (&$isEOF): void {
@@ -215,7 +220,7 @@ class File extends Node implements IFile {
 					$count = -1;
 					try {
 						/** @var IWriteStreamStorage $partStorage */
-						$count = $partStorage->writeStream($internalPartPath, $wrappedData);
+						$count = $partStorage->writeStream($internalPartPath, $wrappedData, $expected);
 					} catch (GenericFileException $e) {
 						$logger = Server::get(LoggerInterface::class);
 						$logger->error('Error while writing stream to storage: ' . $e->getMessage(), ['exception' => $e, 'app' => 'webdav']);
@@ -232,13 +237,16 @@ class File extends Node implements IFile {
 					// because we have no clue about the cause we can only throw back a 500/Internal Server Error
 					throw new Exception($this->l10n->t('Could not write file contents'));
 				}
-				[$count, $result] = Files::streamCopy($data, $target, true);
+				$count = stream_copy_to_stream($data, $target);
+				if ($count === false) {
+					$result = false;
+					$count = 0;
+				} else {
+					$result = true;
+				}
 				fclose($target);
 			}
-
-			$lengthHeader = $this->request->getHeader('content-length');
-			$expected = $lengthHeader !== '' ? (int)$lengthHeader : -1;
-			if ($result === false && $expected >= 0) {
+			if ($result === false && $expected !== null) {
 				throw new Exception(
 					$this->l10n->t(
 						'Error while copying file to target location (copied: %1$s, expected filesize: %2$s)',
@@ -253,7 +261,7 @@ class File extends Node implements IFile {
 			// if content length is sent by client:
 			// double check if the file was fully received
 			// compare expected and actual size
-			if ($expected >= 0
+			if ($expected !== null
 				&& $expected !== $count
 				&& $this->request->getMethod() === 'PUT'
 			) {
@@ -451,6 +459,7 @@ class File extends Node implements IFile {
 	 * @throws Forbidden
 	 * @throws ServiceUnavailable
 	 */
+	#[\Override]
 	public function get() {
 		//throw exception if encryption is disabled but files are still encrypted
 		try {
@@ -467,17 +476,22 @@ class File extends Node implements IFile {
 
 			if ($res === false) {
 				if ($this->fileView->file_exists($path)) {
-					throw new ServiceUnavailable($this->l10n->t('Could not open file: %1$s, file does seem to exist', [$path]));
+					throw new ServiceUnavailable($this->l10n->t('Could not open file: %1$s (%2$d), file does seem to exist', [$path, $this->info->getId()]));
 				} else {
-					throw new ServiceUnavailable($this->l10n->t('Could not open file: %1$s, file doesn\'t seem to exist', [$path]));
+					throw new ServiceUnavailable($this->l10n->t('Could not open file: %1$s (%2$d), file doesn\'t seem to exist', [$path, $this->info->getId()]));
 				}
 			}
 
+			$logger = Server::get(LoggerInterface::class);
 			// comparing current file size with the one in DB
 			// if different, fix DB and refresh cache.
-			if ($this->getSize() !== $this->fileView->filesize($this->getPath())) {
-				$logger = Server::get(LoggerInterface::class);
-				$logger->warning('fixing cached size of file id=' . $this->getId());
+			//
+			$fsSize = $this->fileView->filesize($this->getPath());
+			if ($fsSize === false) {
+				$logger->warning('file not found on storage after successfully opening it');
+				throw new ServiceUnavailable($this->l10n->t('Failed to get size for : %1$s', [$this->getPath()]));
+			} elseif ($this->getSize() !== $fsSize) {
+				$logger->warning('fixing cached size of file id=' . $this->getId() . ', cached size was ' . $this->getSize() . ', but the filesystem reported a size of ' . $fsSize);
 
 				$this->getFileInfo()->getStorage()->getUpdater()->update($this->getFileInfo()->getInternalPath());
 				$this->refreshInfo();
@@ -502,6 +516,7 @@ class File extends Node implements IFile {
 	 * @throws Forbidden
 	 * @throws ServiceUnavailable
 	 */
+	#[\Override]
 	public function delete() {
 		if (!$this->info->isDeletable()) {
 			throw new Forbidden();
@@ -528,6 +543,7 @@ class File extends Node implements IFile {
 	 *
 	 * @return string
 	 */
+	#[\Override]
 	public function getContentType() {
 		$mimeType = $this->info->getMimetype();
 
@@ -539,18 +555,24 @@ class File extends Node implements IFile {
 	}
 
 	/**
-	 * @return array|bool
+	 * @throws NotFoundException
+	 * @throws NotPermittedException
 	 */
-	public function getDirectDownload() {
+	public function getDirectDownload(): array|false {
 		if (Server::get(IAppManager::class)->isEnabledForUser('encryption')) {
-			return [];
+			return false;
 		}
-		[$storage, $internalPath] = $this->fileView->resolvePath($this->path);
-		if (is_null($storage)) {
-			return [];
+		$node = $this->getNode();
+		$storage = $node->getStorage();
+		if (!$storage) {
+			return false;
 		}
 
-		return $storage->getDirectDownload($internalPath);
+		if (!($node->getPermissions() & Constants::PERMISSION_READ)) {
+			return false;
+		}
+
+		return $storage->getDirectDownloadById((string)$node->getId());
 	}
 
 	/**
@@ -599,6 +621,9 @@ class File extends Node implements IFile {
 		if ($e instanceof NotFoundException) {
 			throw new NotFound($this->l10n->t('File not found: %1$s', [$e->getMessage()]), 0, $e);
 		}
+		if ($e instanceof Files\NotEnoughSpaceException) {
+			throw new EntityTooLarge($this->l10n->t('Insufficient space'), 0, $e);
+		}
 
 		throw new \Sabre\DAV\Exception($e->getMessage(), 0, $e);
 	}
@@ -627,6 +652,7 @@ class File extends Node implements IFile {
 		return $this->fileView->hash($type, $this->path);
 	}
 
+	#[\Override]
 	public function getNode(): \OCP\Files\File {
 		return $this->node;
 	}

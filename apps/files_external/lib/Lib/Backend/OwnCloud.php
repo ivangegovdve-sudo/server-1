@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2017-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -17,7 +20,7 @@ class OwnCloud extends Backend {
 			->setIdentifier('owncloud')
 			->addIdentifierAlias('\OC\Files\Storage\OwnCloud') // legacy compat
 			->setStorageClass('\OCA\Files_External\Lib\Storage\OwnCloud')
-			->setText($l->t('Nextcloud'))
+			->setText($l->t('Nextcloud (WebDAV)'))
 			->addParameters([
 				new DefinitionParameter('host', $l->t('URL')),
 				(new DefinitionParameter('root', $l->t('Remote subfolder')))

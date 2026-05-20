@@ -14,6 +14,7 @@ use OC\ForbiddenException;
 use OC\Group\Manager;
 use OC\KnownUser\KnownUserService;
 use OC\User\Manager as UserManager;
+use OCA\Settings\ConfigLexicon;
 use OCA\Settings\Controller\UsersController;
 use OCP\Accounts\IAccount;
 use OCP\Accounts\IAccountManager;
@@ -23,9 +24,11 @@ use OCP\App\IAppManager;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Services\IInitialState;
 use OCP\BackgroundJob\IJobList;
+use OCP\Config\IUserConfig;
 use OCP\Encryption\IEncryptionModule;
 use OCP\Encryption\IManager;
 use OCP\EventDispatcher\IEventDispatcher;
+use OCP\IAppConfig;
 use OCP\IConfig;
 use OCP\IGroupManager;
 use OCP\IL10N;
@@ -37,15 +40,16 @@ use OCP\Mail\IMailer;
 use PHPUnit\Framework\MockObject\MockObject;
 
 /**
- * @group DB
- *
  * @package Tests\Settings\Controller
  */
+#[\PHPUnit\Framework\Attributes\Group(name: 'DB')]
 class UsersControllerTest extends \Test\TestCase {
 	private IGroupManager&MockObject $groupManager;
 	private UserManager&MockObject $userManager;
 	private IUserSession&MockObject $userSession;
 	private IConfig&MockObject $config;
+	private IAppConfig&MockObject $appConfig;
+	private IUserConfig&MockObject $userConfig;
 	private IMailer&MockObject $mailer;
 	private IFactory&MockObject $l10nFactory;
 	private IAppManager&MockObject $appManager;
@@ -66,6 +70,8 @@ class UsersControllerTest extends \Test\TestCase {
 		$this->groupManager = $this->createMock(Manager::class);
 		$this->userSession = $this->createMock(IUserSession::class);
 		$this->config = $this->createMock(IConfig::class);
+		$this->appConfig = $this->createMock(IAppConfig::class);
+		$this->userConfig = $this->createMock(IUserConfig::class);
 		$this->l = $this->createMock(IL10N::class);
 		$this->mailer = $this->createMock(IMailer::class);
 		$this->l10nFactory = $this->createMock(IFactory::class);
@@ -107,6 +113,8 @@ class UsersControllerTest extends \Test\TestCase {
 				$this->groupManager,
 				$this->userSession,
 				$this->config,
+				$this->appConfig,
+				$this->userConfig,
 				$this->l,
 				$this->mailer,
 				$this->l10nFactory,
@@ -129,6 +137,8 @@ class UsersControllerTest extends \Test\TestCase {
 						$this->groupManager,
 						$this->userSession,
 						$this->config,
+						$this->appConfig,
+						$this->userConfig,
 						$this->l,
 						$this->mailer,
 						$this->l10nFactory,
@@ -202,6 +212,11 @@ class UsersControllerTest extends \Test\TestCase {
 				'Default twitter',
 				IAccountManager::SCOPE_LOCAL,
 			),
+			IAccountManager::PROPERTY_BLUESKY => $this->buildPropertyMock(
+				IAccountManager::PROPERTY_BLUESKY,
+				'Default bluesky',
+				IAccountManager::SCOPE_LOCAL,
+			),
 			IAccountManager::PROPERTY_FEDIVERSE => $this->buildPropertyMock(
 				IAccountManager::PROPERTY_FEDIVERSE,
 				'Default fediverse',
@@ -235,9 +250,7 @@ class UsersControllerTest extends \Test\TestCase {
 		return $account;
 	}
 
-	/**
-	 * @dataProvider dataTestSetUserSettings
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataTestSetUserSettings')]
 	public function testSetUserSettings(string $email, bool $validEmail, int $expectedStatus): void {
 		$controller = $this->getController(false, ['saveUserSettings']);
 		$user = $this->createMock(IUser::class);
@@ -324,6 +337,16 @@ class UsersControllerTest extends \Test\TestCase {
 		$user = $this->createMock(IUser::class);
 		$user->method('getUID')->willReturn('johndoe');
 
+		$user->expects($this->atLeastOnce())
+			->method('canEditProperty')
+			->willReturnCallback(
+				fn (string $property): bool => match($property) {
+					IAccountManager::PROPERTY_EMAIL,
+					IAccountManager::PROPERTY_DISPLAYNAME => false,
+					default => true,
+				}
+			);
+
 		$this->userSession->method('getUser')->willReturn($user);
 
 		/** @var MockObject|IAccount $userAccount */
@@ -364,11 +387,6 @@ class UsersControllerTest extends \Test\TestCase {
 			->method('setValue');
 		$emailProperty->expects($this->never())
 			->method('setScope');
-
-		$this->config->expects($this->once())
-			->method('getSystemValueBool')
-			->with('allow_user_to_change_display_name')
-			->willReturn(false);
 
 		$this->appManager->expects($this->any())
 			->method('isEnabledForUser')
@@ -437,6 +455,8 @@ class UsersControllerTest extends \Test\TestCase {
 		$addressScope = IAccountManager::SCOPE_PUBLISHED;
 		$twitter = '@nextclouders';
 		$twitterScope = IAccountManager::SCOPE_PUBLISHED;
+		$bluesky = 'nextclouders.net';
+		$blueskyScope = IAccountManager::SCOPE_PUBLISHED;
 		$fediverse = '@nextclouders@floss.social';
 		$fediverseScope = IAccountManager::SCOPE_PUBLISHED;
 		$birthdate = '2020-01-01';
@@ -460,6 +480,8 @@ class UsersControllerTest extends \Test\TestCase {
 		$expectedProperties[IAccountManager::PROPERTY_ADDRESS]['scope'] = $addressScope;
 		$expectedProperties[IAccountManager::PROPERTY_TWITTER]['value'] = $twitter;
 		$expectedProperties[IAccountManager::PROPERTY_TWITTER]['scope'] = $twitterScope;
+		$expectedProperties[IAccountManager::PROPERTY_BLUESKY]['value'] = $bluesky;
+		$expectedProperties[IAccountManager::PROPERTY_BLUESKY]['scope'] = $blueskyScope;
 		$expectedProperties[IAccountManager::PROPERTY_FEDIVERSE]['value'] = $fediverse;
 		$expectedProperties[IAccountManager::PROPERTY_FEDIVERSE]['scope'] = $fediverseScope;
 		$expectedProperties[IAccountManager::PROPERTY_BIRTHDATE]['value'] = $birthdate;
@@ -488,6 +510,8 @@ class UsersControllerTest extends \Test\TestCase {
 			$addressScope,
 			$twitter,
 			$twitterScope,
+			$bluesky,
+			$blueskyScope,
 			$fediverse,
 			$fediverseScope,
 			$birthdate,
@@ -497,9 +521,7 @@ class UsersControllerTest extends \Test\TestCase {
 		);
 	}
 
-	/**
-	 * @dataProvider dataTestSetUserSettingsSubset
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataTestSetUserSettingsSubset')]
 	public function testSetUserSettingsSubset(string $property, string $propertyValue): void {
 		$controller = $this->getController(false, ['saveUserSettings']);
 		$user = $this->createMock(IUser::class);
@@ -528,6 +550,8 @@ class UsersControllerTest extends \Test\TestCase {
 		$addressScope = ($property === 'addressScope') ? $propertyValue : null;
 		$twitter = ($property === 'twitter') ? $propertyValue : null;
 		$twitterScope = ($property === 'twitterScope') ? $propertyValue : null;
+		$bluesky = ($property === 'bluesky') ? $propertyValue : null;
+		$blueskyScope = ($property === 'blueskyScope') ? $propertyValue : null;
 		$fediverse = ($property === 'fediverse') ? $propertyValue : null;
 		$fediverseScope = ($property === 'fediverseScope') ? $propertyValue : null;
 		$birthdate = ($property === 'birthdate') ? $propertyValue : null;
@@ -565,6 +589,10 @@ class UsersControllerTest extends \Test\TestCase {
 			case 'twitter':
 			case 'twitterScope':
 				$propertyId = IAccountManager::PROPERTY_TWITTER;
+				break;
+			case 'bluesky':
+			case 'blueskyScope':
+				$propertyId = IAccountManager::PROPERTY_BLUESKY;
 				break;
 			case 'fediverse':
 			case 'fediverseScope':
@@ -608,6 +636,8 @@ class UsersControllerTest extends \Test\TestCase {
 			$addressScope,
 			$twitter,
 			$twitterScope,
+			$bluesky,
+			$blueskyScope,
 			$fediverse,
 			$fediverseScope,
 			$birthdate,
@@ -632,6 +662,8 @@ class UsersControllerTest extends \Test\TestCase {
 			['addressScope', IAccountManager::SCOPE_PUBLISHED],
 			['twitter', '@nextclouders'],
 			['twitterScope', IAccountManager::SCOPE_PUBLISHED],
+			['bluesky', 'nextclouders.net'],
+			['blueskyScope', IAccountManager::SCOPE_PUBLISHED],
 			['fediverse', '@nextclouders@floss.social'],
 			['fediverseScope', IAccountManager::SCOPE_PUBLISHED],
 			['birthdate', '2020-01-01'],
@@ -641,9 +673,7 @@ class UsersControllerTest extends \Test\TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider dataTestSaveUserSettings
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataTestSaveUserSettings')]
 	public function testSaveUserSettings(array $data, ?string $oldEmailAddress, ?string $oldDisplayName): void {
 		$controller = $this->getController();
 		$user = $this->createMock(IUser::class);
@@ -758,9 +788,7 @@ class UsersControllerTest extends \Test\TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider dataTestSaveUserSettingsException
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataTestSaveUserSettingsException')]
 	public function testSaveUserSettingsException(
 		array $data,
 		string $oldEmailAddress,
@@ -843,9 +871,7 @@ class UsersControllerTest extends \Test\TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider dataTestGetVerificationCode
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataTestGetVerificationCode')]
 	public function testGetVerificationCode(string $account, string $type, array $dataBefore, array $expectedData, bool $onlyVerificationCode): void {
 		$message = 'Use my Federated Cloud ID to share with me: user@nextcloud.com';
 		$signature = 'theSignature';
@@ -940,9 +966,7 @@ class UsersControllerTest extends \Test\TestCase {
 		$this->assertSame(Http::STATUS_BAD_REQUEST, $result->getStatus());
 	}
 
-	/**
-	 * @dataProvider dataTestCanAdminChangeUserPasswords
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataTestCanAdminChangeUserPasswords')]
 	public function testCanAdminChangeUserPasswords(
 		bool $encryptionEnabled,
 		bool $encryptionModuleLoaded,
@@ -982,6 +1006,58 @@ class UsersControllerTest extends \Test\TestCase {
 			[false, true, false, false],
 			[true, false, false, false],
 			[false, false, false, true],
+		];
+	}
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataSetPreference')]
+	public function testSetPreference(string $key, string $value, bool $isUserValue, bool $isAppValue, int $expectedStatus): void {
+		$controller = $this->getController(false, []);
+		$user = $this->createMock(IUser::class);
+		$user->method('getUID')->willReturn('testUser');
+		$this->userSession->method('getUser')->willReturn($user);
+
+		if ($isAppValue) {
+			if ($value === 'true' || $value === 'false' || $value === 'yes' || $value === 'no') {
+				$this->appConfig->expects($this->once())
+					->method('setValueBool')
+					->with('core', $key, $value === 'yes' || $value === 'true');
+			} else {
+				$this->appConfig->expects($this->once())
+					->method('setValueString')
+					->with('core', $key, $value);
+			}
+			$this->userConfig->expects($this->never())
+				->method('setValueBool');
+		} elseif ($isUserValue) {
+			$this->userConfig->expects($this->once())
+				->method('setValueBool')
+				->with('testUser', 'settings', $key, $value === 'true');
+			$this->appConfig->expects($this->never())
+				->method('setValueString');
+			$this->appConfig->expects($this->never())
+				->method('setValueBool');
+		} else {
+			$this->appConfig->expects($this->never())->method('setValueString');
+			$this->appConfig->expects($this->never())->method('setValueBool');
+			$this->userConfig->expects($this->never())->method('setValueString');
+			$this->userConfig->expects($this->never())->method('setValueBool');
+		}
+
+		$response = $controller->setPreference($key, $value);
+		$this->assertEquals($expectedStatus, $response->getStatus());
+	}
+
+	public static function dataSetPreference(): array {
+		return [
+			['newUser.sendEmail', 'yes', false, true, Http::STATUS_OK],
+			['newUser.sendEmail', 'no', false, true, Http::STATUS_OK],
+			['group.sortBy', '1', false, true, Http::STATUS_OK],
+			[ConfigLexicon::USER_LIST_SHOW_STORAGE_PATH, 'true', true, false, Http::STATUS_OK],
+			[ConfigLexicon::USER_LIST_SHOW_USER_BACKEND, 'false', true, false, Http::STATUS_OK],
+			[ConfigLexicon::USER_LIST_SHOW_FIRST_LOGIN, 'true', true, false, Http::STATUS_OK],
+			[ConfigLexicon::USER_LIST_SHOW_LAST_LOGIN, 'true', true, false, Http::STATUS_OK],
+			[ConfigLexicon::USER_LIST_SHOW_NEW_USER_FORM, 'true', true, false, Http::STATUS_OK],
+			[ConfigLexicon::USER_LIST_SHOW_LANGUAGES, 'true', true, false, Http::STATUS_OK],
+			['invalidKey', 'value', false, false, Http::STATUS_FORBIDDEN],
 		];
 	}
 }

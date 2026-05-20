@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2017-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -56,6 +57,7 @@ class OwnCloud extends DAV implements IDisableEncryptionStorage {
 		parent::__construct($parameters);
 	}
 
+	#[\Override]
 	public function needsPartFile(): bool {
 		return false;
 	}

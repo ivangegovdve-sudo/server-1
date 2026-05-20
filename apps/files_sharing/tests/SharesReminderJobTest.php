@@ -29,10 +29,10 @@ use Psr\Log\LoggerInterface;
 /**
  * Class SharesReminderJobTest
  *
- * @group DB
  *
  * @package OCA\Files_Sharing\Tests
  */
+#[\PHPUnit\Framework\Attributes\Group(name: 'DB')]
 class SharesReminderJobTest extends \Test\TestCase {
 	private SharesReminderJob $job;
 	private IDBConnection $db;
@@ -95,16 +95,15 @@ class SharesReminderJobTest extends \Test\TestCase {
 		parent::tearDown();
 	}
 
-	public function dataSharesReminder() {
+	public static function dataSharesReminder() {
 		$someMail = 'test@test.com';
 		$noExpirationDate = null;
 		$today = new \DateTime();
-		// For expiration dates, the time is always automatically set to zero by ShareAPIController
-		$today->setTime(0, 0);
-		$nearFuture = new \DateTime();
-		$nearFuture->setTimestamp($today->getTimestamp() + 86400 * 1);
+		// Expiration dates are set to end of day (23:59:59) by the Share Manager
+		$today->setTime(23, 59, 59);
+		$nearFuture = clone $today;
 		$farFuture = new \DateTime();
-		$farFuture->setTimestamp($today->getTimestamp() + 86400 * 2);
+		$farFuture->setTimestamp($today->getTimestamp() + 86400 * 1);
 		$permissionRead = Constants::PERMISSION_READ;
 		$permissionCreate = $permissionRead | Constants::PERMISSION_CREATE;
 		$permissionUpdate = $permissionRead | Constants::PERMISSION_UPDATE;
@@ -144,7 +143,6 @@ class SharesReminderJobTest extends \Test\TestCase {
 	}
 
 	/**
-	 * @dataProvider dataSharesReminder
 	 *
 	 * @param \DateTime|null $expirationDate Share expiration date
 	 * @param string $email Share with this email. If empty, the share is of type TYPE_USER and the sharee is user2
@@ -152,6 +150,7 @@ class SharesReminderJobTest extends \Test\TestCase {
 	 * @param int $permissions
 	 * @param bool $shouldBeReminded
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataSharesReminder')]
 	public function testSharesReminder(
 		?\DateTime $expirationDate, string $email, bool $isEmpty, int $permissions, bool $shouldBeReminded,
 	): void {

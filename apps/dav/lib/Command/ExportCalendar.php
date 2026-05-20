@@ -39,15 +39,17 @@ class ExportCalendar extends Command {
 		parent::__construct();
 	}
 
+	#[\Override]
 	protected function configure(): void {
 		$this->setName('calendar:export')
 			->setDescription('Export calendar data from supported calendars to disk or stdout')
 			->addArgument('uid', InputArgument::REQUIRED, 'Id of system user')
-			->addArgument('uri', InputArgument::REQUIRED, 'Uri of calendar')
+			->addArgument('uri', InputArgument::REQUIRED, 'URI of calendar')
 			->addOption('format', null, InputOption::VALUE_REQUIRED, 'Format of output (ical, jcal, xcal) defaults to ical', 'ical')
-			->addOption('location', null, InputOption::VALUE_REQUIRED, 'Location of where to write the output. defaults to stdout');
+			->addOption('location', null, InputOption::VALUE_REQUIRED, 'Location of where to write the output. Defaults to stdout');
 	}
 
+	#[\Override]
 	protected function execute(InputInterface $input, OutputInterface $output): int {
 		$userId = $input->getArgument('uid');
 		$calendarId = $input->getArgument('uri');
@@ -73,13 +75,13 @@ class ExportCalendar extends Command {
 			throw new InvalidArgumentException("Format <$format> is not valid.");
 		}
 		$options->setFormat($format);
-		// evaluate is a valid location was given and is usable otherwise output to stdout
+		// evaluate if a valid location was given and is usable otherwise output to stdout
 		if ($location !== null) {
 			$handle = fopen($location, 'wb');
 			if ($handle === false) {
-				throw new InvalidArgumentException("Location <$location> is not valid. Can not open location for write operation.");
+				throw new InvalidArgumentException("Location <$location> is not valid. Cannot open location for write operation.");
 			}
-			
+
 			foreach ($this->exportService->export($calendar, $options) as $chunk) {
 				fwrite($handle, $chunk);
 			}

@@ -12,11 +12,9 @@ use OC\User\Manager;
 use OCP\IUser;
 
 class UidLoginCommand extends ALoginCommand {
-	/** @var Manager */
-	private $userManager;
-
-	public function __construct(Manager $userManager) {
-		$this->userManager = $userManager;
+	public function __construct(
+		private Manager $userManager,
+	) {
 	}
 
 	/**
@@ -24,6 +22,7 @@ class UidLoginCommand extends ALoginCommand {
 	 *
 	 * @return LoginResult
 	 */
+	#[\Override]
 	public function process(LoginData $loginData): LoginResult {
 		/* @var $loginResult IUser */
 		$user = $this->userManager->checkPasswordNoLogging(

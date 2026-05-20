@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -24,24 +25,20 @@ use OCP\IL10N;
 use OCP\IRequest;
 use OCP\IUser;
 use OCP\IUserManager;
-use OCP\IUserSession;
 use OCP\Server;
 
 class ChangePasswordController extends Controller {
-	private Session $userSession;
-
 	public function __construct(
 		string $appName,
 		IRequest $request,
 		private ?string $userId,
 		private IUserManager $userManager,
-		IUserSession $userSession,
+		private Session $userSession,
 		private GroupManager $groupManager,
 		private IAppManager $appManager,
 		private IL10N $l,
 	) {
 		parent::__construct($appName, $request);
-		$this->userSession = $userSession;
 	}
 
 	/**
@@ -125,9 +122,9 @@ class ChangePasswordController extends Controller {
 
 		$currentUser = $this->userSession->getUser();
 		$targetUser = $this->userManager->get($username);
-		if ($currentUser === null || $targetUser === null ||
-			!($this->groupManager->isAdmin($this->userId) ||
-			 $this->groupManager->getSubAdmin()->isUserAccessible($currentUser, $targetUser))
+		if ($currentUser === null || $targetUser === null
+			|| !($this->groupManager->isAdmin($this->userId)
+			 || $this->groupManager->getSubAdmin()->isUserAccessible($currentUser, $targetUser))
 		) {
 			return new JSONResponse([
 				'status' => 'error',

@@ -30,6 +30,7 @@ class FederatedSharesDiscoverJob extends TimedJob {
 		$this->setTimeSensitivity(self::TIME_INSENSITIVE);
 	}
 
+	#[\Override]
 	public function run($argument) {
 		$qb = $this->connection->getQueryBuilder();
 
@@ -37,7 +38,7 @@ class FederatedSharesDiscoverJob extends TimedJob {
 			->from('share_external');
 
 		$result = $qb->executeQuery();
-		while ($row = $result->fetch()) {
+		while ($row = $result->fetchAssociative()) {
 			$this->discoveryService->discover($row['remote'], 'FEDERATED_SHARING', true);
 			try {
 				$this->ocmDiscoveryService->discover($row['remote'], true);

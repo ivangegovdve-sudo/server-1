@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -13,21 +14,21 @@ use OC\Files\Storage\Wrapper\Wrapper;
 use OCP\Constants;
 use OCP\Files\Cache\IScanner;
 
-/**
- * @group DB
- */
+#[\PHPUnit\Framework\Attributes\Group('DB')]
 class PermissionsMaskTest extends \Test\Files\Storage\Storage {
 	/**
-	 * @var \OC\Files\Storage\Temporary
+	 * @var Temporary
 	 */
 	private $sourceStorage;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 		$this->sourceStorage = new Temporary([]);
 		$this->instance = $this->getMaskedStorage(Constants::PERMISSION_ALL);
 	}
 
+	#[\Override]
 	protected function tearDown(): void {
 		$this->sourceStorage->cleanUp();
 		parent::tearDown();

@@ -18,7 +18,9 @@ use OCP\App\IAppManager;
 use OCP\AppFramework\Http\ContentSecurityPolicy;
 use OCP\AppFramework\Http\RedirectResponse;
 use OCP\AppFramework\Http\TemplateResponse;
+use OCP\AppFramework\Services\IAppConfig;
 use OCP\AppFramework\Services\IInitialState;
+use OCP\Authentication\TwoFactorAuth\IRegistry;
 use OCP\Diagnostics\IEventLogger;
 use OCP\EventDispatcher\IEventDispatcher;
 use OCP\Files\File;
@@ -40,13 +42,14 @@ use Test\TestCase;
 /**
  * Class ViewControllerTest
  *
- * @group RoutingWeirdness
  *
  * @package OCA\Files\Tests\Controller
  */
+#[\PHPUnit\Framework\Attributes\Group('RoutingWeirdness')]
 class ViewControllerTest extends TestCase {
 	private ContainerInterface&MockObject $container;
 	private IAppManager&MockObject $appManager;
+	private IAppConfig&MockObject $appConfig;
 	private ICacheFactory&MockObject $cacheFactory;
 	private IConfig&MockObject $config;
 	private IEventDispatcher $eventDispatcher;
@@ -63,12 +66,14 @@ class ViewControllerTest extends TestCase {
 	private UserConfig&MockObject $userConfig;
 	private ViewConfig&MockObject $viewConfig;
 	private Router $router;
+	private IRegistry&MockObject $twoFactorRegistry;
 
 	private ViewController&MockObject $viewController;
 
 	protected function setUp(): void {
 		parent::setUp();
 		$this->appManager = $this->createMock(IAppManager::class);
+		$this->appConfig = $this->createMock(IAppConfig::class);
 		$this->config = $this->createMock(IConfig::class);
 		$this->eventDispatcher = $this->createMock(IEventDispatcher::class);
 		$this->initialState = $this->createMock(IInitialState::class);
@@ -79,6 +84,7 @@ class ViewControllerTest extends TestCase {
 		$this->userConfig = $this->createMock(UserConfig::class);
 		$this->userSession = $this->createMock(IUserSession::class);
 		$this->viewConfig = $this->createMock(ViewConfig::class);
+		$this->twoFactorRegistry = $this->createMock(IRegistry::class);
 
 		$this->user = $this->getMockBuilder(IUser::class)->getMock();
 		$this->user->expects($this->any())
@@ -98,6 +104,10 @@ class ViewControllerTest extends TestCase {
 		$this->appManager->expects($this->any())
 			->method('isAppLoaded')
 			->willReturn(true);
+		$this->appManager->expects($this->any())
+			->method('getAppNamespace')
+			->with('files')
+			->willReturn('OCA\\Files');
 
 		$this->cacheFactory = $this->createMock(ICacheFactory::class);
 		$this->logger = $this->createMock(LoggerInterface::class);
@@ -138,6 +148,8 @@ class ViewControllerTest extends TestCase {
 				$this->userConfig,
 				$this->viewConfig,
 				$filenameValidator,
+				$this->twoFactorRegistry,
+				$this->appConfig,
 			])
 			->onlyMethods([
 				'getStorageInfo',
@@ -210,9 +222,7 @@ class ViewControllerTest extends TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider dataTestShortRedirect
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataTestShortRedirect')]
 	public function testShortRedirect(?string $openfile, ?string $opendetails, string $result): void {
 		$this->appManager->expects($this->any())
 			->method('isEnabledForUser')
@@ -287,5 +297,31 @@ class ViewControllerTest extends TestCase {
 
 		$expected = new RedirectResponse('/index.php/apps/files/trashbin/123?dir=/test.d1462861890/sub');
 		$this->assertEquals($expected, $this->viewController->index('', '', '123'));
+	}
+
+	public function testTwoFactorAuthEnabled(): void {
+		$this->twoFactorRegistry->method('getProviderStates')
+			->willReturn([
+				'totp' => true,
+				'backup_codes' => true,
+			]);
+
+		$invokedCountProvideInitialState = $this->exactly(13);
+		$this->initialState->expects($invokedCountProvideInitialState)
+			->method('provideInitialState')
+			->willReturnCallback(function ($key, $data) use ($invokedCountProvideInitialState): void {
+				if ($invokedCountProvideInitialState->numberOfInvocations() === 13) {
+					$this->assertEquals('isTwoFactorEnabled', $key);
+					$this->assertTrue($data);
+				}
+			});
+
+		$this->config
+			->method('getUserValue')
+			->willReturnMap([
+				[$this->user->getUID(), 'files', 'files_sorting_configs', '{}', '{}'],
+			]);
+
+		$this->viewController->index('', '', null);
 	}
 }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -8,6 +9,7 @@
 namespace Test;
 
 use OC\Files\Filesystem;
+use OC\Files\Storage\Storage;
 use OC\Files\Storage\Temporary;
 use OC\Files\Storage\Wrapper\Quota;
 use OCP\Files\Mount\IMountManager;
@@ -17,20 +19,20 @@ use Test\Traits\UserTrait;
 
 /**
  * Test the storage functions of OC_Helper
- *
- * @group DB
  */
+#[\PHPUnit\Framework\Attributes\Group('DB')]
 class HelperStorageTest extends \Test\TestCase {
 	use UserTrait;
 
 	/** @var string */
 	private $user;
-	/** @var \OC\Files\Storage\Storage */
+	/** @var Storage */
 	private $storageMock;
-	/** @var \OC\Files\Storage\Storage */
+	/** @var Storage */
 	private $storage;
 	private bool $savedQuotaIncludeExternalStorage;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -49,6 +51,7 @@ class HelperStorageTest extends \Test\TestCase {
 		$this->storageMock = null;
 	}
 
+	#[\Override]
 	protected function tearDown(): void {
 		$this->setIncludeExternalStorage($this->savedQuotaIncludeExternalStorage);
 		$this->user = null;
@@ -70,7 +73,7 @@ class HelperStorageTest extends \Test\TestCase {
 	 * free space
 	 *
 	 * @param int $freeSpace free space value
-	 * @return \OC\Files\Storage\Storage
+	 * @return Storage
 	 */
 	private function getStorageMock($freeSpace = 12) {
 		$this->storageMock = $this->getMockBuilder(Temporary::class)
@@ -101,14 +104,12 @@ class HelperStorageTest extends \Test\TestCase {
 	private function getIncludeExternalStorage(): bool {
 		$class = new \ReflectionClass(\OC_Helper::class);
 		$prop = $class->getProperty('quotaIncludeExternalStorage');
-		$prop->setAccessible(true);
 		return $prop->getValue(null) ?? false;
 	}
 
 	private function setIncludeExternalStorage(bool $include) {
 		$class = new \ReflectionClass(\OC_Helper::class);
 		$prop = $class->getProperty('quotaIncludeExternalStorage');
-		$prop->setAccessible(true);
 		$prop->setValue(null, $include);
 	}
 

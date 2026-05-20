@@ -20,7 +20,9 @@ use OC\Authentication\Notifications\Notifier as AuthenticationNotifier;
 use OC\Core\Listener\AddMissingIndicesListener;
 use OC\Core\Listener\AddMissingPrimaryKeyListener;
 use OC\Core\Listener\BeforeTemplateRenderedListener;
+use OC\Core\Listener\PasswordUpdatedListener;
 use OC\Core\Notification\CoreNotifier;
+use OC\OCM\OCMDiscoveryHandler;
 use OC\TagManager;
 use OCP\AppFramework\App;
 use OCP\AppFramework\Bootstrap\IBootContext;
@@ -31,6 +33,7 @@ use OCP\AppFramework\Http\Events\BeforeTemplateRenderedEvent;
 use OCP\DB\Events\AddMissingIndicesEvent;
 use OCP\DB\Events\AddMissingPrimaryKeyEvent;
 use OCP\User\Events\BeforeUserDeletedEvent;
+use OCP\User\Events\PasswordUpdatedEvent;
 use OCP\User\Events\UserDeletedEvent;
 use OCP\Util;
 
@@ -50,6 +53,7 @@ class Application extends App implements IBootstrap {
 		parent::__construct(self::APP_ID, $urlParams);
 	}
 
+	#[\Override]
 	public function register(IRegistrationContext $context): void {
 		$context->registerService('defaultMailAddress', function () {
 			return Util::getDefaultEmailAddress('lostpassword-noreply');
@@ -75,11 +79,19 @@ class Application extends App implements IBootstrap {
 		$context->registerEventListener(BeforeUserDeletedEvent::class, UserDeletedFilesCleanupListener::class);
 		$context->registerEventListener(UserDeletedEvent::class, UserDeletedFilesCleanupListener::class);
 		$context->registerEventListener(UserDeletedEvent::class, UserDeletedWebAuthnCleanupListener::class);
+		$context->registerEventListener(PasswordUpdatedEvent::class, PasswordUpdatedListener::class);
 
 		// Tags
 		$context->registerEventListener(UserDeletedEvent::class, TagManager::class);
+
+		// config lexicon
+		$context->registerConfigLexicon(ConfigLexicon::class);
+
+		$context->registerWellKnownHandler(OCMDiscoveryHandler::class);
+		$context->registerCapability(Capabilities::class);
 	}
 
+	#[\Override]
 	public function boot(IBootContext $context): void {
 		// ...
 	}

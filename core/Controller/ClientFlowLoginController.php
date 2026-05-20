@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2017 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -16,6 +17,7 @@ use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\FrontpageRoute;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
+use OCP\AppFramework\Http\Attribute\NoSameSiteCookieRequired;
 use OCP\AppFramework\Http\Attribute\OpenAPI;
 use OCP\AppFramework\Http\Attribute\PasswordConfirmationRequired;
 use OCP\AppFramework\Http\Attribute\PublicPage;
@@ -24,6 +26,7 @@ use OCP\AppFramework\Http\ContentSecurityPolicy;
 use OCP\AppFramework\Http\RedirectResponse;
 use OCP\AppFramework\Http\Response;
 use OCP\AppFramework\Http\StandaloneTemplateResponse;
+use OCP\AppFramework\Services\IInitialState;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\Authentication\Exceptions\InvalidTokenException;
 use OCP\Authentication\Token\IToken;
@@ -34,11 +37,11 @@ use OCP\IL10N;
 use OCP\IRequest;
 use OCP\ISession;
 use OCP\IURLGenerator;
-use OCP\IUser;
 use OCP\IUserSession;
 use OCP\Security\ICrypto;
 use OCP\Security\ISecureRandom;
 use OCP\Session\Exceptions\SessionNotAvailableException;
+use OCP\Util;
 
 #[OpenAPI(scope: OpenAPI::SCOPE_IGNORE)]
 class ClientFlowLoginController extends Controller {
@@ -60,6 +63,7 @@ class ClientFlowLoginController extends Controller {
 		private IEventDispatcher $eventDispatcher,
 		private ITimeFactory $timeFactory,
 		private IConfig $config,
+		private IInitialState $initialState,
 	) {
 		parent::__construct($appName, $request);
 	}
@@ -109,8 +113,8 @@ class ClientFlowLoginController extends Controller {
 				$this->appName,
 				'error',
 				[
-					'errors' =>
-					[
+					'errors'
+					=> [
 						[
 							'error' => 'Access Forbidden',
 							'hint' => 'Invalid request',
@@ -134,35 +138,45 @@ class ClientFlowLoginController extends Controller {
 			$csp->addAllowedFormActionDomain('nc://*');
 		}
 
+		$this->initialState->provideInitialState('loginFlowState', 'auth');
+		$this->initialState->provideInitialState('loginFlowAuth', [
+			'client' => $clientName,
+			'clientIdentifier' => $clientIdentifier,
+			'instanceName' => $this->defaults->getName(),
+			'stateToken' => $stateToken,
+			'serverHost' => $this->getServerPath(),
+			'oauthState' => $this->session->get('oauth.state'),
+			'direct' => (bool)$direct,
+			'providedRedirectUri' => $providedRedirectUri,
+			'loginRedirectUrl' => $this->urlGenerator->linkToRoute(
+				'core.ClientFlowLogin.grantPage',
+				[
+					'stateToken' => $stateToken,
+					'clientIdentifier' => $clientIdentifier,
+					'oauthState' => $this->session->get('oauth.state'),
+					'user' => $user,
+					'direct' => $direct,
+					'providedRedirectUri' => $providedRedirectUri,
+				]),
+			'appTokenUrl' => $this->urlGenerator->linkToRouteAbsolute('core.ClientFlowLogin.apptokenRedirect'),
+		]);
+
+
+		Util::addScript('core', 'login_flow');
 		$response = new StandaloneTemplateResponse(
 			$this->appName,
-			'loginflow/authpicker',
-			[
-				'client' => $clientName,
-				'clientIdentifier' => $clientIdentifier,
-				'instanceName' => $this->defaults->getName(),
-				'urlGenerator' => $this->urlGenerator,
-				'stateToken' => $stateToken,
-				'serverHost' => $this->getServerPath(),
-				'oauthState' => $this->session->get('oauth.state'),
-				'user' => $user,
-				'direct' => $direct,
-				'providedRedirectUri' => $providedRedirectUri,
-			],
-			'guest'
+			'loginflow',
+			renderAs: 'guest'
 		);
-
 		$response->setContentSecurityPolicy($csp);
 		return $response;
 	}
 
-	/**
-	 * @NoSameSiteCookieRequired
-	 */
 	#[NoAdminRequired]
 	#[NoCSRFRequired]
 	#[UseSession]
 	#[FrontpageRoute(verb: 'GET', url: '/login/flow/grant')]
+	#[NoSameSiteCookieRequired]
 	public function grantPage(
 		string $stateToken = '',
 		string $clientIdentifier = '',
@@ -187,26 +201,31 @@ class ClientFlowLoginController extends Controller {
 			$csp->addAllowedFormActionDomain('nc://*');
 		}
 
-		/** @var IUser $user */
 		$user = $this->userSession->getUser();
+		\assert($user !== null);
 
+		$this->initialState->provideInitialState('loginFlowState', 'grant');
+		$this->initialState->provideInitialState('loginFlowGrant', [
+			'actionUrl' => $this->urlGenerator->linkToRouteAbsolute(
+				'core.ClientFlowLogin.generateAppPassword',
+			),
+			'client' => $clientName,
+			'clientIdentifier' => $clientIdentifier,
+			'instanceName' => $this->defaults->getName(),
+			'stateToken' => $stateToken,
+			'serverHost' => $this->getServerPath(),
+			'oauthState' => $this->session->get('oauth.state'),
+			'direct' => $direct,
+			'providedRedirectUri' => $providedRedirectUri,
+			'userDisplayName' => $user->getDisplayName(),
+			'userId' => $user->getUID(),
+		]);
+
+		Util::addScript('core', 'login_flow');
 		$response = new StandaloneTemplateResponse(
 			$this->appName,
-			'loginflow/grant',
-			[
-				'userId' => $user->getUID(),
-				'userDisplayName' => $user->getDisplayName(),
-				'client' => $clientName,
-				'clientIdentifier' => $clientIdentifier,
-				'instanceName' => $this->defaults->getName(),
-				'urlGenerator' => $this->urlGenerator,
-				'stateToken' => $stateToken,
-				'serverHost' => $this->getServerPath(),
-				'oauthState' => $this->session->get('oauth.state'),
-				'direct' => $direct,
-				'providedRedirectUri' => $providedRedirectUri,
-			],
-			'guest'
+			'loginflow',
+			renderAs: 'guest'
 		);
 
 		$response->setContentSecurityPolicy($csp);

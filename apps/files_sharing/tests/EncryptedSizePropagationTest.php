@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2017-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -11,9 +12,7 @@ use OCP\ITempManager;
 use OCP\Server;
 use Test\Traits\EncryptionTrait;
 
-/**
- * @group DB
- */
+#[\PHPUnit\Framework\Attributes\Group(name: 'DB')]
 class EncryptedSizePropagationTest extends SizePropagationTest {
 	use EncryptionTrait;
 

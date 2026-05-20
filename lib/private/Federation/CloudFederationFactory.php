@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2018 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -28,6 +29,7 @@ class CloudFederationFactory implements ICloudFederationFactory {
 	 *
 	 * @since 14.0.0
 	 */
+	#[\Override]
 	public function getCloudFederationShare($shareWith, $name, $description, $providerId, $owner, $ownerDisplayName, $sharedBy, $sharedByDisplayName, $sharedSecret, $shareType, $resourceType) {
 		return new CloudFederationShare($shareWith, $name, $description, $providerId, $owner, $ownerDisplayName, $sharedBy, $sharedByDisplayName, $shareType, $resourceType, $sharedSecret);
 	}
@@ -40,6 +42,7 @@ class CloudFederationFactory implements ICloudFederationFactory {
 	 *
 	 * @since 14.0.0
 	 */
+	#[\Override]
 	public function getCloudFederationNotification() {
 		return new CloudFederationNotification();
 	}

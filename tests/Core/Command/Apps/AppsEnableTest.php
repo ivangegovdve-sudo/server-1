@@ -18,13 +18,13 @@ use Test\TestCase;
 
 /**
  * Class AppsEnableTest
- *
- * @group DB
  */
+#[\PHPUnit\Framework\Attributes\Group('DB')]
 class AppsEnableTest extends TestCase {
 	/** @var CommandTester */
 	private $commandTester;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -41,12 +41,12 @@ class AppsEnableTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider dataCommandInput
 	 * @param $appId
 	 * @param $groups
 	 * @param $statusCode
 	 * @param $pattern
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataCommandInput')]
 	public function testCommandInput($appId, $groups, $statusCode, $pattern): void {
 		$input = ['app-id' => $appId];
 

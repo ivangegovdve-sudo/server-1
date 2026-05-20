@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -32,6 +33,7 @@ class GroupProvider implements IProvider {
 	) {
 	}
 
+	#[\Override]
 	public function parse($language, IEvent $event, ?IEvent $previousEvent = null) {
 		if ($event->getType() !== 'group_settings') {
 			throw new UnknownActivityException();

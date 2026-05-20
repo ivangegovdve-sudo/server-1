@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -14,6 +15,7 @@ use OC\SystemConfig;
 use OC\User\DisplayNameCache;
 use OCA\Files_Sharing\AppInfo\Application;
 use OCA\Files_Sharing\External\MountProvider as ExternalMountProvider;
+use OCA\Files_Sharing\Listener\SharesUpdatedListener;
 use OCA\Files_Sharing\MountProvider;
 use OCP\Files\Config\IMountProviderCollection;
 use OCP\Files\IRootFolder;
@@ -26,12 +28,9 @@ use OCP\Share\IShare;
 use Test\Traits\MountProviderTrait;
 
 /**
- * Class TestCase
- *
- * @group DB
- *
  * Base class for sharing tests.
  */
+#[\PHPUnit\Framework\Attributes\Group(name: 'DB')]
 abstract class TestCase extends \Test\TestCase {
 	use MountProviderTrait;
 
@@ -101,6 +100,8 @@ abstract class TestCase extends \Test\TestCase {
 		$groupBackend->addToGroup(self::TEST_FILES_SHARING_API_USER4, 'group3');
 		$groupBackend->addToGroup(self::TEST_FILES_SHARING_API_USER2, self::TEST_FILES_SHARING_API_GROUP1);
 		Server::get(IGroupManager::class)->addBackend($groupBackend);
+
+		Server::get(SharesUpdatedListener::class)->setCutOffMarkTime(-1);
 	}
 
 	protected function setUp(): void {
@@ -121,15 +122,15 @@ abstract class TestCase extends \Test\TestCase {
 	protected function tearDown(): void {
 		$qb = Server::get(IDBConnection::class)->getQueryBuilder();
 		$qb->delete('share');
-		$qb->execute();
+		$qb->executeStatement();
 
 		$qb = Server::get(IDBConnection::class)->getQueryBuilder();
 		$qb->delete('mounts');
-		$qb->execute();
+		$qb->executeStatement();
 
 		$qb = Server::get(IDBConnection::class)->getQueryBuilder();
 		$qb->delete('filecache')->runAcrossAllShards();
-		$qb->execute();
+		$qb->executeStatement();
 
 		parent::tearDown();
 	}
@@ -212,7 +213,7 @@ abstract class TestCase extends \Test\TestCase {
 			->where(
 				$qb->expr()->eq('id', $qb->createNamedParameter($shareID))
 			);
-		$result = $qb->execute();
+		$result = $qb->executeQuery();
 		$share = $result->fetch();
 		$result->closeCursor();
 

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2017 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -22,9 +23,7 @@ use OCP\Security\ISecureRandom;
 use PHPUnit\Framework\MockObject\MockObject;
 use Test\TestCase;
 
-/**
- * @group DB
- */
+#[\PHPUnit\Framework\Attributes\Group(name: 'DB')]
 class LoginRedirectorControllerTest extends TestCase {
 	private IRequest&MockObject $request;
 	private IURLGenerator&MockObject $urlGenerator;

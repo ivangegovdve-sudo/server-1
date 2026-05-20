@@ -16,16 +16,17 @@ use OCP\Migration\IOutput;
 use OCP\Migration\IRepairStep;
 
 class AddRemoveOldTasksBackgroundJob implements IRepairStep {
-	private IJobList $jobList;
-
-	public function __construct(IJobList $jobList) {
-		$this->jobList = $jobList;
+	public function __construct(
+		private readonly IJobList $jobList,
+	) {
 	}
 
+	#[\Override]
 	public function getName(): string {
 		return 'Add AI tasks cleanup jobs';
 	}
 
+	#[\Override]
 	public function run(IOutput $output) {
 		$this->jobList->add(RemoveOldTextProcessingTasksBackgroundJob::class);
 		$this->jobList->add(RemoveOldTextToImageTasksBackgroundJob::class);

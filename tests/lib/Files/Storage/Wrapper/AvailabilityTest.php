@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2019-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -20,6 +21,7 @@ class AvailabilityTest extends \Test\TestCase {
 	/** @var Availability */
 	protected $wrapper;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -153,5 +155,31 @@ class AvailabilityTest extends \Test\TestCase {
 			->method('setAvailability');
 
 		$this->wrapper->mkdir('foobar');
+	}
+
+	public function testUnavailableMultiple(): void {
+		$this->storage->expects($this->once())
+			->method('getAvailability')
+			->willReturn(['available' => true, 'last_checked' => 0]);
+		$this->storage->expects($this->never())
+			->method('test');
+		$this->storage
+			->expects($this->once()) // load-bearing `once`
+			->method('mkdir')
+			->willThrowException(new StorageNotAvailableException());
+
+		try {
+			$this->wrapper->mkdir('foobar');
+			$this->fail();
+		} catch (StorageNotAvailableException) {
+		}
+
+		$this->storage->expects($this->never())->method('file_exists');
+
+		try {
+			$this->wrapper->mkdir('foobar');
+			$this->fail();
+		} catch (StorageNotAvailableException) {
+		}
 	}
 }

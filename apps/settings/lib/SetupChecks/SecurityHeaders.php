@@ -31,14 +31,17 @@ class SecurityHeaders implements ISetupCheck {
 	) {
 	}
 
+	#[\Override]
 	public function getCategory(): string {
 		return 'security';
 	}
 
+	#[\Override]
 	public function getName(): string {
 		return $this->l10n->t('HTTP headers');
 	}
 
+	#[\Override]
 	public function run(): SetupResult {
 		$urls = [
 			['get', $this->urlGenerator->linkToRoute('heartbeat'), [200]],
@@ -70,11 +73,6 @@ class SecurityHeaders implements ISetupCheck {
 							$msg .= $this->l10n->t('- The `%1$s` HTTP header is not set to `%2$s`. This is a potential security or privacy risk, as it is recommended to adjust this setting accordingly.', [$header, $expected]) . "\n";
 						}
 					}
-				}
-
-				$xssFields = array_map('trim', explode(';', $response->getHeader('X-XSS-Protection')));
-				if (!in_array('1', $xssFields) || !in_array('mode=block', $xssFields)) {
-					$msg .= $this->l10n->t('- The `%1$s` HTTP header does not contain `%2$s`. This is a potential security or privacy risk, as it is recommended to adjust this setting accordingly.', ['X-XSS-Protection', '1; mode=block']) . "\n";
 				}
 
 				$referrerPolicy = $response->getHeader('Referrer-Policy');

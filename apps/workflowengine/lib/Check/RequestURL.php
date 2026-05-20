@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -30,6 +31,7 @@ class RequestURL extends AbstractStringCheck {
 	 * @param string $value
 	 * @return bool
 	 */
+	#[\Override]
 	public function executeCheck($operator, $value) {
 		if (\OC::$CLI) {
 			$actualValue = $this->url = RequestURL::CLI;
@@ -52,6 +54,7 @@ class RequestURL extends AbstractStringCheck {
 	/**
 	 * @return string
 	 */
+	#[\Override]
 	protected function getActualValue() {
 		if ($this->url !== null) {
 			return $this->url;
@@ -70,10 +73,10 @@ class RequestURL extends AbstractStringCheck {
 			return false;
 		}
 		return substr($this->request->getScriptName(), 0 - strlen('/remote.php')) === '/remote.php' && (
-			$this->request->getPathInfo() === '/webdav' ||
-			str_starts_with($this->request->getPathInfo() ?? '', '/webdav/') ||
-			$this->request->getPathInfo() === '/dav/files' ||
-			str_starts_with($this->request->getPathInfo() ?? '', '/dav/files/')
+			$this->request->getPathInfo() === '/webdav'
+			|| str_starts_with($this->request->getPathInfo() ?? '', '/webdav/')
+			|| $this->request->getPathInfo() === '/dav/files'
+			|| str_starts_with($this->request->getPathInfo() ?? '', '/dav/files/')
 		);
 	}
 }

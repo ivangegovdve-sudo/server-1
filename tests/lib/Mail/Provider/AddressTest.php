@@ -16,6 +16,7 @@ class AddressTest extends TestCase {
 	/** @var Address&MockObject */
 	private Address $address;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -24,7 +25,7 @@ class AddressTest extends TestCase {
 	}
 
 	public function testAddress(): void {
-		
+
 		// test set by constructor
 		$this->assertEquals('user1@testing.com', $this->address->getAddress());
 		// test set by setter
@@ -34,7 +35,7 @@ class AddressTest extends TestCase {
 	}
 
 	public function testLabel(): void {
-		
+
 		// test set by constructor
 		$this->assertEquals('User One', $this->address->getLabel());
 		// test set by setter

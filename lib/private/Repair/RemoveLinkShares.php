@@ -20,17 +20,18 @@ use OCP\Notification\IManager;
 
 class RemoveLinkShares implements IRepairStep {
 	/** @var string[] */
-	private $userToNotify = [];
+	private array $userToNotify = [];
 
 	public function __construct(
-		private IDBConnection $connection,
-		private IConfig $config,
-		private IGroupManager $groupManager,
-		private IManager $notificationManager,
-		private ITimeFactory $timeFactory,
+		private readonly IDBConnection $connection,
+		private readonly IConfig $config,
+		private readonly IGroupManager $groupManager,
+		private readonly IManager $notificationManager,
+		private readonly ITimeFactory $timeFactory,
 	) {
 	}
 
+	#[\Override]
 	public function getName(): string {
 		return 'Remove potentially over exposing share links';
 	}
@@ -51,11 +52,6 @@ class RemoveLinkShares implements IRepairStep {
 		return false;
 	}
 
-	/**
-	 * Delete the share
-	 *
-	 * @param int $id
-	 */
 	private function deleteShare(int $id): void {
 		$qb = $this->connection->getQueryBuilder();
 		$qb->delete('share')
@@ -65,8 +61,6 @@ class RemoveLinkShares implements IRepairStep {
 
 	/**
 	 * Get the total of affected shares
-	 *
-	 * @return int
 	 */
 	private function getTotal(): int {
 		$subSubQuery = $this->connection->getQueryBuilder();
@@ -130,7 +124,7 @@ class RemoveLinkShares implements IRepairStep {
 	/**
 	 * Process a single share
 	 *
-	 * @param array $data
+	 * @param array{id: int|string, uid_owner: string, uid_initiator: string} $data
 	 */
 	private function processShare(array $data): void {
 		$id = $data['id'];
@@ -143,8 +137,6 @@ class RemoveLinkShares implements IRepairStep {
 
 	/**
 	 * Update list of users to notify
-	 *
-	 * @param string $uid
 	 */
 	private function addToNotify(string $uid): void {
 		if (!isset($this->userToNotify[$uid])) {
@@ -193,6 +185,7 @@ class RemoveLinkShares implements IRepairStep {
 		$this->sendNotification();
 	}
 
+	#[\Override]
 	public function run(IOutput $output): void {
 		if ($this->shouldRun() === false || ($total = $this->getTotal()) === 0) {
 			$output->info('No need to remove link shares.');

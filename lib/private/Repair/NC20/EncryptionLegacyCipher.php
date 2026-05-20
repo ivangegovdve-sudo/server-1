@@ -14,17 +14,13 @@ use OCP\Migration\IOutput;
 use OCP\Migration\IRepairStep;
 
 class EncryptionLegacyCipher implements IRepairStep {
-	/** @var IConfig */
-	private $config;
-	/** @var IManager */
-	private $manager;
-
-	public function __construct(IConfig $config,
-		IManager $manager) {
-		$this->config = $config;
-		$this->manager = $manager;
+	public function __construct(
+		private IConfig $config,
+		private IManager $manager,
+	) {
 	}
 
+	#[\Override]
 	public function getName(): string {
 		return 'Keep legacy encryption enabled';
 	}
@@ -34,6 +30,7 @@ class EncryptionLegacyCipher implements IRepairStep {
 		return version_compare($versionFromBeforeUpdate, '20.0.0.0', '<=');
 	}
 
+	#[\Override]
 	public function run(IOutput $output): void {
 		if (!$this->shouldRun()) {
 			return;

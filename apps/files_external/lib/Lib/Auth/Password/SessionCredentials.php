@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2017-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -41,6 +44,7 @@ class SessionCredentials extends AuthMechanism {
 	/**
 	 * @return void
 	 */
+	#[\Override]
 	public function manipulateStorageConfig(StorageConfig &$storage, ?IUser $user = null) {
 		try {
 			$credentials = $this->credentialsStore->getLoginCredentials();
@@ -60,6 +64,7 @@ class SessionCredentials extends AuthMechanism {
 		$storage->setBackendOption('password', $credentials->getPassword());
 	}
 
+	#[\Override]
 	public function wrapStorage(IStorage $storage): IStorage {
 		return new SessionStorageWrapper(['storage' => $storage]);
 	}

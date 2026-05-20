@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -26,6 +28,7 @@ class Capabilities implements ICapability {
 	 *
 	 * @return array{files: array{'$comment': ?string, bigfilechunking: bool, blacklisted_files: list<mixed>, forbidden_filenames: list<string>, forbidden_filename_basenames: list<string>, forbidden_filename_characters: list<string>, forbidden_filename_extensions: list<string>, chunked_upload: array{max_size: int, max_parallel_count: int}, file_conversions: list<array{from: string, to: string, extension: string, displayName: string}>}}
 	 */
+	#[\Override]
 	public function getCapabilities(): array {
 		return [
 			'files' => [

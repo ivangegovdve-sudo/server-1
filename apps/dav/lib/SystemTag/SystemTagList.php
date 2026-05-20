@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2023 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-only
@@ -42,10 +43,12 @@ class SystemTagList implements Element {
 		return $this->tags;
 	}
 
+	#[\Override]
 	public static function xmlDeserialize(Reader $reader): void {
 		// unsupported/unused
 	}
 
+	#[\Override]
 	public function xmlSerialize(Writer $writer): void {
 		foreach ($this->tags as $tag) {
 			$writer->startElement('{' . self::NS_NEXTCLOUD . '}system-tag');

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2017 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -14,6 +15,7 @@ class PublicCalendar extends Calendar {
 	 * @throws NotFound
 	 * @return PublicCalendarObject
 	 */
+	#[\Override]
 	public function getChild($name) {
 		$obj = $this->caldavBackend->getCalendarObject($this->calendarInfo['id'], $name);
 
@@ -31,6 +33,7 @@ class PublicCalendar extends Calendar {
 	/**
 	 * @return PublicCalendarObject[]
 	 */
+	#[\Override]
 	public function getChildren() {
 		$objs = $this->caldavBackend->getCalendarObjects($this->calendarInfo['id']);
 		$children = [];
@@ -48,6 +51,7 @@ class PublicCalendar extends Calendar {
 	 * @param string[] $paths
 	 * @return PublicCalendarObject[]
 	 */
+	#[\Override]
 	public function getMultipleChildren(array $paths) {
 		$objs = $this->caldavBackend->getMultipleCalendarObjects($this->calendarInfo['id'], $paths);
 		$children = [];
@@ -65,6 +69,7 @@ class PublicCalendar extends Calendar {
 	 * public calendars are always shared
 	 * @return bool
 	 */
+	#[\Override]
 	public function isShared() {
 		return true;
 	}

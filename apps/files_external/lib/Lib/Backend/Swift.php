@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2018-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -21,7 +24,7 @@ class Swift extends Backend {
 			->setIdentifier('swift')
 			->addIdentifierAlias('\OC\Files\Storage\Swift') // legacy compat
 			->setStorageClass('\OCA\Files_External\Lib\Storage\Swift')
-			->setText($l->t('OpenStack Object Storage'))
+			->setText($l->t('OpenStack Swift Object Storage'))
 			->addParameters([
 				(new DefinitionParameter('service_name', $l->t('Service name')))
 					->setFlag(DefinitionParameter::FLAG_OPTIONAL),

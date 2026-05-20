@@ -36,6 +36,7 @@ class Application extends App implements IBootstrap {
 		parent::__construct(self::APP_NAME, []);
 	}
 
+	#[\Override]
 	public function register(IRegistrationContext $context): void {
 		$context->registerNotifierService(Notifier::class);
 		$context->registerNotifierService(AppUpdateNotifier::class);
@@ -44,6 +45,7 @@ class Application extends App implements IBootstrap {
 		$context->registerEventListener(BeforeTemplateRenderedEvent::class, BeforeTemplateRenderedEventListener::class);
 	}
 
+	#[\Override]
 	public function boot(IBootContext $context): void {
 		$context->injectFn(function (IConfig $config,
 			IUserSession $userSession,
@@ -63,8 +65,8 @@ class Application extends App implements IBootstrap {
 				return;
 			}
 
-			if (!$appManager->isEnabledForUser('notifications') &&
-				$groupManager->isAdmin($user->getUID())) {
+			if (!$appManager->isEnabledForUser('notifications')
+				&& $groupManager->isAdmin($user->getUID())) {
 				try {
 					$updateChecker = $container->get(UpdateChecker::class);
 				} catch (ContainerExceptionInterface $e) {

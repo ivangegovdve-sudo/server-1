@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2017 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -29,6 +30,7 @@ class SearchPlugin extends ServerPlugin {
 	 *
 	 * @return string[]
 	 */
+	#[\Override]
 	public function getFeatures() {
 		// May have to be changed to be detected
 		return ['nc-calendar-search'];
@@ -42,6 +44,7 @@ class SearchPlugin extends ServerPlugin {
 	 *
 	 * @return string
 	 */
+	#[\Override]
 	public function getPluginName() {
 		return 'nc-calendar-search';
 	}
@@ -56,13 +59,14 @@ class SearchPlugin extends ServerPlugin {
 	 *
 	 * @param Server $server
 	 */
+	#[\Override]
 	public function initialize(Server $server) {
 		$this->server = $server;
 
 		$server->on('report', [$this, 'report']);
 
-		$server->xml->elementMap['{' . self::NS_Nextcloud . '}calendar-search'] =
-			CalendarSearchReport::class;
+		$server->xml->elementMap['{' . self::NS_Nextcloud . '}calendar-search']
+			= CalendarSearchReport::class;
 	}
 
 	/**
@@ -92,6 +96,7 @@ class SearchPlugin extends ServerPlugin {
 	 * @param string $uri
 	 * @return array
 	 */
+	#[\Override]
 	public function getSupportedReportSet($uri) {
 		$node = $this->server->tree->getNodeForPath($uri);
 

@@ -46,6 +46,7 @@ class ProviderFactory implements IProviderFactory {
 	) {
 	}
 
+	#[\Override]
 	public function registerProvider(string $shareProviderClass): void {
 		$this->registeredShareProviders[] = $shareProviderClass;
 	}
@@ -128,6 +129,7 @@ class ProviderFactory implements IProviderFactory {
 	/**
 	 * @inheritdoc
 	 */
+	#[\Override]
 	public function getProvider($id) {
 		$provider = null;
 		if (isset($this->shareProviders[$id])) {
@@ -171,12 +173,13 @@ class ProviderFactory implements IProviderFactory {
 	/**
 	 * @inheritdoc
 	 */
+	#[\Override]
 	public function getProviderForType($shareType) {
 		$provider = null;
 
-		if ($shareType === IShare::TYPE_USER ||
-			$shareType === IShare::TYPE_GROUP ||
-			$shareType === IShare::TYPE_LINK
+		if ($shareType === IShare::TYPE_USER
+			|| $shareType === IShare::TYPE_GROUP
+			|| $shareType === IShare::TYPE_LINK
 		) {
 			$provider = $this->defaultShareProvider();
 		} elseif ($shareType === IShare::TYPE_REMOTE || $shareType === IShare::TYPE_REMOTE_GROUP) {
@@ -189,8 +192,6 @@ class ProviderFactory implements IProviderFactory {
 			$provider = $this->getRoomShareProvider();
 		} elseif ($shareType === IShare::TYPE_DECK) {
 			$provider = $this->getProvider('deck');
-		} elseif ($shareType === IShare::TYPE_SCIENCEMESH) {
-			$provider = $this->getProvider('sciencemesh');
 		}
 
 
@@ -201,6 +202,7 @@ class ProviderFactory implements IProviderFactory {
 		return $provider;
 	}
 
+	#[\Override]
 	public function getAllProviders() {
 		$shares = [$this->defaultShareProvider(), $this->federatedShareProvider()];
 		$shareByMail = $this->getShareByMailProvider();

@@ -14,8 +14,8 @@ use OCP\Template\ITemplateManager;
 /**
  * A generic 429 response showing an 404 error page as well to the end-user
  * @since 19.0.0
- * @template S of Http::STATUS_*
- * @template H of array<string, mixed>
+ * @template-covariant S of Http::STATUS_*
+ * @template-covariant H of array<string, mixed>
  * @template-extends Response<Http::STATUS_*, array<string, mixed>>
  */
 class TooManyRequestsResponse extends Response {
@@ -34,6 +34,7 @@ class TooManyRequestsResponse extends Response {
 	 * @return string
 	 * @since 19.0.0
 	 */
+	#[\Override]
 	public function render() {
 		$template = Server::get(ITemplateManager::class)->getTemplate('core', '429', TemplateResponse::RENDER_AS_BLANK);
 		return $template->fetchPage();

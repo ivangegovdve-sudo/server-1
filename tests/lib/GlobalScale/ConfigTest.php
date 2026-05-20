@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2017 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -14,6 +15,7 @@ class ConfigTest extends TestCase {
 	/** @var IConfig|\PHPUnit\Framework\MockObject\MockObject */
 	private $config;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -47,12 +49,12 @@ class ConfigTest extends TestCase {
 
 
 	/**
-	 * @dataProvider dataTestOnlyInternalFederation
 	 *
 	 * @param bool $gsEnabled
 	 * @param string $gsFederation
 	 * @param bool $expected
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataTestOnlyInternalFederation')]
 	public function testOnlyInternalFederation($gsEnabled, $gsFederation, $expected): void {
 		$gsConfig = $this->getInstance(['isGlobalScaleEnabled']);
 

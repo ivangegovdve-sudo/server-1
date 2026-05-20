@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -12,6 +14,7 @@ class Postscript extends Bitmap {
 	/**
 	 * {@inheritDoc}
 	 */
+	#[\Override]
 	public function getMimeType(): string {
 		return '/application\/postscript/';
 	}
@@ -19,7 +22,8 @@ class Postscript extends Bitmap {
 	/**
 	 * {@inheritDoc}
 	 */
+	#[\Override]
 	protected function getAllowedMimeTypes(): string {
-		return '/application\/postscript/';
+		return '/(application\/postscript|image\/x-eps)/';
 	}
 }

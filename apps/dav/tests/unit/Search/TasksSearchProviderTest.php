@@ -29,68 +29,68 @@ class TasksSearchProviderTest extends TestCase {
 	private TasksSearchProvider $provider;
 
 	// NO DUE NOR COMPLETED NOR SUMMARY
-	private static string $vTodo0 = 'BEGIN:VCALENDAR' . PHP_EOL .
-		'PRODID:TEST' . PHP_EOL .
-		'VERSION:2.0' . PHP_EOL .
-		'BEGIN:VTODO' . PHP_EOL .
-		'UID:20070313T123432Z-456553@example.com' . PHP_EOL .
-		'DTSTAMP:20070313T123432Z' . PHP_EOL .
-		'STATUS:NEEDS-ACTION' . PHP_EOL .
-		'END:VTODO' . PHP_EOL .
-		'END:VCALENDAR';
+	private static string $vTodo0 = 'BEGIN:VCALENDAR' . PHP_EOL
+		. 'PRODID:TEST' . PHP_EOL
+		. 'VERSION:2.0' . PHP_EOL
+		. 'BEGIN:VTODO' . PHP_EOL
+		. 'UID:20070313T123432Z-456553@example.com' . PHP_EOL
+		. 'DTSTAMP:20070313T123432Z' . PHP_EOL
+		. 'STATUS:NEEDS-ACTION' . PHP_EOL
+		. 'END:VTODO' . PHP_EOL
+		. 'END:VCALENDAR';
 
 	// DUE AND COMPLETED
-	private static string $vTodo1 = 'BEGIN:VCALENDAR' . PHP_EOL .
-		'PRODID:TEST' . PHP_EOL .
-		'VERSION:2.0' . PHP_EOL .
-		'BEGIN:VTODO' . PHP_EOL .
-		'UID:20070313T123432Z-456553@example.com' . PHP_EOL .
-		'DTSTAMP:20070313T123432Z' . PHP_EOL .
-		'COMPLETED:20070707T100000Z' . PHP_EOL .
-		'DUE;VALUE=DATE:20070501' . PHP_EOL .
-		'SUMMARY:Task title' . PHP_EOL .
-		'STATUS:NEEDS-ACTION' . PHP_EOL .
-		'END:VTODO' . PHP_EOL .
-		'END:VCALENDAR';
+	private static string $vTodo1 = 'BEGIN:VCALENDAR' . PHP_EOL
+		. 'PRODID:TEST' . PHP_EOL
+		. 'VERSION:2.0' . PHP_EOL
+		. 'BEGIN:VTODO' . PHP_EOL
+		. 'UID:20070313T123432Z-456553@example.com' . PHP_EOL
+		. 'DTSTAMP:20070313T123432Z' . PHP_EOL
+		. 'COMPLETED:20070707T100000Z' . PHP_EOL
+		. 'DUE;VALUE=DATE:20070501' . PHP_EOL
+		. 'SUMMARY:Task title' . PHP_EOL
+		. 'STATUS:NEEDS-ACTION' . PHP_EOL
+		. 'END:VTODO' . PHP_EOL
+		. 'END:VCALENDAR';
 
 	// COMPLETED ONLY
-	private static string $vTodo2 = 'BEGIN:VCALENDAR' . PHP_EOL .
-		'PRODID:TEST' . PHP_EOL .
-		'VERSION:2.0' . PHP_EOL .
-		'BEGIN:VTODO' . PHP_EOL .
-		'UID:20070313T123432Z-456553@example.com' . PHP_EOL .
-		'DTSTAMP:20070313T123432Z' . PHP_EOL .
-		'COMPLETED:20070707T100000Z' . PHP_EOL .
-		'SUMMARY:Task title' . PHP_EOL .
-		'STATUS:NEEDS-ACTION' . PHP_EOL .
-		'END:VTODO' . PHP_EOL .
-		'END:VCALENDAR';
+	private static string $vTodo2 = 'BEGIN:VCALENDAR' . PHP_EOL
+		. 'PRODID:TEST' . PHP_EOL
+		. 'VERSION:2.0' . PHP_EOL
+		. 'BEGIN:VTODO' . PHP_EOL
+		. 'UID:20070313T123432Z-456553@example.com' . PHP_EOL
+		. 'DTSTAMP:20070313T123432Z' . PHP_EOL
+		. 'COMPLETED:20070707T100000Z' . PHP_EOL
+		. 'SUMMARY:Task title' . PHP_EOL
+		. 'STATUS:NEEDS-ACTION' . PHP_EOL
+		. 'END:VTODO' . PHP_EOL
+		. 'END:VCALENDAR';
 
 	// DUE DATE
-	private static string $vTodo3 = 'BEGIN:VCALENDAR' . PHP_EOL .
-		'PRODID:TEST' . PHP_EOL .
-		'VERSION:2.0' . PHP_EOL .
-		'BEGIN:VTODO' . PHP_EOL .
-		'UID:20070313T123432Z-456553@example.com' . PHP_EOL .
-		'DTSTAMP:20070313T123432Z' . PHP_EOL .
-		'DUE;VALUE=DATE:20070501' . PHP_EOL .
-		'SUMMARY:Task title' . PHP_EOL .
-		'STATUS:NEEDS-ACTION' . PHP_EOL .
-		'END:VTODO' . PHP_EOL .
-		'END:VCALENDAR';
+	private static string $vTodo3 = 'BEGIN:VCALENDAR' . PHP_EOL
+		. 'PRODID:TEST' . PHP_EOL
+		. 'VERSION:2.0' . PHP_EOL
+		. 'BEGIN:VTODO' . PHP_EOL
+		. 'UID:20070313T123432Z-456553@example.com' . PHP_EOL
+		. 'DTSTAMP:20070313T123432Z' . PHP_EOL
+		. 'DUE;VALUE=DATE:20070501' . PHP_EOL
+		. 'SUMMARY:Task title' . PHP_EOL
+		. 'STATUS:NEEDS-ACTION' . PHP_EOL
+		. 'END:VTODO' . PHP_EOL
+		. 'END:VCALENDAR';
 
 	// DUE DATETIME
-	private static string $vTodo4 = 'BEGIN:VCALENDAR' . PHP_EOL .
-		'PRODID:TEST' . PHP_EOL .
-		'VERSION:2.0' . PHP_EOL .
-		'BEGIN:VTODO' . PHP_EOL .
-		'UID:20070313T123432Z-456553@example.com' . PHP_EOL .
-		'DTSTAMP:20070313T123432Z' . PHP_EOL .
-		'DUE:20070709T130000Z' . PHP_EOL .
-		'SUMMARY:Task title' . PHP_EOL .
-		'STATUS:NEEDS-ACTION' . PHP_EOL .
-		'END:VTODO' . PHP_EOL .
-		'END:VCALENDAR';
+	private static string $vTodo4 = 'BEGIN:VCALENDAR' . PHP_EOL
+		. 'PRODID:TEST' . PHP_EOL
+		. 'VERSION:2.0' . PHP_EOL
+		. 'BEGIN:VTODO' . PHP_EOL
+		. 'UID:20070313T123432Z-456553@example.com' . PHP_EOL
+		. 'DTSTAMP:20070313T123432Z' . PHP_EOL
+		. 'DUE:20070709T130000Z' . PHP_EOL
+		. 'SUMMARY:Task title' . PHP_EOL
+		. 'STATUS:NEEDS-ACTION' . PHP_EOL
+		. 'END:VTODO' . PHP_EOL
+		. 'END:VCALENDAR';
 
 	protected function setUp(): void {
 		parent::setUp();
@@ -289,27 +289,30 @@ class TasksSearchProviderTest extends TestCase {
 		$this->assertEquals('absolute-url-link-to-route-tasks.indexcalendars/uri-john.doe/tasks/task-uri.ics', $actual);
 	}
 
-	/**
-	 * @dataProvider generateSublineDataProvider
-	 */
-	public function testGenerateSubline(string $ics, string $expectedSubline): void {
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'generateSublineDataProvider')]
+	public function testGenerateSubline(string $ics, string $expectedSubline, array $calendarInfo = []): void {
 		$vCalendar = Reader::read($ics, Reader::OPTION_FORGIVING);
 		$taskComponent = $vCalendar->VTODO;
 
 		$this->l10n->method('t')->willReturnArgument(0);
 		$this->l10n->method('l')->willReturnArgument(0);
 
-		$actual = self::invokePrivate($this->provider, 'generateSubline', [$taskComponent]);
+		$actual = self::invokePrivate($this->provider, 'generateSubline', [$taskComponent, $calendarInfo]);
 		$this->assertEquals($expectedSubline, $actual);
 	}
 
 	public static function generateSublineDataProvider(): array {
 		return [
-			[self::$vTodo0, ''],
-			[self::$vTodo1, 'Completed on %s'],
-			[self::$vTodo2, 'Completed on %s'],
-			[self::$vTodo3, 'Due on %s'],
-			[self::$vTodo4, 'Due on %s by %s'],
+			[self::$vTodo0, '', []],
+			[self::$vTodo1, 'Completed on %s', []],
+			[self::$vTodo2, 'Completed on %s', []],
+			[self::$vTodo3, 'Due on %s', []],
+			[self::$vTodo4, 'Due on %s by %s', []],
+			[self::$vTodo0, '(My Tasks)', ['{DAV:}displayname' => 'My Tasks']],
+			[self::$vTodo1, 'Completed on %s (My Tasks)', ['{DAV:}displayname' => 'My Tasks']],
+			[self::$vTodo3, 'Due on %s (My Tasks)', ['{DAV:}displayname' => 'My Tasks']],
+			[self::$vTodo4, 'Due on %s by %s (My Tasks)', ['{DAV:}displayname' => 'My Tasks']],
+			[self::$vTodo1, 'Completed on %s', ['{DAV:}displayname' => '']],
 		];
 	}
 }

@@ -16,10 +16,11 @@ use OCP\AppFramework\Utility\ITimeFactory;
 
 class ResponseTest extends \Test\TestCase {
 	/**
-	 * @var \OCP\AppFramework\Http\Response
+	 * @var Response
 	 */
 	private $childResponse;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 		$this->childResponse = new Response();

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -8,16 +9,16 @@
 namespace Test\Files\ObjectStore;
 
 use OC\Files\ObjectStore\Swift;
+use OCP\Files\ObjectStore\IObjectStore;
 use OCP\IConfig;
 use OCP\Server;
 
-/**
- * @group PRIMARY-swift
- */
+#[\PHPUnit\Framework\Attributes\Group('PRIMARY-swift')]
 class SwiftTest extends ObjectStoreTestCase {
 	/**
-	 * @return \OCP\Files\ObjectStore\IObjectStore
+	 * @return IObjectStore
 	 */
+	#[\Override]
 	protected function getInstance() {
 		$config = Server::get(IConfig::class)->getSystemValue('objectstore');
 		if (!is_array($config) || $config['class'] !== 'OC\\Files\\ObjectStore\\Swift') {
@@ -27,6 +28,7 @@ class SwiftTest extends ObjectStoreTestCase {
 		return new Swift($config['arguments']);
 	}
 
+	#[\Override]
 	public function testFseekSize(): void {
 		$this->markTestSkipped('Swift does not support seeking at the moment');
 	}

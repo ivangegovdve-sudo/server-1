@@ -16,6 +16,7 @@ use OCP\IConfig;
 use OCP\IL10N;
 use OCP\IRequest;
 use PHPUnit\Framework\MockObject\MockObject;
+use Psr\Log\LoggerInterface;
 use Test\TestCase;
 
 class RecoveryControllerTest extends TestCase {
@@ -28,22 +29,22 @@ class RecoveryControllerTest extends TestCase {
 
 	public static function adminRecoveryProvider(): array {
 		return [
-			['test', 'test', '1', 'Recovery key successfully enabled', Http::STATUS_OK],
-			['', 'test', '1', 'Missing recovery key password', Http::STATUS_BAD_REQUEST],
-			['test', '', '1', 'Please repeat the recovery key password', Http::STATUS_BAD_REQUEST],
-			['test', 'something that doesn\'t match', '1', 'Repeated recovery key password does not match the provided recovery key password', Http::STATUS_BAD_REQUEST],
-			['test', 'test', '0', 'Recovery key successfully disabled', Http::STATUS_OK],
+			['test', 'test', true, 'Recovery key successfully enabled', Http::STATUS_OK],
+			['', 'test', true, 'Missing recovery key password', Http::STATUS_BAD_REQUEST],
+			['test', '', true, 'Please repeat the recovery key password', Http::STATUS_BAD_REQUEST],
+			['test', 'something that doesn\'t match', true, 'Repeated recovery key password does not match the provided recovery key password', Http::STATUS_BAD_REQUEST],
+			['test', 'test', false, 'Recovery key successfully disabled', Http::STATUS_OK],
 		];
 	}
 
 	/**
-	 * @dataProvider adminRecoveryProvider
 	 * @param $recoveryPassword
 	 * @param $passConfirm
 	 * @param $enableRecovery
 	 * @param $expectedMessage
 	 * @param $expectedStatus
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'adminRecoveryProvider')]
 	public function testAdminRecovery($recoveryPassword, $passConfirm, $enableRecovery, $expectedMessage, $expectedStatus): void {
 		$this->recoveryMock->expects($this->any())
 			->method('enableAdminRecovery')
@@ -73,19 +74,19 @@ class RecoveryControllerTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider changeRecoveryPasswordProvider
 	 * @param $password
 	 * @param $confirmPassword
 	 * @param $oldPassword
 	 * @param $expectedMessage
 	 * @param $expectedStatus
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'changeRecoveryPasswordProvider')]
 	public function testChangeRecoveryPassword($password, $confirmPassword, $oldPassword, $expectedMessage, $expectedStatus): void {
 		$this->recoveryMock->expects($this->any())
 			->method('changeRecoveryKeyPassword')
 			->with($password, $oldPassword)
 			->willReturnMap([
-				['test', 'oldTestFail', false],
+				['test', 'oldtestFail', false],
 				['test', 'oldtest', true]
 			]);
 
@@ -105,11 +106,11 @@ class RecoveryControllerTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider userSetRecoveryProvider
 	 * @param $enableRecovery
 	 * @param $expectedMessage
 	 * @param $expectedStatus
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'userSetRecoveryProvider')]
 	public function testUserSetRecovery($enableRecovery, $expectedMessage, $expectedStatus): void {
 		$this->recoveryMock->expects($this->any())
 			->method('setRecoveryForUser')
@@ -150,10 +151,12 @@ class RecoveryControllerTest extends TestCase {
 			->disableOriginalConstructor()
 			->getMock();
 
-		$this->controller = new RecoveryController('encryption',
+		$this->controller = new RecoveryController(
+			'encryption',
 			$this->requestMock,
-			$this->configMock,
 			$this->l10nMock,
-			$this->recoveryMock);
+			$this->recoveryMock,
+			$this->createMock(LoggerInterface::class),
+		);
 	}
 }

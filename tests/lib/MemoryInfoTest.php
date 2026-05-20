@@ -18,21 +18,15 @@ use PHPUnit\Framework\MockObject\MockObject;
 class MemoryInfoTest extends TestCase {
 	/**
 	 * The "memory_limit" value before tests.
-	 *
-	 * @var string
 	 */
-	private $iniSettingBeforeTest;
+	private string $iniSettingBeforeTest;
 
-	/**
-	 * @beforeClass
-	 */
+	#[\PHPUnit\Framework\Attributes\BeforeClass()]
 	public function backupMemoryInfoIniSetting() {
 		$this->iniSettingBeforeTest = ini_get('memory_limit');
 	}
 
-	/**
-	 * @afterClass
-	 */
+	#[\PHPUnit\Framework\Attributes\AfterClass()]
 	public function restoreMemoryInfoIniSetting() {
 		ini_set('memory_limit', $this->iniSettingBeforeTest);
 	}
@@ -52,8 +46,8 @@ class MemoryInfoTest extends TestCase {
 	 *
 	 * @param string $iniValue The "memory_limit" ini data.
 	 * @param int|float $expected The expected detected memory limit.
-	 * @dataProvider getMemoryLimitTestData
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('getMemoryLimitTestData')]
 	public function testMemoryLimit(string $iniValue, int|float $expected): void {
 		ini_set('memory_limit', $iniValue);
 		$memoryInfo = new MemoryInfo();
@@ -74,8 +68,8 @@ class MemoryInfoTest extends TestCase {
 	 *
 	 * @param int $memoryLimit The memory limit
 	 * @param bool $expected If the memory limit is sufficient.
-	 * @dataProvider getSufficientMemoryTestData
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('getSufficientMemoryTestData')]
 	public function testIsMemoryLimitSufficient(int $memoryLimit, bool $expected): void {
 		/* @var MemoryInfo|MockObject $memoryInfo */
 		$memoryInfo = $this->getMockBuilder(MemoryInfo::class)

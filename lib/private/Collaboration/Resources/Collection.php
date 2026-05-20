@@ -35,6 +35,7 @@ class Collection implements ICollection {
 	/**
 	 * @since 16.0.0
 	 */
+	#[\Override]
 	public function getId(): int {
 		return $this->id;
 	}
@@ -42,6 +43,7 @@ class Collection implements ICollection {
 	/**
 	 * @since 16.0.0
 	 */
+	#[\Override]
 	public function getName(): string {
 		return $this->name;
 	}
@@ -49,6 +51,7 @@ class Collection implements ICollection {
 	/**
 	 * @since 16.0.0
 	 */
+	#[\Override]
 	public function setName(string $name): void {
 		$query = $this->connection->getQueryBuilder();
 		$query->update(Manager::TABLE_COLLECTIONS)
@@ -63,6 +66,7 @@ class Collection implements ICollection {
 	 * @return IResource[]
 	 * @since 16.0.0
 	 */
+	#[\Override]
 	public function getResources(): array {
 		if (empty($this->resources)) {
 			$this->resources = $this->manager->getResourcesByCollectionForUser($this, $this->userForAccess);
@@ -77,8 +81,9 @@ class Collection implements ICollection {
 	 * @throws ResourceException when the resource is already part of the collection
 	 * @since 16.0.0
 	 */
+	#[\Override]
 	public function addResource(IResource $resource): void {
-		array_map(function (IResource $r) use ($resource) {
+		array_map(function (IResource $r) use ($resource): void {
 			if ($this->isSameResource($r, $resource)) {
 				throw new ResourceException('Already part of the collection');
 			}
@@ -95,7 +100,7 @@ class Collection implements ICollection {
 			]);
 
 		try {
-			$query->execute();
+			$query->executeStatement();
 		} catch (ConstraintViolationException $e) {
 			throw new ResourceException('Already part of the collection');
 		}
@@ -108,6 +113,7 @@ class Collection implements ICollection {
 	 *
 	 * @since 16.0.0
 	 */
+	#[\Override]
 	public function removeResource(IResource $resource): void {
 		$this->resources = array_filter($this->getResources(), function (IResource $r) use ($resource) {
 			return !$this->isSameResource($r, $resource);
@@ -132,6 +138,7 @@ class Collection implements ICollection {
 	 *
 	 * @since 16.0.0
 	 */
+	#[\Override]
 	public function canAccess(?IUser $user): bool {
 		if ($user instanceof IUser) {
 			return $this->canUserAccess($user);
@@ -164,8 +171,8 @@ class Collection implements ICollection {
 	}
 
 	protected function isSameResource(IResource $resource1, IResource $resource2): bool {
-		return $resource1->getType() === $resource2->getType() &&
-			$resource1->getId() === $resource2->getId();
+		return $resource1->getType() === $resource2->getType()
+			&& $resource1->getId() === $resource2->getId();
 	}
 
 	protected function removeCollection(): void {

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -57,6 +58,7 @@ class EncryptionTest extends Storage {
 	/** dummy unencrypted size */
 	private int $dummySize = -1;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -193,7 +195,6 @@ class EncryptionTest extends Storage {
 	}
 
 	/**
-	 * @dataProvider dataTestGetMetaData
 	 *
 	 * @param string $path
 	 * @param array $metaData
@@ -202,6 +203,7 @@ class EncryptionTest extends Storage {
 	 * @param int $storedUnencryptedSize
 	 * @param array $expected
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataTestGetMetaData')]
 	public function testGetMetaData($path, $metaData, $encrypted, $unencryptedSizeSet, $storedUnencryptedSize, $expected): void {
 		$sourceStorage = $this->getMockBuilder('\OC\Files\Storage\Storage')
 			->disableOriginalConstructor()->getMock();
@@ -327,13 +329,13 @@ class EncryptionTest extends Storage {
 	}
 
 	/**
-	 * @dataProvider dataTestVerifyUnencryptedSize
 	 *
 	 * @param int $encryptedSize
 	 * @param int $unencryptedSize
 	 * @param bool $failure
 	 * @param int $expected
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataTestVerifyUnencryptedSize')]
 	public function testVerifyUnencryptedSize($encryptedSize, $unencryptedSize, $failure, $expected): void {
 		$sourceStorage = $this->getMockBuilder('\OC\Files\Storage\Storage')
 			->disableOriginalConstructor()->getMock();
@@ -390,13 +392,13 @@ class EncryptionTest extends Storage {
 	}
 
 	/**
-	 * @dataProvider dataTestCopyAndRename
 	 *
 	 * @param string $source
 	 * @param string $target
 	 * @param $encryptionEnabled
 	 * @param boolean $renameKeysReturn
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataTestCopyAndRename')]
 	public function testRename($source,
 		$target,
 		$encryptionEnabled,
@@ -452,13 +454,13 @@ class EncryptionTest extends Storage {
 	}
 
 	/**
-	 * @dataProvider dataTestRmdir
 	 *
 	 * @param string $path
 	 * @param boolean $rmdirResult
 	 * @param boolean $isExcluded
 	 * @param boolean $encryptionEnabled
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataTestRmdir')]
 	public function testRmdir($path, $rmdirResult, $isExcluded, $encryptionEnabled): void {
 		$sourceStorage = $this->getMockBuilder('\OC\Files\Storage\Storage')
 			->disableOriginalConstructor()->getMock();
@@ -510,11 +512,11 @@ class EncryptionTest extends Storage {
 	}
 
 	/**
-	 * @dataProvider dataTestCopyKeys
 	 *
 	 * @param boolean $excluded
 	 * @param boolean $expected
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataTestCopyKeys')]
 	public function testCopyKeys($excluded, $expected): void {
 		$this->util->expects($this->once())
 			->method('isExcluded')
@@ -539,12 +541,12 @@ class EncryptionTest extends Storage {
 	}
 
 	/**
-	 * @dataProvider dataTestGetHeader
 	 *
 	 * @param string $path
 	 * @param bool $strippedPathExists
 	 * @param string $strippedPath
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataTestGetHeader')]
 	public function testGetHeader($path, $strippedPathExists, $strippedPath): void {
 		$sourceStorage = $this->getMockBuilder('\OC\Files\Storage\Storage')
 			->disableOriginalConstructor()->getMock();
@@ -631,9 +633,8 @@ class EncryptionTest extends Storage {
 	/**
 	 * test if getHeader adds the default module correctly to the header for
 	 * legacy files
-	 *
-	 * @dataProvider dataTestGetHeaderAddLegacyModule
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataTestGetHeaderAddLegacyModule')]
 	public function testGetHeaderAddLegacyModule($header, $isEncrypted, $strippedPathExists, $expected): void {
 		$sourceStorage = $this->getMockBuilder(\OC\Files\Storage\Storage::class)
 			->disableOriginalConstructor()->getMock();
@@ -761,12 +762,12 @@ class EncryptionTest extends Storage {
 	}
 
 	/**
-	 * @dataProvider dataCopyBetweenStorage
 	 *
 	 * @param bool $encryptionEnabled
 	 * @param bool $mountPointEncryptionEnabled
 	 * @param bool $expectedEncrypted
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataCopyBetweenStorage')]
 	public function testCopyBetweenStorage($encryptionEnabled, $mountPointEncryptionEnabled, $expectedEncrypted): void {
 		$storage2 = $this->createMock(\OC\Files\Storage\Storage::class);
 
@@ -821,13 +822,13 @@ class EncryptionTest extends Storage {
 	}
 
 	/**
-	 * @dataProvider dataTestCopyBetweenStorageVersions
 	 *
 	 * @param string $sourceInternalPath
 	 * @param string $targetInternalPath
 	 * @param bool $copyResult
 	 * @param bool $encrypted
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataTestCopyBetweenStorageVersions')]
 	public function testCopyBetweenStorageVersions($sourceInternalPath, $targetInternalPath, $copyResult, $encrypted): void {
 		$sourceStorage = $this->createMock(\OC\Files\Storage\Storage::class);
 
@@ -915,10 +916,10 @@ class EncryptionTest extends Storage {
 	}
 
 	/**
-	 * @dataProvider dataTestIsVersion
 	 * @param string $path
 	 * @param bool $expected
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataTestIsVersion')]
 	public function testIsVersion($path, $expected): void {
 		$this->assertSame($expected,
 			$this->invokePrivate($this->instance, 'isVersion', [$path])
@@ -936,19 +937,13 @@ class EncryptionTest extends Storage {
 		];
 	}
 
-	/**
-	 * @dataProvider dataTestShouldEncrypt
-	 *
-	 * @param bool $encryptMountPoint
-	 * @param mixed $encryptionModule
-	 * @param bool $encryptionModuleShouldEncrypt
-	 * @param bool $expected
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataTestShouldEncrypt')]
 	public function testShouldEncrypt(
-		$encryptMountPoint,
-		$encryptionModule,
-		$encryptionModuleShouldEncrypt,
-		$expected,
+		bool $encryptionEnabled,
+		bool $encryptMountPoint,
+		?bool $encryptionModule,
+		bool $encryptionModuleShouldEncrypt,
+		bool $expected,
 	): void {
 		$encryptionManager = $this->createMock(\OC\Encryption\Manager::class);
 		$util = $this->createMock(Util::class);
@@ -964,7 +959,7 @@ class EncryptionTest extends Storage {
 		$wrapper = $this->getMockBuilder(Encryption::class)
 			->setConstructorArgs(
 				[
-					['mountPoint' => '', 'mount' => $mount, 'storage' => ''],
+					['mountPoint' => '', 'mount' => $mount, 'storage' => null],
 					$encryptionManager,
 					$util,
 					$this->logger,
@@ -978,13 +973,15 @@ class EncryptionTest extends Storage {
 			->onlyMethods(['getFullPath', 'getEncryptionModule'])
 			->getMock();
 
+		$encryptionManager->method('isEnabled')->willReturn($encryptionEnabled);
+
 		if ($encryptionModule === true) {
 			/** @var IEncryptionModule|MockObject $encryptionModule */
 			$encryptionModule = $this->createMock(IEncryptionModule::class);
 		}
 
 		$wrapper->method('getFullPath')->with($path)->willReturn($fullPath);
-		$wrapper->expects($encryptMountPoint ? $this->once() : $this->never())
+		$wrapper->expects(($encryptionEnabled && $encryptMountPoint) ? $this->once() : $this->never())
 			->method('getEncryptionModule')
 			->with($fullPath)
 			->willReturnCallback(
@@ -995,7 +992,8 @@ class EncryptionTest extends Storage {
 					return $encryptionModule;
 				}
 			);
-		$mount->expects($this->once())->method('getOption')->with('encrypt', true)
+		$mount->expects($encryptionEnabled ? $this->once() : $this->never())
+			->method('getOption')->with('encrypt', true)
 			->willReturn($encryptMountPoint);
 
 		if ($encryptionModule !== null && $encryptionModule !== false) {
@@ -1019,11 +1017,12 @@ class EncryptionTest extends Storage {
 
 	public static function dataTestShouldEncrypt(): array {
 		return [
-			[false, false, false, false],
-			[true, false, false, false],
-			[true, true, false, false],
-			[true, true, true, true],
-			[true, null, false, true],
+			[true, false, false, false, false],
+			[true, true, false, false, false],
+			[true, true, true, false, false],
+			[true, true, true, true, true],
+			[true, true, null, false, true],
+			[false, true, true, true, false],
 		];
 	}
 }

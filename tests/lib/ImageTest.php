@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -13,6 +14,7 @@ use OCP\IAppConfig;
 use OCP\IConfig;
 
 class ImageTest extends \Test\TestCase {
+	#[\Override]
 	public static function tearDownAfterClass(): void {
 		@unlink(OC::$SERVERROOT . '/tests/data/testimage2.png');
 		@unlink(OC::$SERVERROOT . '/tests/data/testimage2.jpg');
@@ -171,9 +173,7 @@ class ImageTest extends \Test\TestCase {
 		$this->assertNull($img->data());
 	}
 
-	/**
-	 * @depends testData
-	 */
+	#[\PHPUnit\Framework\Attributes\Depends('testData')]
 	public function testToString(): void {
 		$img = new Image();
 		$img->loadFromFile(OC::$SERVERROOT . '/tests/data/testimage.png');
@@ -280,12 +280,12 @@ class ImageTest extends \Test\TestCase {
 	}
 
 	/**
-	 * @dataProvider sampleProvider
 	 *
 	 * @param string $filename
 	 * @param int[] $asked
 	 * @param int[] $expected
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('sampleProvider')]
 	public function testFitIn($filename, $asked, $expected): void {
 		$img = new Image();
 		$img->loadFromFile(OC::$SERVERROOT . '/tests/data/' . $filename);
@@ -305,10 +305,10 @@ class ImageTest extends \Test\TestCase {
 	/**
 	 * Image should not be resized if it's already smaller than what is required
 	 *
-	 * @dataProvider sampleFilenamesProvider
 	 *
 	 * @param string $filename
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('sampleFilenamesProvider')]
 	public function testScaleDownToFitWhenSmallerAlready($filename): void {
 		$img = new Image();
 		$img->loadFromFile(OC::$SERVERROOT . '/tests/data/' . $filename);
@@ -336,12 +336,12 @@ class ImageTest extends \Test\TestCase {
 	}
 
 	/**
-	 * @dataProvider largeSampleProvider
 	 *
 	 * @param string $filename
 	 * @param int[] $asked
 	 * @param int[] $expected
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('largeSampleProvider')]
 	public function testScaleDownWhenBigger($filename, $asked, $expected): void {
 		$img = new Image();
 		$img->loadFromFile(OC::$SERVERROOT . '/tests/data/' . $filename);
@@ -359,9 +359,7 @@ class ImageTest extends \Test\TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider convertDataProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('convertDataProvider')]
 	public function testConvert($mimeType): void {
 		$img = new Image();
 		$img->loadFromFile(OC::$SERVERROOT . '/tests/data/testimage.png');

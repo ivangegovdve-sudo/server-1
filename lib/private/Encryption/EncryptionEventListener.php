@@ -9,16 +9,22 @@ declare(strict_types=1);
 
 namespace OC\Encryption;
 
-use OC\Files\SetupManager;
 use OC\Files\View;
 use OCA\Files_Trashbin\Events\NodeRestoredEvent;
 use OCP\Encryption\IFile;
+use OCP\Encryption\IManager as IEncryptionManager;
 use OCP\EventDispatcher\Event;
 use OCP\EventDispatcher\IEventDispatcher;
 use OCP\EventDispatcher\IEventListener;
 use OCP\Files\Events\Node\NodeRenamedEvent;
+use OCP\Files\ISetupManager;
+use OCP\Files\NotFoundException;
+use OCP\IConfig;
+use OCP\IGroupManager;
 use OCP\IUser;
+use OCP\IUserManager;
 use OCP\IUserSession;
+use OCP\Server;
 use OCP\Share\Events\ShareCreatedEvent;
 use OCP\Share\Events\ShareDeletedEvent;
 use Psr\Log\LoggerInterface;
@@ -29,8 +35,9 @@ class EncryptionEventListener implements IEventListener {
 
 	public function __construct(
 		private IUserSession $userSession,
-		private SetupManager $setupManager,
+		private ISetupManager $setupManager,
 		private Manager $encryptionManager,
+		private IUserManager $userManager,
 	) {
 	}
 
@@ -41,6 +48,7 @@ class EncryptionEventListener implements IEventListener {
 		$dispatcher->addServiceListener(NodeRestoredEvent::class, static::class);
 	}
 
+	#[\Override]
 	public function handle(Event $event): void {
 		if (!$this->encryptionManager->isEnabled()) {
 			return;
@@ -50,41 +58,40 @@ class EncryptionEventListener implements IEventListener {
 		} elseif ($event instanceof ShareCreatedEvent) {
 			$this->getUpdate()->postShared($event->getShare()->getNode());
 		} elseif ($event instanceof ShareDeletedEvent) {
-			// In case the unsharing happens in a background job, we don't have
-			// a session and we load instead the user from the UserManager
-			$owner = $event->getShare()->getNode()->getOwner();
-			$this->getUpdate($owner)->postUnshared($event->getShare()->getNode());
+			try {
+				// In case the unsharing happens in a background job, we don't have
+				// a session, and we load instead the user from the UserManager
+				$owner = $this->userManager->get($event->getShare()->getShareOwner());
+				$this->getUpdate($owner)->postUnshared($event->getShare()->getNode());
+			} catch (NotFoundException) {
+				/* The node was deleted already, nothing to update */
+			}
 		} elseif ($event instanceof NodeRestoredEvent) {
 			$this->getUpdate()->postRestore($event->getTarget());
 		}
 	}
 
 	private function getUpdate(?IUser $owner = null): Update {
-		if (is_null($this->updater)) {
-			$user = $this->userSession->getUser();
-			if (!$user && ($owner !== null)) {
-				$user = $owner;
-			}
-			if (!$user) {
-				throw new \Exception('Inconsistent data, File unshared, but owner not found. Should not happen');
-			}
-
-			$uid = $user->getUID();
-
+		$user = $this->userSession->getUser();
+		if (!$user && ($owner !== null)) {
+			$user = $owner;
+		}
+		if ($user) {
 			if (!$this->setupManager->isSetupComplete($user)) {
 				$this->setupManager->setupForUser($user);
 			}
-
+		}
+		if (is_null($this->updater)) {
 			$this->updater = new Update(
 				new Util(
 					new View(),
-					\OC::$server->getUserManager(),
-					\OC::$server->getGroupManager(),
-					\OC::$server->getConfig()),
-				\OC::$server->getEncryptionManager(),
-				\OC::$server->get(IFile::class),
-				\OC::$server->get(LoggerInterface::class),
-				$uid
+					$this->userManager,
+					Server::get(IGroupManager::class),
+					Server::get(IConfig::class)
+				),
+				Server::get(IEncryptionManager::class),
+				Server::get(IFile::class),
+				Server::get(LoggerInterface::class),
 			);
 		}
 

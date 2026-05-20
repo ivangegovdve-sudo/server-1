@@ -12,7 +12,7 @@ use OCA\Comments\Activity\Listener;
 use OCP\Activity\IEvent;
 use OCP\Activity\IManager;
 use OCP\App\IAppManager;
-use OCP\Comments\CommentsEvent;
+use OCP\Comments\Events\CommentAddedEvent;
 use OCP\Comments\IComment;
 use OCP\Files\Config\ICachedMountFileInfo;
 use OCP\Files\Config\IMountProviderCollection;
@@ -35,6 +35,7 @@ class ListenerTest extends TestCase {
 	protected IShareHelper&MockObject $shareHelper;
 	protected Listener $listener;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -66,14 +67,7 @@ class ListenerTest extends TestCase {
 			->method('getObjectType')
 			->willReturn('files');
 
-		/** @var CommentsEvent|MockObject $event */
-		$event = $this->createMock(CommentsEvent::class);
-		$event->expects($this->any())
-			->method('getComment')
-			->willReturn($comment);
-		$event->expects($this->any())
-			->method('getEvent')
-			->willReturn(CommentsEvent::EVENT_ADD);
+		$event = new CommentAddedEvent($comment);
 
 		/** @var IUser|MockObject $ownerUser */
 		$ownerUser = $this->createMock(IUser::class);
@@ -99,12 +93,11 @@ class ListenerTest extends TestCase {
 			->willReturn($userMountCache);
 
 		$node = $this->createMock(Node::class);
-		$nodes = [ $node ];
 
 		$ownerFolder = $this->createMock(Folder::class);
 		$ownerFolder->expects($this->any())
-			->method('getById')
-			->willReturn($nodes);
+			->method('getFirstNodeById')
+			->willReturn($node);
 
 		$this->rootFolder->expects($this->any())
 			->method('getUserFolder')

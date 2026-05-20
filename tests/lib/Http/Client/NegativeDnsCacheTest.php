@@ -21,6 +21,7 @@ class NegativeDnsCacheTest extends \Test\TestCase {
 	/** @var NegativeDnsCache */
 	private $negativeDnsCache;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -30,7 +31,7 @@ class NegativeDnsCacheTest extends \Test\TestCase {
 			->method('createLocal')
 			->with('NegativeDnsCache')
 			->willReturn($this->cache);
-		
+
 		$this->negativeDnsCache = new NegativeDnsCache($this->cacheFactory);
 	}
 

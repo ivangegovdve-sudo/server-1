@@ -45,9 +45,7 @@ class RemoveDeletedUsersCalendarSubscriptionsTest extends TestCase {
 		);
 	}
 
-	/**
-	 * @dataProvider dataTestRun
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataTestRun')]
 	public function testRun(array $subscriptions, array $userExists, int $deletions): void {
 		$qb = $this->createMock(IQueryBuilder::class);
 
@@ -74,7 +72,7 @@ class RemoveDeletedUsersCalendarSubscriptionsTest extends TestCase {
 
 		$result = $this->createMock(IResult::class);
 
-		$qb->method('execute')
+		$qb->method('executeQuery')
 			->willReturn($result);
 
 		$result->expects($this->once())
@@ -82,7 +80,7 @@ class RemoveDeletedUsersCalendarSubscriptionsTest extends TestCase {
 			->willReturn(count($subscriptions));
 
 		$result
-			->method('fetch')
+			->method('fetchAssociative')
 			->willReturnOnConsecutiveCalls(...$subscriptions);
 
 		$qb->method('delete')

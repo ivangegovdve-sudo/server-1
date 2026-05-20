@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -16,16 +17,17 @@ use OCP\Server;
 /**
  * Class PathVerificationTest
  *
- * @group DB
  *
  * @package Test\Files
  */
+#[\PHPUnit\Framework\Attributes\Group('DB')]
 class PathVerificationTest extends \Test\TestCase {
 	/**
-	 * @var \OC\Files\View
+	 * @var View
 	 */
 	private $view;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 		$this->view = new View();
@@ -41,9 +43,7 @@ class PathVerificationTest extends \Test\TestCase {
 	}
 
 
-	/**
-	 * @dataProvider providesEmptyFiles
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('providesEmptyFiles')]
 	public function testPathVerificationEmptyFileName($fileName): void {
 		$this->expectException(InvalidPathException::class);
 		$this->expectExceptionMessage('Empty filename is not allowed');
@@ -58,9 +58,7 @@ class PathVerificationTest extends \Test\TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider providesDotFiles
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('providesDotFiles')]
 	public function testPathVerificationDotFiles($fileName): void {
 		$this->expectException(InvalidPathException::class);
 		$this->expectExceptionMessage('Dot files are not allowed');
@@ -81,9 +79,7 @@ class PathVerificationTest extends \Test\TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider providesAstralPlane
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('providesAstralPlane')]
 	public function testPathVerificationAstralPlane($fileName): void {
 		$connection = Server::get(IDBConnection::class);
 
@@ -108,9 +104,7 @@ class PathVerificationTest extends \Test\TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider providesValidPosixPaths
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('providesValidPosixPaths')]
 	public function testPathVerificationValidPaths($fileName): void {
 		$storage = new Local(['datadir' => '']);
 

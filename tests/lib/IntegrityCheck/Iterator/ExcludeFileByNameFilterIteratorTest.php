@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2018 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2015 ownCloud, Inc.
@@ -13,6 +14,7 @@ class ExcludeFileByNameFilterIteratorTest extends TestCase {
 	/** @var ExcludeFileByNameFilterIterator|\PHPUnit\Framework\MockObject\MockObject */
 	protected $filter;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 		$this->filter = $this->getMockBuilder(ExcludeFileByNameFilterIterator::class)
@@ -35,10 +37,10 @@ class ExcludeFileByNameFilterIteratorTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider fileNameProvider
 	 * @param string $fileName
 	 * @param bool $expectedResult
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('fileNameProvider')]
 	public function testAcceptForFiles($fileName, $expectedResult): void {
 		$iteratorMock = $this->getMockBuilder(\RecursiveDirectoryIterator::class)
 			->disableOriginalConstructor()
@@ -57,10 +59,10 @@ class ExcludeFileByNameFilterIteratorTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider fileNameProvider
 	 * @param string $fileName
 	 * @param bool $expectedResult
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('fileNameProvider')]
 	public function testAcceptForDirs($fileName, $expectedResult): void {
 		$iteratorMock = $this->getMockBuilder(\RecursiveDirectoryIterator::class)
 			->disableOriginalConstructor()

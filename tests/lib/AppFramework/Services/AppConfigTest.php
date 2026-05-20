@@ -24,6 +24,7 @@ class AppConfigTest extends TestCase {
 
 	private const TEST_APPID = 'appconfig-test';
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 		$this->config = $this->createMock(IConfig::class);
@@ -57,11 +58,11 @@ class AppConfigTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider providerHasAppKey
 	 *
 	 * @param bool $lazy
 	 * @param bool $expected
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('providerHasAppKey')]
 	public function testHasAppKey(bool $lazy, bool $expected): void {
 		$key = 'key';
 		$this->appConfigCore->expects($this->once())
@@ -87,11 +88,11 @@ class AppConfigTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider providerIsSensitive
 	 *
 	 * @param bool $lazy
 	 * @param bool $expected
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('providerIsSensitive')]
 	public function testIsSensitive(bool $lazy, bool $expected): void {
 		$key = 'key';
 		$this->appConfigCore->expects($this->once())
@@ -103,11 +104,11 @@ class AppConfigTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider providerIsSensitive
 	 *
 	 * @param bool $lazy
 	 * @param bool $expected
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('providerIsSensitive')]
 	public function testIsSensitiveException(bool $lazy, bool $expected): void {
 		$key = 'unknown-key';
 		$this->appConfigCore->expects($this->once())
@@ -132,10 +133,9 @@ class AppConfigTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider providerIsLazy
-	 *
 	 * @param bool $expected
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('providerIsLazy')]
 	public function testIsLazy(bool $expected): void {
 		$key = 'key';
 		$this->appConfigCore->expects($this->once())
@@ -172,11 +172,11 @@ class AppConfigTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider providerGetAllAppValues
 	 *
 	 * @param string $key
 	 * @param bool $filtered
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('providerGetAllAppValues')]
 	public function testGetAllAppValues(string $key, bool $filtered): void {
 		$expected = [
 			'key1' => 'value1',
@@ -229,12 +229,12 @@ class AppConfigTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider providerSetAppValue
 	 *
 	 * @param bool $lazy
 	 * @param bool $sensitive
 	 * @param bool $expected
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('providerSetAppValue')]
 	public function testSetAppValueString(bool $lazy, bool $sensitive, bool $expected): void {
 		$key = 'key';
 		$value = 'valueString';
@@ -247,11 +247,11 @@ class AppConfigTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider providerSetAppValue
 	 *
 	 * @param bool $lazy
 	 * @param bool $sensitive
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('providerSetAppValue')]
 	public function testSetAppValueStringException(bool $lazy, bool $sensitive): void {
 		$key = 'key';
 		$value = 'valueString';
@@ -265,12 +265,12 @@ class AppConfigTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider providerSetAppValue
 	 *
 	 * @param bool $lazy
 	 * @param bool $sensitive
 	 * @param bool $expected
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('providerSetAppValue')]
 	public function testSetAppValueInt(bool $lazy, bool $sensitive, bool $expected): void {
 		$key = 'key';
 		$value = 42;
@@ -283,11 +283,11 @@ class AppConfigTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider providerSetAppValue
 	 *
 	 * @param bool $lazy
 	 * @param bool $sensitive
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('providerSetAppValue')]
 	public function testSetAppValueIntException(bool $lazy, bool $sensitive): void {
 		$key = 'key';
 		$value = 42;
@@ -301,12 +301,12 @@ class AppConfigTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider providerSetAppValue
 	 *
 	 * @param bool $lazy
 	 * @param bool $sensitive
 	 * @param bool $expected
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('providerSetAppValue')]
 	public function testSetAppValueFloat(bool $lazy, bool $sensitive, bool $expected): void {
 		$key = 'key';
 		$value = 3.14;
@@ -319,11 +319,11 @@ class AppConfigTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider providerSetAppValue
 	 *
 	 * @param bool $lazy
 	 * @param bool $sensitive
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('providerSetAppValue')]
 	public function testSetAppValueFloatException(bool $lazy, bool $sensitive): void {
 		$key = 'key';
 		$value = 3.14;
@@ -351,11 +351,11 @@ class AppConfigTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider providerSetAppValueBool
 	 *
 	 * @param bool $lazy
 	 * @param bool $expected
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('providerSetAppValueBool')]
 	public function testSetAppValueBool(bool $lazy, bool $expected): void {
 		$key = 'key';
 		$value = true;
@@ -368,10 +368,9 @@ class AppConfigTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider providerSetAppValueBool
-	 *
 	 * @param bool $lazy
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('providerSetAppValueBool')]
 	public function testSetAppValueBoolException(bool $lazy): void {
 		$key = 'key';
 		$value = true;
@@ -385,12 +384,12 @@ class AppConfigTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider providerSetAppValue
 	 *
 	 * @param bool $lazy
 	 * @param bool $sensitive
 	 * @param bool $expected
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('providerSetAppValue')]
 	public function testSetAppValueArray(bool $lazy, bool $sensitive, bool $expected): void {
 		$key = 'key';
 		$value = ['item' => true];
@@ -403,11 +402,11 @@ class AppConfigTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider providerSetAppValue
 	 *
 	 * @param bool $lazy
 	 * @param bool $sensitive
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('providerSetAppValue')]
 	public function testSetAppValueArrayException(bool $lazy, bool $sensitive): void {
 		$key = 'key';
 		$value = ['item' => true];
@@ -467,11 +466,11 @@ class AppConfigTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider providerGetAppValue
 	 *
 	 * @param bool $lazy
 	 * @param bool $exist
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('providerGetAppValue')]
 	public function testGetAppValueString(bool $lazy, bool $exist): void {
 		$key = 'key';
 		$value = 'valueString';
@@ -487,10 +486,9 @@ class AppConfigTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider providerGetAppValue
-	 *
 	 * @param bool $lazy
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('providerGetAppValue')]
 	public function testGetAppValueStringException(bool $lazy): void {
 		$key = 'key';
 		$default = 'default';
@@ -505,11 +503,11 @@ class AppConfigTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider providerGetAppValue
 	 *
 	 * @param bool $lazy
 	 * @param bool $exist
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('providerGetAppValue')]
 	public function testGetAppValueInt(bool $lazy, bool $exist): void {
 		$key = 'key';
 		$value = 42;
@@ -525,10 +523,9 @@ class AppConfigTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider providerGetAppValue
-	 *
 	 * @param bool $lazy
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('providerGetAppValue')]
 	public function testGetAppValueIntException(bool $lazy): void {
 		$key = 'key';
 		$default = 17;
@@ -543,11 +540,11 @@ class AppConfigTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider providerGetAppValue
 	 *
 	 * @param bool $lazy
 	 * @param bool $exist
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('providerGetAppValue')]
 	public function testGetAppValueFloat(bool $lazy, bool $exist): void {
 		$key = 'key';
 		$value = 3.14;
@@ -563,10 +560,9 @@ class AppConfigTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider providerGetAppValue
-	 *
 	 * @param bool $lazy
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('providerGetAppValue')]
 	public function testGetAppValueFloatException(bool $lazy): void {
 		$key = 'key';
 		$default = 17.04;
@@ -581,11 +577,11 @@ class AppConfigTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider providerGetAppValue
 	 *
 	 * @param bool $lazy
 	 * @param bool $exist
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('providerGetAppValue')]
 	public function testGetAppValueBool(bool $lazy, bool $exist): void {
 		$key = 'key';
 		$value = true;
@@ -601,10 +597,9 @@ class AppConfigTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider providerGetAppValue
-	 *
 	 * @param bool $lazy
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('providerGetAppValue')]
 	public function testGetAppValueBoolException(bool $lazy): void {
 		$key = 'key';
 		$default = false;
@@ -619,11 +614,11 @@ class AppConfigTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider providerGetAppValue
 	 *
 	 * @param bool $lazy
 	 * @param bool $exist
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('providerGetAppValue')]
 	public function testGetAppValueArray(bool $lazy, bool $exist): void {
 		$key = 'key';
 		$value = ['item' => true];
@@ -639,10 +634,9 @@ class AppConfigTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider providerGetAppValue
-	 *
 	 * @param bool $lazy
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('providerGetAppValue')]
 	public function testGetAppValueArrayException(bool $lazy): void {
 		$key = 'key';
 		$default = [];

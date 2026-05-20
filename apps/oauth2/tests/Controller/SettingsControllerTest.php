@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2017 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -21,9 +22,7 @@ use OCP\Security\ISecureRandom;
 use OCP\Server;
 use Test\TestCase;
 
-/**
- * @group DB
- */
+#[\PHPUnit\Framework\Attributes\Group(name: 'DB')]
 class SettingsControllerTest extends TestCase {
 	/** @var IRequest|\PHPUnit\Framework\MockObject\MockObject */
 	private $request;
@@ -95,10 +94,10 @@ class SettingsControllerTest extends TestCase {
 			->expects($this->once())
 			->method('insert')
 			->with($this->callback(function (Client $c) {
-				return $c->getName() === 'My Client Name' &&
-					$c->getRedirectUri() === 'https://example.com/' &&
-					$c->getSecret() === bin2hex('MyHashedSecret') &&
-					$c->getClientIdentifier() === 'MyClientIdentifier';
+				return $c->getName() === 'My Client Name'
+					&& $c->getRedirectUri() === 'https://example.com/'
+					&& $c->getSecret() === bin2hex('MyHashedSecret')
+					&& $c->getClientIdentifier() === 'MyClientIdentifier';
 			}))->willReturnCallback(function (Client $c) {
 				$c->setId(42);
 				return $c;

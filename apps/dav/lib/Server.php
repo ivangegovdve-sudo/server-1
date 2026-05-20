@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2022 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -26,6 +27,7 @@ use OCA\DAV\CardDAV\PhotoCache;
 use OCA\DAV\CardDAV\Security\CardDavRateLimitingPlugin;
 use OCA\DAV\CardDAV\Validation\CardDavValidatePlugin;
 use OCA\DAV\Comments\CommentsPlugin;
+use OCA\DAV\Connector\Sabre\AddExtraHeadersPlugin;
 use OCA\DAV\Connector\Sabre\AnonymousOptionsPlugin;
 use OCA\DAV\Connector\Sabre\AppleQuirksPlugin;
 use OCA\DAV\Connector\Sabre\Auth;
@@ -44,14 +46,19 @@ use OCA\DAV\Connector\Sabre\FilesReportPlugin;
 use OCA\DAV\Connector\Sabre\LockPlugin;
 use OCA\DAV\Connector\Sabre\MaintenancePlugin;
 use OCA\DAV\Connector\Sabre\PropfindCompressionPlugin;
+use OCA\DAV\Connector\Sabre\PropFindMonitorPlugin;
+use OCA\DAV\Connector\Sabre\PropFindPreloadNotifyPlugin;
 use OCA\DAV\Connector\Sabre\QuotaPlugin;
 use OCA\DAV\Connector\Sabre\RequestIdHeaderPlugin;
 use OCA\DAV\Connector\Sabre\SharesPlugin;
 use OCA\DAV\Connector\Sabre\TagsPlugin;
+use OCA\DAV\Connector\Sabre\UserIdHeaderPlugin;
 use OCA\DAV\Connector\Sabre\ZipFolderPlugin;
 use OCA\DAV\DAV\CustomPropertiesBackend;
 use OCA\DAV\DAV\PublicAuth;
+use OCA\DAV\DAV\Security\RateLimiting;
 use OCA\DAV\DAV\ViewOnlyPlugin;
+use OCA\DAV\Db\PropertyMapper;
 use OCA\DAV\Events\SabrePluginAddEvent;
 use OCA\DAV\Events\SabrePluginAuthInitEvent;
 use OCA\DAV\Files\BrowserErrorPagePlugin;
@@ -63,6 +70,7 @@ use OCA\DAV\Provisioning\Apple\AppleProvisioningPlugin;
 use OCA\DAV\SystemTag\SystemTagPlugin;
 use OCA\DAV\Upload\ChunkingPlugin;
 use OCA\DAV\Upload\ChunkingV2Plugin;
+use OCA\DAV\Upload\UploadAutoMkcolPlugin;
 use OCA\Theming\ThemingDefaults;
 use OCP\Accounts\IAccountManager;
 use OCP\App\IAppManager;
@@ -78,6 +86,7 @@ use OCP\FilesMetadata\IFilesMetadataManager;
 use OCP\IAppConfig;
 use OCP\ICacheFactory;
 use OCP\IConfig;
+use OCP\IDateTimeZone;
 use OCP\IDBConnection;
 use OCP\IGroupManager;
 use OCP\IPreview;
@@ -86,6 +95,7 @@ use OCP\ISession;
 use OCP\ITagManager;
 use OCP\IURLGenerator;
 use OCP\IUserSession;
+use OCP\Mail\IEmailValidator;
 use OCP\Mail\IMailer;
 use OCP\Profiler\IProfiler;
 use OCP\SabrePluginEvent;
@@ -106,6 +116,7 @@ class Server {
 		private IRequest $request,
 		private string $baseUri,
 	) {
+		$debugEnabled = \OCP\Server::get(IConfig::class)->getSystemValue('debug', false);
 		$this->profiler = \OCP\Server::get(IProfiler::class);
 		if ($this->profiler->isEnabled()) {
 			/** @var IEventLogger $eventLogger */
@@ -118,6 +129,7 @@ class Server {
 
 		$root = new RootCollection();
 		$this->server = new \OCA\DAV\Connector\Sabre\Server(new CachingTree($root));
+		$this->server->setLogger($logger);
 
 		// Add maintenance plugin
 		$this->server->addPlugin(new MaintenancePlugin(\OCP\Server::get(IConfig::class), \OC::$server->getL10N('dav')));
@@ -165,7 +177,9 @@ class Server {
 		$authPlugin->addBackend($authBackend);
 
 		// debugging
-		if (\OCP\Server::get(IConfig::class)->getSystemValue('debug', false)) {
+		if ($debugEnabled) {
+			$this->server->debugEnabled = true;
+			$this->server->addPlugin(new PropFindMonitorPlugin());
 			$this->server->addPlugin(new \Sabre\DAV\Browser\Plugin());
 		} else {
 			$this->server->addPlugin(new DummyGetResponsePlugin());
@@ -187,7 +201,7 @@ class Server {
 
 		// calendar plugins
 		if ($this->requestIsForSubtree(['calendars', 'public-calendars', 'system-calendars', 'principals'])) {
-			$this->server->addPlugin(new DAV\Sharing\Plugin($authBackend, \OCP\Server::get(IRequest::class), \OCP\Server::get(IConfig::class)));
+			$this->server->addPlugin(new DAV\Sharing\Plugin($authBackend, \OCP\Server::get(IRequest::class), \OCP\Server::get(IConfig::class), \OCP\Server::get(RateLimiting::class)));
 			$this->server->addPlugin(new \OCA\DAV\CalDAV\Plugin());
 			$this->server->addPlugin(new ICSExportPlugin(\OCP\Server::get(IConfig::class), $logger));
 			$this->server->addPlugin(new \OCA\DAV\CalDAV\Schedule\Plugin(\OCP\Server::get(IConfig::class), \OCP\Server::get(LoggerInterface::class), \OCP\Server::get(DefaultCalendarValidator::class)));
@@ -210,7 +224,7 @@ class Server {
 
 		// addressbook plugins
 		if ($this->requestIsForSubtree(['addressbooks', 'principals'])) {
-			$this->server->addPlugin(new DAV\Sharing\Plugin($authBackend, \OCP\Server::get(IRequest::class), \OCP\Server::get(IConfig::class)));
+			$this->server->addPlugin(new DAV\Sharing\Plugin($authBackend, \OCP\Server::get(IRequest::class), \OCP\Server::get(IConfig::class), \OCP\Server::get(RateLimiting::class)));
 			$this->server->addPlugin(new \OCA\DAV\CardDAV\Plugin());
 			$this->server->addPlugin(new VCFExportPlugin());
 			$this->server->addPlugin(new MultiGetExportPlugin());
@@ -230,16 +244,21 @@ class Server {
 			\OCP\Server::get(IUserSession::class)
 		));
 
+		// performance improvement plugins
 		$this->server->addPlugin(new CopyEtagHeaderPlugin());
 		$this->server->addPlugin(new RequestIdHeaderPlugin(\OCP\Server::get(IRequest::class)));
+		$this->server->addPlugin(new UserIdHeaderPlugin(\OCP\Server::get(IUserSession::class)));
+		$this->server->addPlugin(new UploadAutoMkcolPlugin());
 		$this->server->addPlugin(new ChunkingV2Plugin(\OCP\Server::get(ICacheFactory::class)));
 		$this->server->addPlugin(new ChunkingPlugin());
 		$this->server->addPlugin(new ZipFolderPlugin(
 			$this->server->tree,
 			$logger,
 			$eventDispatcher,
+			\OCP\Server::get(IDateTimeZone::class),
 		));
 		$this->server->addPlugin(\OCP\Server::get(PaginatePlugin::class));
+		$this->server->addPlugin(new PropFindPreloadNotifyPlugin());
 
 		// allow setup of additional plugins
 		$eventDispatcher->dispatch('OCA\DAV\Connector\Sabre::addPlugin', $event);
@@ -298,6 +317,7 @@ class Server {
 							$this->server->tree,
 							\OCP\Server::get(IDBConnection::class),
 							\OCP\Server::get(IUserSession::class)->getUser(),
+							\OCP\Server::get(PropertyMapper::class),
 							\OCP\Server::get(DefaultCalendarValidator::class),
 						)
 					)
@@ -318,7 +338,6 @@ class Server {
 				$this->server->addPlugin(new SharesPlugin(
 					$this->server->tree,
 					$userSession,
-					$userFolder,
 					$shareManager,
 				));
 				$this->server->addPlugin(new CommentPropertiesPlugin(
@@ -335,7 +354,8 @@ class Server {
 						$userSession,
 						\OCP\Server::get(IMipService::class),
 						\OCP\Server::get(EventComparisonService::class),
-						\OCP\Server::get(\OCP\Mail\Provider\IManager::class)
+						\OCP\Server::get(\OCP\Mail\Provider\IManager::class),
+						\OCP\Server::get(IEmailValidator::class),
 					));
 				}
 				$this->server->addPlugin(new \OCA\DAV\CalDAV\Search\SearchPlugin());
@@ -352,6 +372,7 @@ class Server {
 						\OCP\Server::get(IAppManager::class)
 					));
 					$lazySearchBackend->setBackend(new FileSearchBackend(
+						$this->server,
 						$this->server->tree,
 						$user,
 						\OCP\Server::get(IRootFolder::class),
@@ -366,6 +387,7 @@ class Server {
 						)
 					);
 				}
+				$this->server->addPlugin(new AddExtraHeadersPlugin($logger, false));
 				$this->server->addPlugin(new EnablePlugin(
 					\OCP\Server::get(IConfig::class),
 					\OCP\Server::get(BirthdayService::class),

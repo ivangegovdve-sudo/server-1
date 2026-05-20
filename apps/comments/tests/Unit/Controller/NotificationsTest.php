@@ -35,6 +35,7 @@ class NotificationsTest extends TestCase {
 	protected IURLGenerator&MockObject $urlGenerator;
 	protected NotificationsController $notificationsController;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -107,8 +108,8 @@ class NotificationsTest extends TestCase {
 			->willReturn($folder);
 
 		$folder->expects($this->once())
-			->method('getById')
-			->willReturn([$file]);
+			->method('getFirstNodeById')
+			->willReturn($file);
 
 		$this->session->expects($this->once())
 			->method('getUser')
@@ -138,7 +139,7 @@ class NotificationsTest extends TestCase {
 		$this->commentsManager->expects($this->any())
 			->method('get')
 			->with('42')
-			->will($this->throwException(new NotFoundException()));
+			->willThrowException(new NotFoundException());
 
 		$this->rootFolder->expects($this->never())
 			->method('getUserFolder');
@@ -183,8 +184,8 @@ class NotificationsTest extends TestCase {
 			->willReturn($folder);
 
 		$folder->expects($this->once())
-			->method('getById')
-			->willReturn([]);
+			->method('getFirstNodeById')
+			->willReturn(null);
 
 		$user = $this->createMock(IUser::class);
 

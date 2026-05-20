@@ -12,12 +12,12 @@ OC.L10N.register(
     "Files" : "پرونده‌ها",
     "You were mentioned on \"{file}\", in a comment by an account that has since been deleted" : "شما در «{file}» و در دیدگاهی که توسط حسابی که بعدتر پاک شده است مورد اشاره قرار گرفته‌اید",
     "{user} mentioned you in a comment on \"{file}\"" : "{user} در دیدگاهش زیر «{file}» به شما اشاره کرد",
+    "Go to file" : "Go to file",
     "Files app plugin to add comments to files" : "افزونهٔ برنامهٔ Files برای افزودن دیدگاه به پرونده‌ها",
     "Edit comment" : "ویرایش دیدگاه",
     "Delete comment" : "حذف دیدگاه",
     "Cancel edit" : "Cancel edit",
     "New comment" : "دیدگاه جدید",
-    "Write a comment …" : "دیدگاهی بنویسید...",
     "Post comment" : "فرستادن دیدگاه",
     "@ for mentions, : for emoji, / for smart picker" : "@ برای اشاره، : برای شکلک، / برای انتخاب‌گر هوشمند",
     "Could not reload comments" : "ناتوانی در دریافت دیدگاه‌ها",
@@ -31,6 +31,7 @@ OC.L10N.register(
     "An error occurred while trying to edit the comment" : "خطایی در خلال تلاش برای ویرایش دیدگاه رخ داد",
     "Comment deleted" : "دیدگاه حذف شد",
     "An error occurred while trying to delete the comment" : "خطایی در خلال تلاش برای حذف دیدگاه رخ داد",
-    "An error occurred while trying to create the comment" : "خطایی در خلال تلاش برای ایجاد دیدگاه رخ داد"
+    "An error occurred while trying to create the comment" : "خطایی در خلال تلاش برای ایجاد دیدگاه رخ داد",
+    "Write a comment …" : "دیدگاهی بنویسید..."
 },
 "nplurals=2; plural=(n > 1);");

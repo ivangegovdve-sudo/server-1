@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2019 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -22,6 +25,7 @@ class Capabilities implements ICapability {
 	 *
 	 * @return array{files: array{versioning: bool, version_labeling: bool, version_deletion: bool}}
 	 */
+	#[\Override]
 	public function getCapabilities() {
 		return [
 			'files' => [

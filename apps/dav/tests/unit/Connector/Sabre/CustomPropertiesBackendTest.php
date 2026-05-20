@@ -12,6 +12,7 @@ use OCA\DAV\CalDAV\DefaultCalendarValidator;
 use OCA\DAV\Connector\Sabre\Directory;
 use OCA\DAV\Connector\Sabre\File;
 use OCA\DAV\DAV\CustomPropertiesBackend;
+use OCA\DAV\Db\PropertyMapper;
 use OCP\IDBConnection;
 use OCP\IUser;
 use OCP\Server;
@@ -21,10 +22,10 @@ use Sabre\DAV\Tree;
 /**
  * Class CustomPropertiesBackend
  *
- * @group DB
  *
  * @package OCA\DAV\Tests\unit\Connector\Sabre
  */
+#[\PHPUnit\Framework\Attributes\Group(name: 'DB')]
 class CustomPropertiesBackendTest extends \Test\TestCase {
 	private \Sabre\DAV\Server $server;
 	private \Sabre\DAV\Tree&MockObject $tree;
@@ -52,6 +53,7 @@ class CustomPropertiesBackendTest extends \Test\TestCase {
 			$this->tree,
 			Server::get(IDBConnection::class),
 			$this->user,
+			Server::get(PropertyMapper::class),
 			$this->defaultCalendarValidator,
 		);
 	}
@@ -59,8 +61,8 @@ class CustomPropertiesBackendTest extends \Test\TestCase {
 	protected function tearDown(): void {
 		$connection = Server::get(IDBConnection::class);
 		$deleteStatement = $connection->prepare(
-			'DELETE FROM `*PREFIX*properties`' .
-			' WHERE `userid` = ?'
+			'DELETE FROM `*PREFIX*properties`'
+			. ' WHERE `userid` = ?'
 		);
 		$deleteStatement->execute(
 			[

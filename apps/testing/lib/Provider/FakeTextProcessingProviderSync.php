@@ -1,9 +1,11 @@
 <?php
+
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2023 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
-
 namespace OCA\Testing\Provider;
 
 use OCP\TextProcessing\FreePromptTaskType;
@@ -15,18 +17,22 @@ use OCP\TextProcessing\ITaskType;
  */
 class FakeTextProcessingProviderSync implements IProviderWithExpectedRuntime {
 
+	#[\Override]
 	public function getName(): string {
 		return 'Fake text processing provider (synchronous)';
 	}
 
+	#[\Override]
 	public function process(string $prompt): string {
 		return $this->mb_strrev($prompt) . ' (done with FakeTextProcessingProviderSync)';
 	}
 
+	#[\Override]
 	public function getTaskType(): string {
 		return FreePromptTaskType::class;
 	}
 
+	#[\Override]
 	public function getExpectedRuntime(): int {
 		return 1;
 	}

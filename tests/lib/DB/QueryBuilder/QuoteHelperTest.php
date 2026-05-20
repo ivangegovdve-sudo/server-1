@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2017-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -17,6 +18,7 @@ class QuoteHelperTest extends \Test\TestCase {
 	/** @var QuoteHelper */
 	protected $helper;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -37,10 +39,10 @@ class QuoteHelperTest extends \Test\TestCase {
 	}
 
 	/**
-	 * @dataProvider dataQuoteColumnName
 	 * @param mixed $input
 	 * @param string $expected
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataQuoteColumnName')]
 	public function testQuoteColumnName($input, $expected): void {
 		$this->assertSame(
 			$expected,
@@ -72,10 +74,10 @@ class QuoteHelperTest extends \Test\TestCase {
 	}
 
 	/**
-	 * @dataProvider dataQuoteColumnNames
 	 * @param mixed $input
 	 * @param string $expected
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataQuoteColumnNames')]
 	public function testQuoteColumnNames($input, $expected): void {
 		$this->assertSame(
 			$expected,

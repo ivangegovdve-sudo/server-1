@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2016 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -18,6 +21,7 @@ class Setting extends ActivitySettings {
 	 * @return string Lowercase a-z and underscore only identifier
 	 * @since 11.0.0
 	 */
+	#[\Override]
 	public function getIdentifier() {
 		return 'systemtags';
 	}
@@ -26,6 +30,7 @@ class Setting extends ActivitySettings {
 	 * @return string A translated string
 	 * @since 11.0.0
 	 */
+	#[\Override]
 	public function getName() {
 		return $this->l->t('<strong>System tags</strong> for a file have been modified');
 	}
@@ -34,6 +39,7 @@ class Setting extends ActivitySettings {
 	 * @return string Lowercase a-z and underscore only group identifier
 	 * @since 20.0.0
 	 */
+	#[\Override]
 	public function getGroupIdentifier() {
 		return 'files';
 	}
@@ -42,6 +48,7 @@ class Setting extends ActivitySettings {
 	 * @return string A translated string for the settings group
 	 * @since 20.0.0
 	 */
+	#[\Override]
 	public function getGroupName() {
 		return $this->l->t('Files');
 	}
@@ -52,6 +59,7 @@ class Setting extends ActivitySettings {
 	 *             priority values. It is required to return a value between 0 and 100.
 	 * @since 11.0.0
 	 */
+	#[\Override]
 	public function getPriority() {
 		return 50;
 	}
@@ -60,6 +68,7 @@ class Setting extends ActivitySettings {
 	 * @return bool True when the option can be changed for the stream
 	 * @since 11.0.0
 	 */
+	#[\Override]
 	public function canChangeStream() {
 		return true;
 	}
@@ -68,6 +77,7 @@ class Setting extends ActivitySettings {
 	 * @return bool True when the option can be changed for the stream
 	 * @since 11.0.0
 	 */
+	#[\Override]
 	public function isDefaultEnabledStream() {
 		return true;
 	}
@@ -76,6 +86,7 @@ class Setting extends ActivitySettings {
 	 * @return bool True when the option can be changed for the mail
 	 * @since 11.0.0
 	 */
+	#[\Override]
 	public function canChangeMail() {
 		return true;
 	}
@@ -84,6 +95,7 @@ class Setting extends ActivitySettings {
 	 * @return bool True when the option can be changed for the stream
 	 * @since 11.0.0
 	 */
+	#[\Override]
 	public function isDefaultEnabledMail() {
 		return false;
 	}

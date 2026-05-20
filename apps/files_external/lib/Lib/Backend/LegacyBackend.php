@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2018-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -73,6 +74,7 @@ class LegacyBackend extends Backend {
 	/**
 	 * @return MissingDependency[]
 	 */
+	#[\Override]
 	public function checkDependencies() {
 		if ($this->hasDependencies) {
 			return $this->doCheckDependencies();

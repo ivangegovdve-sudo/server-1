@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2017-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2017 ownCloud GmbH
@@ -22,11 +23,13 @@ class RootCollection extends AbstractPrincipalCollection {
 	 * @param array $principalInfo
 	 * @return AvatarHome
 	 */
+	#[\Override]
 	public function getChildForPrincipal(array $principalInfo) {
 		$avatarManager = Server::get(IAvatarManager::class);
 		return new AvatarHome($principalInfo, $avatarManager);
 	}
 
+	#[\Override]
 	public function getName() {
 		return 'avatars';
 	}

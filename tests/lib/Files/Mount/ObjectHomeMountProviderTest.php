@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -27,6 +28,7 @@ class ObjectHomeMountProviderTest extends \Test\TestCase {
 	/** @var IStorageFactory|\PHPUnit\Framework\MockObject\MockObject */
 	protected $loader;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -83,7 +85,7 @@ class ObjectHomeMountProviderTest extends \Test\TestCase {
 		$this->config->method('getUserValue')
 			->willReturn(null);
 
-		$this->config->expects($this->once())
+		$this->config
 			->method('setUserValue')
 			->with(
 				$this->equalTo('uid'),
@@ -250,21 +252,32 @@ class FakeObjectStore implements IObjectStore {
 		return $this->arguments;
 	}
 
+	#[\Override]
 	public function getStorageId() {
 	}
 
+	#[\Override]
 	public function readObject($urn) {
 	}
 
+	#[\Override]
 	public function writeObject($urn, $stream, ?string $mimetype = null) {
 	}
 
+	#[\Override]
 	public function deleteObject($urn) {
 	}
 
+	#[\Override]
 	public function objectExists($urn) {
 	}
 
+	#[\Override]
 	public function copyObject($from, $to) {
+	}
+
+	#[\Override]
+	public function preSignedUrl(string $urn, \DateTimeInterface $expiration): ?string {
+		return null;
 	}
 }

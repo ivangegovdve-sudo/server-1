@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -14,14 +15,12 @@ use OCA\Files_External\Service\BackendService;
 use OCA\Files_External\Service\GlobalStoragesService;
 use OCA\Files_External\Service\UserGlobalStoragesService;
 use OCA\Files_External\Service\UserStoragesService;
-use OCP\AppFramework\QueryException;
 use OCP\Files\StorageNotAvailableException;
 use OCP\IConfig;
-use OCP\IL10N;
 use OCP\Security\ISecureRandom;
 use OCP\Server;
-use OCP\Util;
 use phpseclib\Crypt\AES;
+use Psr\Container\ContainerExceptionInterface;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -49,7 +48,7 @@ class MountConfig {
 	 * @param mixed $input
 	 * @param string|null $userId
 	 * @return mixed
-	 * @throws QueryException
+	 * @throws ContainerExceptionInterface
 	 * @since 16.0.0
 	 */
 	public static function substitutePlaceholdersInConfig($input, ?string $userId = null) {
@@ -75,7 +74,7 @@ class MountConfig {
 	 * @return int see self::STATUS_*
 	 * @throws \Exception
 	 */
-	public static function getBackendStatus($class, $options, $isPersonal, $testOnly = true) {
+	public static function getBackendStatus($class, $options) {
 		if (self::$skipTest) {
 			return StorageNotAvailableException::STATUS_SUCCESS;
 		}
@@ -92,7 +91,7 @@ class MountConfig {
 				$storage = new $class($options);
 
 				try {
-					$result = $storage->test($isPersonal, $testOnly);
+					$result = $storage->test();
 					$storage->setAvailability($result);
 					if ($result) {
 						return StorageNotAvailableException::STATUS_SUCCESS;
@@ -107,52 +106,6 @@ class MountConfig {
 			}
 		}
 		return StorageNotAvailableException::STATUS_ERROR;
-	}
-
-	/**
-	 * Get backend dependency message
-	 * TODO: move into AppFramework along with templates
-	 *
-	 * @param Backend[] $backends
-	 */
-	public static function dependencyMessage(array $backends): string {
-		$l = Util::getL10N('files_external');
-		$message = '';
-		$dependencyGroups = [];
-
-		foreach ($backends as $backend) {
-			foreach ($backend->checkDependencies() as $dependency) {
-				$dependencyMessage = $dependency->getMessage();
-				if ($dependencyMessage !== null) {
-					$message .= '<p>' . $dependencyMessage . '</p>';
-				} else {
-					$dependencyGroups[$dependency->getDependency()][] = $backend;
-				}
-			}
-		}
-
-		foreach ($dependencyGroups as $module => $dependants) {
-			$backends = implode(', ', array_map(function (Backend $backend): string {
-				return '"' . $backend->getText() . '"';
-			}, $dependants));
-			$message .= '<p>' . MountConfig::getSingleDependencyMessage($l, $module, $backends) . '</p>';
-		}
-
-		return $message;
-	}
-
-	/**
-	 * Returns a dependency missing message
-	 */
-	private static function getSingleDependencyMessage(IL10N $l, string $module, string $backend): string {
-		switch (strtolower($module)) {
-			case 'curl':
-				return $l->t('The cURL support in PHP is not enabled or installed. Mounting of %s is not possible. Please ask your system administrator to install it.', [$backend]);
-			case 'ftp':
-				return $l->t('The FTP support in PHP is not enabled or installed. Mounting of %s is not possible. Please ask your system administrator to install it.', [$backend]);
-			default:
-				return $l->t('"%1$s" is not installed. Mounting of %2$s is not possible. Please ask your system administrator to install it.', [$module, $backend]);
-		}
 	}
 
 	/**

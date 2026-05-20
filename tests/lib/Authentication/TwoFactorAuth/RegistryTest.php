@@ -24,15 +24,11 @@ use PHPUnit\Framework\MockObject\MockObject;
 use Test\TestCase;
 
 class RegistryTest extends TestCase {
-	/** @var ProviderUserAssignmentDao|MockObject */
-	private $dao;
+	private ProviderUserAssignmentDao&MockObject $dao;
+	private IEventDispatcher&MockObject $dispatcher;
+	private Registry $registry;
 
-	/** @var IEventDispatcher|MockObject */
-	private $dispatcher;
-
-	/** @var Registry */
-	private $registry;
-
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 

@@ -14,19 +14,17 @@ use OCP\Support\Subscription\IAssertion;
 use OCP\Support\Subscription\IRegistry;
 
 class Assertion implements IAssertion {
-	private IRegistry $registry;
-	private IFactory $l10nFactory;
-	private IManager $notificationManager;
-
-	public function __construct(IRegistry $registry, IFactory $l10nFactory, IManager $notificationManager) {
-		$this->registry = $registry;
-		$this->l10nFactory = $l10nFactory;
-		$this->notificationManager = $notificationManager;
+	public function __construct(
+		private IRegistry $registry,
+		private IFactory $l10nFactory,
+		private IManager $notificationManager,
+	) {
 	}
 
 	/**
 	 * @inheritDoc
 	 */
+	#[\Override]
 	public function createUserIsLegit(): void {
 		if ($this->registry->delegateIsHardUserLimitReached($this->notificationManager)) {
 			$l = $this->l10nFactory->get('lib');

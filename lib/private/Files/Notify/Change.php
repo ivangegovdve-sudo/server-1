@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2017 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -8,29 +11,22 @@ namespace OC\Files\Notify;
 use OCP\Files\Notify\IChange;
 
 class Change implements IChange {
-	/** @var int */
-	private $type;
-
-	/** @var string */
-	private $path;
-
 	/**
-	 * Change constructor.
-	 *
-	 * @param int $type
-	 * @param string $path
+	 * @param IChange::ADDED|IChange::REMOVED|IChange::MODIFIED|IChange::RENAMED $type
 	 */
-	public function __construct($type, $path) {
-		$this->type = $type;
-		$this->path = $path;
+	public function __construct(
+		private readonly int $type,
+		private readonly string $path,
+	) {
 	}
 
 	/**
 	 * Get the type of the change
 	 *
-	 * @return int IChange::ADDED, IChange::REMOVED, IChange::MODIFIED or IChange::RENAMED
+	 * @return IChange::ADDED|IChange::REMOVED|IChange::MODIFIED|IChange::RENAMED
 	 */
-	public function getType() {
+	#[\Override]
+	public function getType(): int {
 		return $this->type;
 	}
 
@@ -38,10 +34,9 @@ class Change implements IChange {
 	 * Get the path of the file that was changed relative to the root of the storage
 	 *
 	 * Note, for rename changes this path is the old path for the file
-	 *
-	 * @return mixed
 	 */
-	public function getPath() {
+	#[\Override]
+	public function getPath(): string {
 		return $this->path;
 	}
 }

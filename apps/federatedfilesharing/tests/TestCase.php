@@ -17,12 +17,9 @@ use OCP\IUserSession;
 use OCP\Server;
 
 /**
- * Class Test_Files_Sharing_Base
- *
- * @group DB
- *
  * Base class for sharing tests.
  */
+#[\PHPUnit\Framework\Attributes\Group(name: 'DB')]
 abstract class TestCase extends \Test\TestCase {
 	public const TEST_FILES_SHARING_API_USER1 = 'test-share-user1';
 	public const TEST_FILES_SHARING_API_USER2 = 'test-share-user2';
@@ -84,7 +81,7 @@ abstract class TestCase extends \Test\TestCase {
 			$userObject = $userManager->createUser($user, $password);
 			$group = $groupManager->createGroup('group');
 
-			if ($group and $userObject) {
+			if ($group && $userObject) {
 				$group->addUser($userObject);
 			}
 		}
@@ -93,7 +90,7 @@ abstract class TestCase extends \Test\TestCase {
 		Server::get(IUserSession::class)->setUser(null);
 		Filesystem::tearDown();
 		Server::get(IUserSession::class)->login($user, $password);
-		\OCP\Server::get(IRootFolder::class)->getUserFolder($user);
+		Server::get(IRootFolder::class)->getUserFolder($user);
 
 		\OC_Util::setupFS($user);
 	}

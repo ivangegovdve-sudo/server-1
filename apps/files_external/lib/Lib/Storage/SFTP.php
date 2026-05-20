@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2017-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -67,9 +68,12 @@ class SFTP extends Common {
 		Stream::register();
 
 		$parsedHost = $this->splitHost($parameters['host']);
-
 		$this->host = $parsedHost[0];
-		$this->port = $parsedHost[1];
+
+		// Handle empty port parameter to allow host-defined ports
+		// and ensure strictly numeric ports
+		$parsedPort = $parameters['port'] ?? null;
+		$this->port = (int)(is_numeric($parsedPort) ? $parsedPort : $parsedHost[1]);
 
 		if (!isset($parameters['user'])) {
 			throw new \UnexpectedValueException('no authentication parameters specified');
@@ -138,6 +142,7 @@ class SFTP extends Common {
 		return $this->client;
 	}
 
+	#[\Override]
 	public function test(): bool {
 		if (
 			!isset($this->host)
@@ -148,6 +153,7 @@ class SFTP extends Common {
 		return $this->getConnection()->nlist() !== false;
 	}
 
+	#[\Override]
 	public function getId(): string {
 		$id = 'sftp::' . $this->user . '@' . $this->host;
 		if ($this->port !== 22) {
@@ -230,6 +236,7 @@ class SFTP extends Common {
 		return [];
 	}
 
+	#[\Override]
 	public function mkdir(string $path): bool {
 		try {
 			return $this->getConnection()->mkdir($this->absPath($path));
@@ -238,6 +245,7 @@ class SFTP extends Common {
 		}
 	}
 
+	#[\Override]
 	public function rmdir(string $path): bool {
 		try {
 			$result = $this->getConnection()->delete($this->absPath($path), true);
@@ -250,6 +258,7 @@ class SFTP extends Common {
 		}
 	}
 
+	#[\Override]
 	public function opendir(string $path) {
 		try {
 			$list = $this->getConnection()->nlist($this->absPath($path));
@@ -270,6 +279,7 @@ class SFTP extends Common {
 		}
 	}
 
+	#[\Override]
 	public function filetype(string $path): string|false {
 		try {
 			$stat = $this->getConnection()->stat($this->absPath($path));
@@ -288,6 +298,7 @@ class SFTP extends Common {
 		return false;
 	}
 
+	#[\Override]
 	public function file_exists(string $path): bool {
 		try {
 			return $this->getConnection()->stat($this->absPath($path)) !== false;
@@ -296,6 +307,7 @@ class SFTP extends Common {
 		}
 	}
 
+	#[\Override]
 	public function unlink(string $path): bool {
 		try {
 			return $this->getConnection()->delete($this->absPath($path), true);
@@ -304,6 +316,7 @@ class SFTP extends Common {
 		}
 	}
 
+	#[\Override]
 	public function fopen(string $path, string $mode) {
 		$path = $this->cleanPath($path);
 		try {
@@ -329,7 +342,7 @@ class SFTP extends Common {
 					$fh = fopen('sftpwrite://' . trim($absPath, '/'), 'w', false, $context);
 					if ($fh) {
 						$fh = CallbackWrapper::wrap($fh, null, null, function () use ($path): void {
-							$this->knownMTimes->set($path, time());
+							$this->touch($path, time());
 						});
 					}
 					return $fh;
@@ -352,19 +365,19 @@ class SFTP extends Common {
 		return false;
 	}
 
+	#[\Override]
 	public function touch(string $path, ?int $mtime = null): bool {
-		try {
+
+		$result = $this->getConnection()->touch($this->absPath($path), $mtime, $mtime);
+
+		if ($result) {
+			$this->getConnection()->clearStatCache();
 			if (!is_null($mtime)) {
-				return false;
+				$this->knownMTimes->set($path, $mtime);
 			}
-			if (!$this->file_exists($path)) {
-				return $this->getConnection()->put($this->absPath($path), '');
-			} else {
-				return false;
-			}
-		} catch (\Exception $e) {
-			return false;
 		}
+
+		return $result;
 	}
 
 	/**
@@ -374,6 +387,7 @@ class SFTP extends Common {
 		$this->getConnection()->get($path, $target);
 	}
 
+	#[\Override]
 	public function rename(string $source, string $target): bool {
 		try {
 			if ($this->file_exists($target)) {
@@ -391,6 +405,7 @@ class SFTP extends Common {
 	/**
 	 * @return array{mtime: int, size: int, ctime: int}|false
 	 */
+	#[\Override]
 	public function stat(string $path): array|false {
 		try {
 			$path = $this->cleanPath($path);
@@ -422,9 +437,13 @@ class SFTP extends Common {
 		return $url;
 	}
 
+	#[\Override]
 	public function file_put_contents(string $path, mixed $data): int|float|false {
 		/** @psalm-suppress InternalMethod */
 		$result = $this->getConnection()->put($this->absPath($path), $data);
+
+		$this->touch($path, time());
+
 		if ($result) {
 			return strlen($data);
 		} else {
@@ -432,6 +451,7 @@ class SFTP extends Common {
 		}
 	}
 
+	#[\Override]
 	public function writeStream(string $path, $stream, ?int $size = null): int {
 		if ($size === null) {
 			$stream = CountWrapper::wrap($stream, function (int $writtenSize) use (&$size): void {
@@ -444,6 +464,9 @@ class SFTP extends Common {
 		/** @psalm-suppress InternalMethod */
 		$result = $this->getConnection()->put($this->absPath($path), $stream);
 		fclose($stream);
+
+		$this->touch($path, time());
+
 		if ($result) {
 			if ($size === null) {
 				throw new \Exception('Failed to get written size from sftp storage wrapper');
@@ -454,6 +477,7 @@ class SFTP extends Common {
 		}
 	}
 
+	#[\Override]
 	public function copy(string $source, string $target): bool {
 		if ($this->is_dir($source) || $this->is_dir($target)) {
 			return parent::copy($source, $target);
@@ -481,6 +505,7 @@ class SFTP extends Common {
 		}
 	}
 
+	#[\Override]
 	public function getPermissions(string $path): int {
 		$stat = $this->getConnection()->stat($this->absPath($path));
 		if (!$stat) {
@@ -493,6 +518,7 @@ class SFTP extends Common {
 		}
 	}
 
+	#[\Override]
 	public function getMetaData(string $path): ?array {
 		$stat = $this->getConnection()->stat($this->absPath($path));
 		if (!$stat) {

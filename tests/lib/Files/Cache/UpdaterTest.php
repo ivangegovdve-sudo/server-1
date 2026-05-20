@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2019-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -7,40 +8,45 @@
 
 namespace Test\Files\Cache;
 
+use OC\Files\Cache\Cache;
+use OC\Files\Cache\Updater;
 use OC\Files\Filesystem;
 use OC\Files\ObjectStore\ObjectStoreStorage;
 use OC\Files\ObjectStore\StorageObjectStore;
+use OC\Files\Storage\Storage;
 use OC\Files\Storage\Temporary;
+use OC\Files\View;
 use OCP\Files\Storage\IStorage;
 
 /**
  * Class UpdaterTest
  *
- * @group DB
  *
  * @package Test\Files\Cache
  */
+#[\PHPUnit\Framework\Attributes\Group('DB')]
 class UpdaterTest extends \Test\TestCase {
 	/**
-	 * @var \OC\Files\Storage\Storage
+	 * @var Storage
 	 */
 	protected $storage;
 
 	/**
-	 * @var \OC\Files\Cache\Cache
+	 * @var Cache
 	 */
 	protected $cache;
 
 	/**
-	 * @var \OC\Files\View
+	 * @var View
 	 */
 	protected $view;
 
 	/**
-	 * @var \OC\Files\Cache\Updater
+	 * @var Updater
 	 */
 	protected $updater;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -51,6 +57,7 @@ class UpdaterTest extends \Test\TestCase {
 		$this->cache = $this->storage->getCache();
 	}
 
+	#[\Override]
 	protected function tearDown(): void {
 		$this->logout();
 		parent::tearDown();
@@ -312,9 +319,7 @@ class UpdaterTest extends \Test\TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider changeExtensionProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('changeExtensionProvider')]
 	public function testChangeExtension(IStorage $storage) {
 		$updater = $storage->getUpdater();
 		$cache = $storage->getCache();

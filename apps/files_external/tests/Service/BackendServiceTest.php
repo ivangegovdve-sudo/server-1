@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -174,11 +175,11 @@ class BackendServiceTest extends \Test\TestCase {
 
 		$backendAvailable = $this->getBackendMock('\Backend\Available');
 		$backendAvailable->expects($this->once())
-			->method('checkDependencies')
+			->method('checkRequiredDependencies')
 			->willReturn([]);
 		$backendNotAvailable = $this->getBackendMock('\Backend\NotAvailable');
 		$backendNotAvailable->expects($this->once())
-			->method('checkDependencies')
+			->method('checkRequiredDependencies')
 			->willReturn([
 				$this->getMockBuilder('\OCA\Files_External\Lib\MissingDependency')
 					->disableOriginalConstructor()
@@ -207,9 +208,7 @@ class BackendServiceTest extends \Test\TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider invalidConfigPlaceholderProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'invalidConfigPlaceholderProvider')]
 	public function testRegisterConfigHandlerInvalid(array $placeholders): void {
 		$this->expectException(\RuntimeException::class);
 

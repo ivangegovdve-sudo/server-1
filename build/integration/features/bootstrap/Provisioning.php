@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -10,10 +11,16 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Message\ResponseInterface;
 use PHPUnit\Framework\Assert;
 
-require __DIR__ . '/../../vendor/autoload.php';
+require __DIR__ . '/autoload.php';
 
 trait Provisioning {
 	use BasicStructure;
+
+	/** @var array */
+	private $appsToEnableAfterScenario = [];
+
+	/** @var array */
+	private $appsToDisableAfterScenario = [];
 
 	/** @var array */
 	private $createdUsers = [];
@@ -26,6 +33,19 @@ trait Provisioning {
 
 	/** @var array */
 	private $createdGroups = [];
+
+	/** @AfterScenario */
+	public function restoreAppsEnabledStateAfterScenario() {
+		$this->asAn('admin');
+
+		foreach ($this->appsToEnableAfterScenario as $app) {
+			$this->sendingTo('POST', '/cloud/apps/' . $app);
+		}
+
+		foreach ($this->appsToDisableAfterScenario as $app) {
+			$this->sendingTo('DELETE', '/cloud/apps/' . $app);
+		}
+	}
 
 	/**
 	 * @Given /^user "([^"]*)" exists$/
@@ -247,6 +267,9 @@ trait Provisioning {
 
 		$expectedFields = $fields->getRows();
 		$expectedFields = $this->simplifyArray($expectedFields);
+		/* Sort both arrays as order is not important */
+		sort($fieldsArray);
+		sort($expectedFields);
 		Assert::assertEquals($expectedFields, $fieldsArray);
 	}
 
@@ -802,13 +825,28 @@ trait Provisioning {
 		return $extractedElementsArray;
 	}
 
-
 	/**
-	 * @Given /^app "([^"]*)" is disabled$/
+	 * @Given /^app "([^"]*)" enabled state will be restored once the scenario finishes$/
 	 * @param string $app
 	 */
-	public function appIsDisabled($app) {
-		$fullUrl = $this->baseUrl . 'v2.php/cloud/apps?filter=disabled';
+	public function appEnabledStateWillBeRestoredOnceTheScenarioFinishes($app) {
+		$previousUser = $this->currentUser;
+		$this->currentUser = 'admin';
+
+		if (in_array($app, $this->getAppsWithFilter('enabled'))) {
+			$this->appsToEnableAfterScenario[] = $app;
+		} elseif (in_array($app, $this->getAppsWithFilter('disabled'))) {
+			$this->appsToDisableAfterScenario[] = $app;
+		}
+
+		// Apps that were not installed before the scenario will not be
+		// disabled nor uninstalled after the scenario.
+
+		$this->currentUser = $previousUser;
+	}
+
+	private function getAppsWithFilter($filter) {
+		$fullUrl = $this->baseUrl . 'v2.php/cloud/apps?filter=' . $filter;
 		$client = new Client();
 		$options = [];
 		if ($this->currentUser === 'admin') {
@@ -819,7 +857,15 @@ trait Provisioning {
 		];
 
 		$this->response = $client->get($fullUrl, $options);
-		$respondedArray = $this->getArrayOfAppsResponded($this->response);
+		return $this->getArrayOfAppsResponded($this->response);
+	}
+
+	/**
+	 * @Given /^app "([^"]*)" is disabled$/
+	 * @param string $app
+	 */
+	public function appIsDisabled($app) {
+		$respondedArray = $this->getAppsWithFilter('disabled');
 		Assert::assertContains($app, $respondedArray);
 		Assert::assertEquals(200, $this->response->getStatusCode());
 	}
@@ -829,18 +875,7 @@ trait Provisioning {
 	 * @param string $app
 	 */
 	public function appIsEnabled($app) {
-		$fullUrl = $this->baseUrl . 'v2.php/cloud/apps?filter=enabled';
-		$client = new Client();
-		$options = [];
-		if ($this->currentUser === 'admin') {
-			$options['auth'] = $this->adminUser;
-		}
-		$options['headers'] = [
-			'OCS-APIREQUEST' => 'true',
-		];
-
-		$this->response = $client->get($fullUrl, $options);
-		$respondedArray = $this->getArrayOfAppsResponded($this->response);
+		$respondedArray = $this->getAppsWithFilter('enabled');
 		Assert::assertContains($app, $respondedArray);
 		Assert::assertEquals(200, $this->response->getStatusCode());
 	}
@@ -853,18 +888,7 @@ trait Provisioning {
 	 * @param string $app
 	 */
 	public function appIsNotEnabled($app) {
-		$fullUrl = $this->baseUrl . 'v2.php/cloud/apps?filter=enabled';
-		$client = new Client();
-		$options = [];
-		if ($this->currentUser === 'admin') {
-			$options['auth'] = $this->adminUser;
-		}
-		$options['headers'] = [
-			'OCS-APIREQUEST' => 'true',
-		];
-
-		$this->response = $client->get($fullUrl, $options);
-		$respondedArray = $this->getArrayOfAppsResponded($this->response);
+		$respondedArray = $this->getAppsWithFilter('enabled');
 		Assert::assertNotContains($app, $respondedArray);
 		Assert::assertEquals(200, $this->response->getStatusCode());
 	}

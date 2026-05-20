@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2020 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -8,6 +9,9 @@ namespace OC\Preview;
 use OC\Archive\ZIP;
 use OCP\Files\File;
 use OCP\IImage;
+use OCP\Image;
+use OCP\ITempManager;
+use OCP\Server;
 
 /**
  * Extracts a preview from files that embed them in an ZIP archive
@@ -18,8 +22,8 @@ abstract class Bundled extends ProviderV2 {
 			return null;
 		}
 
-		$sourceTmp = \OC::$server->getTempManager()->getTemporaryFile();
-		$targetTmp = \OC::$server->getTempManager()->getTemporaryFile();
+		$sourceTmp = Server::get(ITempManager::class)->getTemporaryFile();
+		$targetTmp = Server::get(ITempManager::class)->getTemporaryFile();
 		$this->tmpFiles[] = $sourceTmp;
 		$this->tmpFiles[] = $targetTmp;
 
@@ -30,7 +34,7 @@ abstract class Bundled extends ProviderV2 {
 			$zip = new ZIP($sourceTmp);
 			$zip->extractFile($path, $targetTmp);
 
-			$image = new \OCP\Image();
+			$image = new Image();
 			$image->loadFromFile($targetTmp);
 			$image->fixOrientation();
 

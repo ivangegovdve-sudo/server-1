@@ -22,6 +22,7 @@ class Disable extends Base {
 		parent::__construct();
 	}
 
+	#[\Override]
 	protected function configure() {
 		$this
 			->setName('user:disable')
@@ -33,6 +34,7 @@ class Disable extends Base {
 			);
 	}
 
+	#[\Override]
 	protected function execute(InputInterface $input, OutputInterface $output): int {
 		$user = $this->userManager->get($input->getArgument('uid'));
 		if (is_null($user)) {
@@ -50,12 +52,13 @@ class Disable extends Base {
 	 * @param CompletionContext $context
 	 * @return string[]
 	 */
+	#[\Override]
 	public function completeArgumentValues($argumentName, CompletionContext $context) {
 		if ($argumentName === 'uid') {
 			return array_map(
 				static fn (IUser $user) => $user->getUID(),
 				array_filter(
-					$this->userManager->search($context->getCurrentWord()),
+					$this->userManager->searchDisplayName($context->getCurrentWord()),
 					static fn (IUser $user) => $user->isEnabled()
 				)
 			);

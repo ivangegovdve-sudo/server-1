@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -9,6 +10,7 @@ namespace Test\Files\Cache;
 
 use OC\Files\Cache\Cache;
 use OC\Files\Cache\CacheEntry;
+use OC\Files\Cache\Wrapper\CacheJail;
 use OC\Files\Search\SearchComparison;
 use OC\Files\Search\SearchQuery;
 use OC\Files\Storage\Temporary;
@@ -23,6 +25,7 @@ use OCP\IUserManager;
 use OCP\Server;
 
 class LongId extends Temporary {
+	#[\Override]
 	public function getId(): string {
 		return 'long:' . str_repeat('foo', 50) . parent::getId();
 	}
@@ -31,29 +34,30 @@ class LongId extends Temporary {
 /**
  * Class CacheTest
  *
- * @group DB
  *
  * @package Test\Files\Cache
  */
+#[\PHPUnit\Framework\Attributes\Group('DB')]
 class CacheTest extends \Test\TestCase {
 	/**
-	 * @var \OC\Files\Storage\Temporary $storage ;
+	 * @var Temporary $storage ;
 	 */
 	protected $storage;
 	/**
-	 * @var \OC\Files\Storage\Temporary $storage2 ;
+	 * @var Temporary $storage2 ;
 	 */
 	protected $storage2;
 
 	/**
-	 * @var \OC\Files\Cache\Cache $cache
+	 * @var Cache $cache
 	 */
 	protected $cache;
 	/**
-	 * @var \OC\Files\Cache\Cache $cache2
+	 * @var Cache $cache2
 	 */
 	protected $cache2;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -65,6 +69,7 @@ class CacheTest extends \Test\TestCase {
 		$this->cache2->insert('', ['size' => 0, 'mtime' => 0, 'mimetype' => ICacheEntry::DIRECTORY_MIMETYPE]);
 	}
 
+	#[\Override]
 	protected function tearDown(): void {
 		if ($this->cache) {
 			$this->cache->clear();
@@ -161,9 +166,7 @@ class CacheTest extends \Test\TestCase {
 		$this->assertEquals(new CacheEntry(['size' => 12, 'mtime' => 15]), $this->cache->get($file1));
 	}
 
-	/**
-	 * @dataProvider folderDataProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('folderDataProvider')]
 	public function testFolder($folder): void {
 		if (strpos($folder, 'F09F9890')) {
 			// 4 byte UTF doesn't work on mysql
@@ -334,9 +337,9 @@ class CacheTest extends \Test\TestCase {
 	}
 
 	/**
-	 * @dataProvider putWithAllKindOfQuotesData
 	 * @param $fileName
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('putWithAllKindOfQuotesData')]
 	public function testPutWithAllKindOfQuotes($fileName): void {
 		$this->assertEquals(Cache::NOT_FOUND, $this->cache->get($fileName));
 		$this->cache->put($fileName, ['size' => 20, 'mtime' => 25, 'mimetype' => 'foo/file', 'etag' => $fileName]);
@@ -469,9 +472,7 @@ class CacheTest extends \Test\TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider movePathProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('movePathProvider')]
 	public function testMove($sourceFolder, $targetFolder, $children): void {
 		$data = ['size' => 100, 'mtime' => 50, 'mimetype' => 'foo/bar'];
 		$folderData = ['size' => 100, 'mtime' => 50, 'mimetype' => ICacheEntry::DIRECTORY_MIMETYPE];
@@ -522,6 +523,24 @@ class CacheTest extends \Test\TestCase {
 
 		$this->assertTrue($this->cache->inCache('targetfolder'));
 		$this->assertTrue($this->cache->inCache('targetfolder/sub'));
+	}
+
+	public function testMoveFromCacheJail(): void {
+		$data = ['size' => 100, 'mtime' => 50, 'mimetype' => 'foo/bar'];
+		$folderData = ['size' => 100, 'mtime' => 50, 'mimetype' => ICacheEntry::DIRECTORY_MIMETYPE];
+
+		$this->cache2->put('folder', $folderData);
+		$this->cache2->put('folder/sub', $data);
+
+		$jail = new CacheJail($this->cache2, 'folder');
+
+		$this->cache->moveFromCache($jail, 'sub', 'targetsub');
+
+		$this->assertTrue($this->cache2->inCache('folder'));
+		$this->assertFalse($this->cache2->inCache('folder/sub'));
+
+		$this->assertTrue($this->cache->inCache('targetsub'));
+		$this->assertEquals($this->cache->getId(''), $this->cache->get('targetsub')->getParentId());
 	}
 
 	public function testGetIncomplete(): void {
@@ -596,7 +615,7 @@ class CacheTest extends \Test\TestCase {
 		$folderWith0308 = "\x53\x63\x68\x6f\xcc\x88\x6e";
 
 		/**
-		 * @var \OC\Files\Cache\Cache | \PHPUnit\Framework\MockObject\MockObject $cacheMock
+		 * @var Cache|\PHPUnit\Framework\MockObject\MockObject $cacheMock
 		 */
 		$cacheMock = $this->getMockBuilder(Cache::class)
 			->onlyMethods(['normalize'])
@@ -681,9 +700,8 @@ class CacheTest extends \Test\TestCase {
 
 	/**
 	 * Test bogus paths with leading or doubled slashes
-	 *
-	 * @dataProvider bogusPathNamesProvider
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('bogusPathNamesProvider')]
 	public function testBogusPaths($bogusPath, $fixedBogusPath): void {
 		$data = ['size' => 100, 'mtime' => 50, 'mimetype' => ICacheEntry::DIRECTORY_MIMETYPE];
 		$parentId = $this->cache->getId('');
@@ -725,8 +743,8 @@ class CacheTest extends \Test\TestCase {
 
 	/**
 	 * @param string $name
-	 * @dataProvider escapingProvider
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('escapingProvider')]
 	public function testEscaping($name): void {
 		$data = ['size' => 100, 'mtime' => 50, 'mimetype' => 'text/plain'];
 		$this->cache->put($name, $data);

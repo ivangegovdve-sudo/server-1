@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2017-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -26,6 +27,7 @@ class Cache extends \OC\Files\Cache\Cache {
 		parent::__construct($this->storage);
 	}
 
+	#[\Override]
 	public function get($file) {
 		$result = parent::get($file);
 		if (!$result) {
@@ -40,8 +42,9 @@ class Cache extends \OC\Files\Cache\Cache {
 		return $result;
 	}
 
-	public function getFolderContentsById($fileId) {
-		$results = parent::getFolderContentsById($fileId);
+	#[\Override]
+	public function getFolderContentsById($fileId, ?string $mimeTypeFilter = null): array {
+		$results = parent::getFolderContentsById($fileId, $mimeTypeFilter);
 		foreach ($results as &$file) {
 			$file['displayname_owner'] = $this->cloudId->getDisplayId();
 		}

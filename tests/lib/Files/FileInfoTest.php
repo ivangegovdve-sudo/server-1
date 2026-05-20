@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -21,6 +22,7 @@ class FileInfoTest extends TestCase {
 
 	private $config;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 		$this->createUser('foo', 'foo');

@@ -22,10 +22,10 @@ use Test\TestCase;
 /**
  * Class CleanupTest
  *
- * @group DB
  *
  * @package OCA\Files_Versions\Tests\Command
  */
+#[\PHPUnit\Framework\Attributes\Group(name: 'DB')]
 class CleanupTest extends TestCase {
 	protected Manager&MockObject $userManager;
 	protected IRootFolder&MockObject $rootFolder;
@@ -43,9 +43,9 @@ class CleanupTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider dataTestDeleteVersions
 	 * @param boolean $nodeExists
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataTestDeleteVersions')]
 	public function testDeleteVersions(bool $nodeExists): void {
 		$this->rootFolder->expects($this->once())
 			->method('nodeExists')

@@ -15,6 +15,7 @@ use OCP\Files\Search\ISearchOperator;
 class PathPrefixOptimizer extends QueryOptimizerStep {
 	private bool $useHashEq = true;
 
+	#[\Override]
 	public function inspectOperator(ISearchOperator $operator): void {
 		// normally any `path = "$path"` search filter would be generated as an `path_hash = md5($path)` sql query
 		// since the `path_hash` sql column usually provides much faster querying that selecting on the `path` sql column
@@ -31,6 +32,7 @@ class PathPrefixOptimizer extends QueryOptimizerStep {
 		parent::inspectOperator($operator);
 	}
 
+	#[\Override]
 	public function processOperator(ISearchOperator &$operator) {
 		if (!$this->useHashEq && $operator instanceof ISearchComparison && !$operator->getExtra() && $operator->getField() === 'path' && $operator->getType() === ISearchComparison::COMPARE_EQUAL) {
 			$operator->setQueryHint(ISearchComparison::HINT_PATH_EQ_HASH, false);
@@ -40,7 +42,7 @@ class PathPrefixOptimizer extends QueryOptimizerStep {
 	}
 
 	private function isPathPrefixOperator(ISearchOperator $operator): bool {
-		if ($operator instanceof ISearchBinaryOperator && $operator->getType() === ISearchBinaryOperator::OPERATOR_OR && count($operator->getArguments()) == 2) {
+		if ($operator instanceof ISearchBinaryOperator && $operator->getType() === ISearchBinaryOperator::OPERATOR_OR && count($operator->getArguments()) === 2) {
 			$a = $operator->getArguments()[0];
 			$b = $operator->getArguments()[1];
 			if ($this->operatorPairIsPathPrefix($a, $b) || $this->operatorPairIsPathPrefix($b, $a)) {
@@ -52,9 +54,9 @@ class PathPrefixOptimizer extends QueryOptimizerStep {
 
 	private function operatorPairIsPathPrefix(ISearchOperator $like, ISearchOperator $equal): bool {
 		return (
-			$like instanceof ISearchComparison && $equal instanceof ISearchComparison &&
-			!$like->getExtra() && !$equal->getExtra() && $like->getField() === 'path' && $equal->getField() === 'path' &&
-			$like->getType() === ISearchComparison::COMPARE_LIKE_CASE_SENSITIVE && $equal->getType() === ISearchComparison::COMPARE_EQUAL
+			$like instanceof ISearchComparison && $equal instanceof ISearchComparison
+			&& !$like->getExtra() && !$equal->getExtra() && $like->getField() === 'path' && $equal->getField() === 'path'
+			&& $like->getType() === ISearchComparison::COMPARE_LIKE_CASE_SENSITIVE && $equal->getType() === ISearchComparison::COMPARE_EQUAL
 			&& $like->getValue() === SearchComparison::escapeLikeParameter($equal->getValue()) . '/%'
 		);
 	}

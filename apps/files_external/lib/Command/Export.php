@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -13,6 +16,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class Export extends ListCommand {
+	#[\Override]
 	protected function configure(): void {
 		$this
 			->setName('files_external:export')
@@ -29,6 +33,7 @@ class Export extends ListCommand {
 			);
 	}
 
+	#[\Override]
 	protected function execute(InputInterface $input, OutputInterface $output): int {
 		$listCommand = new ListCommand($this->globalService, $this->userService, $this->userSession, $this->userManager);
 		$listInput = new ArrayInput([], $listCommand->getDefinition());

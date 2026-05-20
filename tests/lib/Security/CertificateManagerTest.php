@@ -25,9 +25,8 @@ use Psr\Log\LoggerInterface;
 
 /**
  * Class CertificateManagerTest
- *
- * @group DB
  */
+#[\PHPUnit\Framework\Attributes\Group('DB')]
 class CertificateManagerTest extends \Test\TestCase {
 	use \Test\Traits\UserTrait;
 	use \Test\Traits\MountProviderTrait;
@@ -36,6 +35,7 @@ class CertificateManagerTest extends \Test\TestCase {
 	private string $username;
 	private ISecureRandom&MockObject $random;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -53,6 +53,11 @@ class CertificateManagerTest extends \Test\TestCase {
 		$config = $this->createMock(IConfig::class);
 		$config->expects($this->any())->method('getSystemValueBool')
 			->with('installed', false)->willReturn(true);
+		$config
+			->expects($this->any())
+			->method('getSystemValueString')
+			->with('default_certificates_bundle_path', \OC::$SERVERROOT . '/resources/config/ca-bundle.crt')
+			->willReturn(\OC::$SERVERROOT . '/resources/config/ca-bundle.crt');
 
 		$this->random = $this->createMock(ISecureRandom::class);
 		$this->random->method('generate')
@@ -66,6 +71,7 @@ class CertificateManagerTest extends \Test\TestCase {
 		);
 	}
 
+	#[\Override]
 	protected function tearDown(): void {
 		$user = Server::get(IUserManager::class)->get($this->username);
 		if ($user !== null) {
@@ -114,9 +120,9 @@ class CertificateManagerTest extends \Test\TestCase {
 	}
 
 	/**
-	 * @dataProvider dangerousFileProvider
 	 * @param string $filename
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dangerousFileProvider')]
 	public function testAddDangerousFile($filename): void {
 		$this->expectException(InvalidPathException::class);
 		$this->certificateManager->addCertificate(file_get_contents(__DIR__ . '/../../data/certificates/expiredCertificate.crt'), $filename);
@@ -136,13 +142,13 @@ class CertificateManagerTest extends \Test\TestCase {
 	}
 
 	/**
-	 * @dataProvider dataTestNeedRebundling
 	 *
 	 * @param int $CaBundleMtime
 	 * @param int $targetBundleMtime
 	 * @param int $targetBundleExists
 	 * @param bool $expected
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataTestNeedRebundling')]
 	public function testNeedRebundling($CaBundleMtime,
 		$targetBundleMtime,
 		$targetBundleExists,

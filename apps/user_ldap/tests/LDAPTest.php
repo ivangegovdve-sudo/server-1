@@ -8,7 +8,10 @@ declare(strict_types=1);
 namespace OCA\User_LDAP\Tests;
 
 use OCA\User_LDAP\LDAP;
+use OCP\IConfig;
+use OCP\Profiler\IProfiler;
 use PHPUnit\Framework\MockObject\MockObject;
+use Psr\Log\LoggerInterface;
 use Test\TestCase;
 
 class LDAPTest extends TestCase {
@@ -18,6 +21,11 @@ class LDAPTest extends TestCase {
 		parent::setUp();
 		$this->ldap = $this->getMockBuilder(LDAP::class)
 			->onlyMethods(['invokeLDAPMethod'])
+			->setConstructorArgs([
+				$this->createMock(IProfiler::class),
+				$this->createMock(IConfig::class),
+				$this->createMock(LoggerInterface::class),
+			])
 			->getMock();
 	}
 
@@ -33,9 +41,7 @@ class LDAPTest extends TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider errorProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'errorProvider')]
 	public function testSearchWithErrorHandler(string $errorMessage, bool $passThrough): void {
 		$wasErrorHandlerCalled = false;
 		$errorHandler = function ($number, $message, $file, $line) use (&$wasErrorHandlerCalled): void {

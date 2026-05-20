@@ -24,10 +24,10 @@ use PHPUnit\Framework\MockObject\MockObject;
 /**
  * Class TagServiceTest
  *
- * @group DB
  *
  * @package OCA\Files
  */
+#[\PHPUnit\Framework\Attributes\Group(name: 'DB')]
 class TagServiceTest extends \Test\TestCase {
 	private string $user;
 	private IUserSession&MockObject $userSession;
@@ -44,16 +44,16 @@ class TagServiceTest extends \Test\TestCase {
 		\OC_User::setUserId($this->user);
 		\OC_Util::setupFS($this->user);
 		$user = $this->createMock(IUser::class);
-		/**
-		 * @var IUserSession
-		 */
+		$user->expects($this->any())
+			->method('getUID')
+			->willReturn($this->user);
 		$this->userSession = $this->createMock(IUserSession::class);
 		$this->userSession->expects($this->any())
 			->method('getUser')
 			->withAnyParameters()
 			->willReturn($user);
 
-		$this->root = \OCP\Server::get(IRootFolder::class)->getUserFolder($this->user);
+		$this->root = Server::get(IRootFolder::class)->getUserFolder($this->user);
 
 		$this->tagger = Server::get(ITagManager::class)->load('files');
 		$this->tagService = $this->getTagService();
@@ -64,8 +64,8 @@ class TagServiceTest extends \Test\TestCase {
 			->setConstructorArgs([
 				$this->userSession,
 				$this->activityManager,
-				$this->tagger,
-				$this->root,
+				Server::get(ITagManager::class),
+				Server::get(IRootFolder::class),
 			])
 			->onlyMethods($methods)
 			->getMock();
@@ -94,16 +94,22 @@ class TagServiceTest extends \Test\TestCase {
 		// set tags
 		$this->tagService->updateFileTags('subdir/test.txt', [$tag1, $tag2]);
 
+		// Sync to reload tags
+		$this->tagger->addMultiple([], sync:true);
 		$this->assertEquals([$fileId], $this->tagger->getIdsForTag($tag1));
 		$this->assertEquals([$fileId], $this->tagger->getIdsForTag($tag2));
 
 		// remove tag
 		$this->tagService->updateFileTags('subdir/test.txt', [$tag2]);
+		// Sync to reload tags
+		$this->tagger->addMultiple([], sync:true);
 		$this->assertEquals([], $this->tagger->getIdsForTag($tag1));
 		$this->assertEquals([$fileId], $this->tagger->getIdsForTag($tag2));
 
 		// clear tags
 		$this->tagService->updateFileTags('subdir/test.txt', []);
+		// Sync to reload tags
+		$this->tagger->addMultiple([], sync:true);
 		$this->assertEquals([], $this->tagger->getIdsForTag($tag1));
 		$this->assertEquals([], $this->tagger->getIdsForTag($tag2));
 

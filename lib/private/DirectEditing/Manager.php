@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2019 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -6,6 +7,7 @@
 namespace OC\DirectEditing;
 
 use Doctrine\DBAL\FetchMode;
+use OCA\Encryption\Util;
 use OCP\AppFramework\Http\NotFoundResponse;
 use OCP\AppFramework\Http\Response;
 use OCP\AppFramework\Http\TemplateResponse;
@@ -26,6 +28,7 @@ use OCP\IL10N;
 use OCP\IUserSession;
 use OCP\L10N\IFactory;
 use OCP\Security\ISecureRandom;
+use OCP\Server;
 use OCP\Share\IShare;
 use Throwable;
 use function array_key_exists;
@@ -55,10 +58,12 @@ class Manager implements IManager {
 		$this->l10n = $l10nFactory->get('lib');
 	}
 
+	#[\Override]
 	public function registerDirectEditor(IEditor $directEditor): void {
 		$this->editors[$directEditor->getId()] = $directEditor;
 	}
 
+	#[\Override]
 	public function getEditors(): array {
 		return $this->editors;
 	}
@@ -94,6 +99,7 @@ class Manager implements IManager {
 		return $return;
 	}
 
+	#[\Override]
 	public function create(string $path, string $editorId, string $creatorId, $templateId = null): string {
 		$userFolder = $this->rootFolder->getUserFolder($this->userId);
 		if ($userFolder->nodeExists($path)) {
@@ -157,6 +163,7 @@ class Manager implements IManager {
 		throw new \RuntimeException('No default editor found for files mimetype');
 	}
 
+	#[\Override]
 	public function edit(string $token): Response {
 		try {
 			/** @var IEditor $editor */
@@ -190,6 +197,7 @@ class Manager implements IManager {
 		return $this->editors[$editorId];
 	}
 
+	#[\Override]
 	public function getToken(string $token): IToken {
 		$query = $this->connection->getQueryBuilder();
 		$query->select('*')->from(self::TABLE_TOKENS)
@@ -201,6 +209,7 @@ class Manager implements IManager {
 		throw new \RuntimeException('Failed to validate the token');
 	}
 
+	#[\Override]
 	public function cleanup(): int {
 		$query = $this->connection->getQueryBuilder();
 		$query->delete(self::TABLE_TOKENS)
@@ -279,6 +288,7 @@ class Manager implements IManager {
 		return $file;
 	}
 
+	#[\Override]
 	public function isEnabled(): bool {
 		if (!$this->encryptionManager->isEnabled()) {
 			return true;
@@ -287,8 +297,8 @@ class Manager implements IManager {
 		try {
 			$moduleId = $this->encryptionManager->getDefaultEncryptionModuleId();
 			$module = $this->encryptionManager->getEncryptionModule($moduleId);
-			/** @var \OCA\Encryption\Util $util */
-			$util = \OCP\Server::get(\OCA\Encryption\Util::class);
+			/** @var Util $util */
+			$util = Server::get(Util::class);
 			if ($module->isReadyForUser($this->userId) && $util->isMasterKeyEnabled()) {
 				return true;
 			}

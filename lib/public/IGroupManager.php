@@ -75,7 +75,7 @@ interface IGroupManager {
 	 * @param string $search
 	 * @param ?int $limit
 	 * @param ?int $offset
-	 * @return \OCP\IGroup[]
+	 * @return list<IGroup>
 	 * @since 8.0.0
 	 */
 	public function search(string $search, ?int $limit = null, ?int $offset = 0);
@@ -89,7 +89,7 @@ interface IGroupManager {
 
 	/**
 	 * @param \OCP\IUser $user
-	 * @return string[] with group names
+	 * @return list<string> with group ids
 	 * @since 8.0.0
 	 */
 	public function getUserGroupIds(IUser $user): array;
@@ -101,7 +101,7 @@ interface IGroupManager {
 	 * @param string $search
 	 * @param int $limit
 	 * @param int $offset
-	 * @return array an array of display names (value) and user ids (key)
+	 * @return array<string, string> ['user id' => 'display name']
 	 * @since 8.0.0
 	 */
 	public function displayNamesInGroup($gid, $search = '', $limit = -1, $offset = 0);

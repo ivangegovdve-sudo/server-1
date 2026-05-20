@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2017 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -24,6 +25,7 @@ class AutoCompleteControllerTest extends TestCase {
 	/** @var AutoCompleteController */
 	protected $controller;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -153,9 +155,7 @@ class AutoCompleteControllerTest extends TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider searchDataProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('searchDataProvider')]
 	public function testGet(array $searchResults, array $expected, string $searchTerm, ?string $itemType, ?string $itemId, ?string $sorter): void {
 		$this->collaboratorSearch->expects($this->once())
 			->method('search')

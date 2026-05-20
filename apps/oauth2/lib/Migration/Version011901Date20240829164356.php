@@ -23,6 +23,7 @@ class Version011901Date20240829164356 extends SimpleMigrationStep {
 	) {
 	}
 
+	#[\Override]
 	public function postSchemaChange(IOutput $output, Closure $schemaClosure, array $options): void {
 		$qbUpdate = $this->connection->getQueryBuilder();
 		$qbUpdate->update('oauth2_clients')
@@ -35,7 +36,7 @@ class Version011901Date20240829164356 extends SimpleMigrationStep {
 		$qbSelect->select('id', 'secret')
 			->from('oauth2_clients');
 		$req = $qbSelect->executeQuery();
-		while ($row = $req->fetch()) {
+		while ($row = $req->fetchAssociative()) {
 			$id = $row['id'];
 			$storedEncryptedSecret = $row['secret'];
 			$secret = $this->crypto->decrypt($storedEncryptedSecret);

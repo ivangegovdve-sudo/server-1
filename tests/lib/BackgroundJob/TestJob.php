@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2020-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -30,6 +31,7 @@ class TestJob extends Job {
 		$this->callback = $callback;
 	}
 
+	#[\Override]
 	public function run($argument) {
 		$this->testCase->markRun();
 		$callback = $this->callback;

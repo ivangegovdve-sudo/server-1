@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2018-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -14,6 +15,7 @@ class TimedJobTest extends \Test\TestCase {
 	private DummyJobList $jobList;
 	private ITimeFactory $time;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 

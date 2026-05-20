@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2017-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -34,13 +35,14 @@ class RSA extends AuthMechanism {
 					->setType(DefinitionParameter::VALUE_PASSWORD)
 					->setFlag(DefinitionParameter::FLAG_HIDDEN),
 			])
-			->addCustomJs('public_key')
+			->addCustomJs('auth_rsa')
 		;
 	}
 
 	/**
 	 * @return void
 	 */
+	#[\Override]
 	public function manipulateStorageConfig(StorageConfig &$storage, ?IUser $user = null) {
 		$auth = new RSACrypt();
 		$auth->setPassword($this->config->getSystemValue('secret', ''));

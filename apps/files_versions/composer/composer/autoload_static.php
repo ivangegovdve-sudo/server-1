@@ -7,14 +7,14 @@ namespace Composer\Autoload;
 class ComposerStaticInitFiles_Versions
 {
     public static $prefixLengthsPsr4 = array (
-        'O' => 
+        'O' =>
         array (
             'OCA\\Files_Versions\\' => 19,
         ),
     );
 
     public static $prefixDirsPsr4 = array (
-        'OCA\\Files_Versions\\' => 
+        'OCA\\Files_Versions\\' =>
         array (
             0 => __DIR__ . '/..' . '/../lib',
         ),
@@ -32,6 +32,7 @@ class ComposerStaticInitFiles_Versions
         'OCA\\Files_Versions\\Db\\VersionEntity' => __DIR__ . '/..' . '/../lib/Db/VersionEntity.php',
         'OCA\\Files_Versions\\Db\\VersionsMapper' => __DIR__ . '/..' . '/../lib/Db/VersionsMapper.php',
         'OCA\\Files_Versions\\Events\\CreateVersionEvent' => __DIR__ . '/..' . '/../lib/Events/CreateVersionEvent.php',
+        'OCA\\Files_Versions\\Events\\VersionCreatedEvent' => __DIR__ . '/..' . '/../lib/Events/VersionCreatedEvent.php',
         'OCA\\Files_Versions\\Events\\VersionRestoredEvent' => __DIR__ . '/..' . '/../lib/Events/VersionRestoredEvent.php',
         'OCA\\Files_Versions\\Expiration' => __DIR__ . '/..' . '/../lib/Expiration.php',
         'OCA\\Files_Versions\\Listener\\FileEventsListener' => __DIR__ . '/..' . '/../lib/Listener/FileEventsListener.php',

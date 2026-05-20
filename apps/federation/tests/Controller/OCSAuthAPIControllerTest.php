@@ -64,9 +64,7 @@ class OCSAuthAPIControllerTest extends TestCase {
 			->willReturn($this->currentTime);
 	}
 
-	/**
-	 * @dataProvider dataTestRequestSharedSecret
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataTestRequestSharedSecret')]
 	public function testRequestSharedSecret(string $token, string $localToken, bool $isTrustedServer, bool $ok): void {
 		$url = 'url';
 
@@ -106,36 +104,30 @@ class OCSAuthAPIControllerTest extends TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider dataTestGetSharedSecret
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataTestGetSharedSecret')]
 	public function testGetSharedSecret(bool $isTrustedServer, bool $isValidToken, bool $ok): void {
 		$url = 'url';
 		$token = 'token';
 
 		/** @var OCSAuthAPIController&MockObject $ocsAuthApi */
-		$ocsAuthApi = $this->getMockBuilder(OCSAuthAPIController::class)
-			->setConstructorArgs(
-				[
-					'federation',
-					$this->request,
-					$this->secureRandom,
-					$this->jobList,
-					$this->trustedServers,
-					$this->dbHandler,
-					$this->logger,
-					$this->timeFactory,
-					$this->throttler
-				]
-			)
-			->onlyMethods(['isValidToken'])
-			->getMock();
+		$ocsAuthApi = new OCSAuthAPIController(
+			'federation',
+			$this->request,
+			$this->secureRandom,
+			$this->jobList,
+			$this->trustedServers,
+			$this->dbHandler,
+			$this->logger,
+			$this->timeFactory,
+			$this->throttler,
+		);
 
 		$this->trustedServers
 			->expects($this->any())
 			->method('isTrustedServer')->with($url)->willReturn($isTrustedServer);
-		$ocsAuthApi->expects($this->any())
-			->method('isValidToken')->with($url, $token)->willReturn($isValidToken);
+		$this->dbHandler->method('getToken')
+			->with($url)
+			->willReturn($isValidToken ? $token : 'not $token');
 
 		if ($ok) {
 			$this->secureRandom->expects($this->once())->method('generate')->with(32)

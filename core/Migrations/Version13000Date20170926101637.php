@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2016 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -16,6 +19,7 @@ class Version13000Date20170926101637 extends BigIntMigration {
 	 *               ['table1' => ['column1', 'column2'], ...]
 	 * @since 13.0.0
 	 */
+	#[\Override]
 	protected function getColumnsByTable() {
 		return [
 			'admin_settings' => ['id'],

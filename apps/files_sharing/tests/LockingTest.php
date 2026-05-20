@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2018-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -18,10 +19,10 @@ use OCP\Share\IShare;
 /**
  * Class LockingTest
  *
- * @group DB
  *
  * @package OCA\Files_Sharing\Tests
  */
+#[\PHPUnit\Framework\Attributes\Group(name: 'DB')]
 class LockingTest extends TestCase {
 	/**
 	 * @var \Test\Util\User\Dummy

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2020 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -11,8 +12,9 @@ use OCP\Files\File;
 use OCP\Http\Client\IClientService;
 use OCP\IConfig;
 use OCP\IImage;
-
 use OCP\Image;
+
+use OCP\Server;
 use Psr\Log\LoggerInterface;
 
 class Imaginary extends ProviderV2 {
@@ -27,14 +29,15 @@ class Imaginary extends ProviderV2 {
 
 	public function __construct(array $config) {
 		parent::__construct($config);
-		$this->config = \OC::$server->get(IConfig::class);
-		$this->service = \OC::$server->get(IClientService::class);
-		$this->logger = \OC::$server->get(LoggerInterface::class);
+		$this->config = Server::get(IConfig::class);
+		$this->service = Server::get(IClientService::class);
+		$this->logger = Server::get(LoggerInterface::class);
 	}
 
 	/**
 	 * {@inheritDoc}
 	 */
+	#[\Override]
 	public function getMimeType(): string {
 		return self::supportedMimeTypes();
 	}
@@ -184,6 +187,7 @@ class Imaginary extends ProviderV2 {
 	/**
 	 * {@inheritDoc}
 	 */
+	#[\Override]
 	public function getThumbnail(File $file, int $maxX, int $maxY): ?IImage {
 		return $this->getCroppedThumbnail($file, $maxX, $maxY, false);
 	}

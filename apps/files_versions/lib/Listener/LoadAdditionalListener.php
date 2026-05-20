@@ -16,6 +16,7 @@ use OCP\Util;
 
 /** @template-implements IEventListener<LoadAdditionalScriptsEvent> */
 class LoadAdditionalListener implements IEventListener {
+	#[\Override]
 	public function handle(Event $event): void {
 		if (!($event instanceof LoadAdditionalScriptsEvent)) {
 			return;
@@ -23,6 +24,7 @@ class LoadAdditionalListener implements IEventListener {
 
 		// TODO: make sure to only include the sidebar script when
 		// we properly split it between files list and sidebar
-		Util::addScript(Application::APP_ID, 'files_versions');
+		Util::addStyle(Application::APP_ID, 'sidebar-tab');
+		Util::addInitScript(Application::APP_ID, 'sidebar-tab');
 	}
 }

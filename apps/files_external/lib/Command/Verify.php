@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2019-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -26,6 +27,7 @@ class Verify extends Base {
 		parent::__construct();
 	}
 
+	#[\Override]
 	protected function configure(): void {
 		$this
 			->setName('files_external:verify')
@@ -43,6 +45,7 @@ class Verify extends Base {
 		parent::configure();
 	}
 
+	#[\Override]
 	protected function execute(InputInterface $input, OutputInterface $output): int {
 		$mountId = $input->getArgument('mount_id');
 		$configInput = $input->getOption('config');
@@ -96,7 +99,6 @@ class Verify extends Base {
 				MountConfig::getBackendStatus(
 					$backend->getStorageClass(),
 					$storage->getBackendOptions(),
-					false
 				)
 			);
 		} catch (InsufficientDataForMeaningfulAnswerException $e) {

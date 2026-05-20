@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -18,16 +19,17 @@ use OCP\Server;
 /**
  * Class LocalTest
  *
- * @group DB
  *
  * @package Test\Files\Storage
  */
+#[\PHPUnit\Framework\Attributes\Group('DB')]
 class LocalTest extends Storage {
 	/**
 	 * @var string tmpDir
 	 */
 	private $tmpDir;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -35,6 +37,7 @@ class LocalTest extends Storage {
 		$this->instance = new Local(['datadir' => $this->tmpDir]);
 	}
 
+	#[\Override]
 	protected function tearDown(): void {
 		Files::rmdirr($this->tmpDir);
 		parent::tearDown();

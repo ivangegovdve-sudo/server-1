@@ -62,6 +62,7 @@ class ClassInterfaceConstructor {
 class SimpleContainerTest extends \Test\TestCase {
 	private $container;
 
+	#[\Override]
 	protected function setUp(): void {
 		$this->container = new SimpleContainer();
 	}
@@ -201,9 +202,7 @@ class SimpleContainerTest extends \Test\TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider sanitizeNameProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('sanitizeNameProvider')]
 	public function testSanitizeName($register, $query): void {
 		$this->container->registerService($register, function () {
 			return 'abc';

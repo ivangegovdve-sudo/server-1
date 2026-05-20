@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -12,6 +13,7 @@ use OC\LargeFileHelper;
 class LargeFileHelperTest extends TestCase {
 	protected $helper;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 		$this->helper = new LargeFileHelper;
@@ -38,7 +40,7 @@ class LargeFileHelperTest extends TestCase {
 		);
 	}
 
-	
+
 	public function testFormatUnsignedIntegerStringException(): void {
 		$this->expectException(\UnexpectedValueException::class);
 

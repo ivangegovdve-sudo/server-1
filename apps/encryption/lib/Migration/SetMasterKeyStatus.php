@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2017 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -28,6 +29,7 @@ class SetMasterKeyStatus implements IRepairStep {
 	 * @return string
 	 * @since 9.1.0
 	 */
+	#[\Override]
 	public function getName() {
 		return 'Write default encryption module configuration to the database';
 	}
@@ -35,6 +37,7 @@ class SetMasterKeyStatus implements IRepairStep {
 	/**
 	 * @param IOutput $output
 	 */
+	#[\Override]
 	public function run(IOutput $output) {
 		if (!$this->shouldRun()) {
 			return;

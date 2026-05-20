@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2017 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -20,12 +23,14 @@ class UpdateTheme extends UpdateJS {
 		parent::__construct($mimetypeDetector);
 	}
 
+	#[\Override]
 	protected function configure() {
 		$this
 			->setName('maintenance:theme:update')
 			->setDescription('Apply custom theme changes');
 	}
 
+	#[\Override]
 	protected function execute(InputInterface $input, OutputInterface $output): int {
 		// run mimetypelist.js update since themes might change mimetype icons
 		parent::execute($input, $output);

@@ -30,6 +30,7 @@ class SynchronousBackgroundJob extends QueuedJob {
 	/**
 	 * @inheritDoc
 	 */
+	#[\Override]
 	protected function run($argument) {
 		$providers = $this->taskProcessingManager->getProviders();
 
@@ -59,8 +60,8 @@ class SynchronousBackgroundJob extends QueuedJob {
 
 		// check if this job needs to be scheduled again:
 		// if there is at least one preferred synchronous provider that has a scheduled task
-		$synchronousProviders = array_filter($providers, fn ($provider) =>
-			$provider instanceof ISynchronousProvider);
+		$synchronousProviders = array_filter($providers, fn ($provider)
+			=> $provider instanceof ISynchronousProvider);
 		$synchronousPreferredProviders = array_filter($synchronousProviders, function ($provider) {
 			$taskTypeId = $provider->getTaskTypeId();
 			$preferredProvider = $this->taskProcessingManager->getPreferredProvider($taskTypeId);

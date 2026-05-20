@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -151,7 +153,7 @@ interface ILDAPWrapper {
 
 	/**
 	 * Sets the value of the specified option to be $value
-	 * @param \LDAP\Connection $link LDAP link resource
+	 * @param ?\LDAP\Connection $link LDAP link resource
 	 * @param int $option a defined LDAP Server option
 	 * @param mixed $value the new value for the option
 	 * @return bool true on success, false otherwise

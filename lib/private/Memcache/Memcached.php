@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -6,8 +7,11 @@
  */
 namespace OC\Memcache;
 
+use OC\SystemConfig;
 use OCP\HintException;
+use OCP\IConfig;
 use OCP\IMemcache;
+use OCP\Server;
 
 class Memcached extends Cache implements IMemcache {
 	use CASTrait;
@@ -48,10 +52,10 @@ class Memcached extends Cache implements IMemcache {
 			 * @psalm-suppress TypeDoesNotContainType
 			 */
 			if (\Memcached::HAVE_IGBINARY) {
-				$defaultOptions[\Memcached::OPT_SERIALIZER] =
-					\Memcached::SERIALIZER_IGBINARY;
+				$defaultOptions[\Memcached::OPT_SERIALIZER]
+					= \Memcached::SERIALIZER_IGBINARY;
 			}
-			$options = \OC::$server->getConfig()->getSystemValue('memcached_options', []);
+			$options = Server::get(IConfig::class)->getSystemValue('memcached_options', []);
 			if (is_array($options)) {
 				$options = $options + $defaultOptions;
 				self::$cache->setOptions($options);
@@ -59,9 +63,9 @@ class Memcached extends Cache implements IMemcache {
 				throw new HintException("Expected 'memcached_options' config to be an array, got $options");
 			}
 
-			$servers = \OC::$server->getSystemConfig()->getValue('memcached_servers');
+			$servers = Server::get(SystemConfig::class)->getValue('memcached_servers');
 			if (!$servers) {
-				$server = \OC::$server->getSystemConfig()->getValue('memcached_server');
+				$server = Server::get(SystemConfig::class)->getValue('memcached_server');
 				if ($server) {
 					$servers = [$server];
 				} else {
@@ -79,15 +83,17 @@ class Memcached extends Cache implements IMemcache {
 		return $this->prefix;
 	}
 
+	#[\Override]
 	public function get($key) {
 		$result = self::$cache->get($this->getNameSpace() . $key);
-		if ($result === false and self::$cache->getResultCode() == \Memcached::RES_NOTFOUND) {
+		if ($result === false && self::$cache->getResultCode() === \Memcached::RES_NOTFOUND) {
 			return null;
 		} else {
 			return $result;
 		}
 	}
 
+	#[\Override]
 	public function set($key, $value, $ttl = 0) {
 		if ($ttl > 0) {
 			$result = self::$cache->set($this->getNameSpace() . $key, $value, $ttl);
@@ -97,16 +103,19 @@ class Memcached extends Cache implements IMemcache {
 		return $result || $this->isSuccess();
 	}
 
+	#[\Override]
 	public function hasKey($key) {
 		self::$cache->get($this->getNameSpace() . $key);
 		return self::$cache->getResultCode() === \Memcached::RES_SUCCESS;
 	}
 
+	#[\Override]
 	public function remove($key) {
 		$result = self::$cache->delete($this->getNameSpace() . $key);
 		return $result || $this->isSuccess() || self::$cache->getResultCode() === \Memcached::RES_NOTFOUND;
 	}
 
+	#[\Override]
 	public function clear($prefix = '') {
 		// Newer Memcached doesn't like getAllKeys(), flush everything
 		self::$cache->flush();
@@ -121,6 +130,7 @@ class Memcached extends Cache implements IMemcache {
 	 * @param int $ttl Time To Live in seconds. Defaults to 60*60*24
 	 * @return bool
 	 */
+	#[\Override]
 	public function add($key, $value, $ttl = 0) {
 		$result = self::$cache->add($this->getPrefix() . $key, $value, $ttl);
 		return $result || $this->isSuccess();
@@ -133,6 +143,7 @@ class Memcached extends Cache implements IMemcache {
 	 * @param int $step
 	 * @return int | bool
 	 */
+	#[\Override]
 	public function inc($key, $step = 1) {
 		$this->add($key, 0);
 		$result = self::$cache->increment($this->getPrefix() . $key, $step);
@@ -151,6 +162,7 @@ class Memcached extends Cache implements IMemcache {
 	 * @param int $step
 	 * @return int | bool
 	 */
+	#[\Override]
 	public function dec($key, $step = 1) {
 		$result = self::$cache->decrement($this->getPrefix() . $key, $step);
 
@@ -161,6 +173,7 @@ class Memcached extends Cache implements IMemcache {
 		return $result;
 	}
 
+	#[\Override]
 	public static function isAvailable(): bool {
 		return extension_loaded('memcached');
 	}

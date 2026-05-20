@@ -12,7 +12,13 @@ use OCA\Comments\Activity\Listener as ActivityListener;
 use OCA\Comments\Listener\CommentsEventListener;
 use OCA\Comments\Notification\Listener as NotificationListener;
 use OCP\Comments\CommentsEvent;
+use OCP\Comments\Events\BeforeCommentUpdatedEvent;
+use OCP\Comments\Events\CommentAddedEvent;
+use OCP\Comments\Events\CommentDeletedEvent;
+use OCP\Comments\Events\CommentUpdatedEvent;
 use OCP\Comments\IComment;
+use OCP\EventDispatcher\IEventDispatcher;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\MockObject\MockObject;
 use Test\TestCase;
 
@@ -21,23 +27,22 @@ class EventHandlerTest extends TestCase {
 	protected NotificationListener&MockObject $notificationListener;
 	protected CommentsEventListener $eventHandler;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
 		$this->activityListener = $this->createMock(ActivityListener::class);
 		$this->notificationListener = $this->createMock(NotificationListener::class);
 
-		$this->eventHandler = new CommentsEventListener($this->activityListener, $this->notificationListener);
+		$this->eventHandler = new CommentsEventListener($this->activityListener, $this->notificationListener, $this->createMock(IEventDispatcher::class));
 	}
 
 	public function testNotFiles(): void {
-		/** @var IComment|MockObject $comment */
 		$comment = $this->createMock(IComment::class);
 		$comment->expects($this->once())
 			->method('getObjectType')
 			->willReturn('smiles');
 
-		/** @var CommentsEvent|MockObject $event */
 		$event = $this->createMock(CommentsEvent::class);
 		$event->expects($this->once())
 			->method('getComment')
@@ -50,31 +55,26 @@ class EventHandlerTest extends TestCase {
 
 	public static function handledProvider(): array {
 		return [
-			[CommentsEvent::EVENT_DELETE],
-			[CommentsEvent::EVENT_UPDATE],
-			[CommentsEvent::EVENT_PRE_UPDATE],
-			[CommentsEvent::EVENT_ADD]
+			['delete'],
+			['update'],
+			['pre_update'],
+			['add']
 		];
 	}
 
-	/**
-	 * @dataProvider handledProvider
-	 */
+	#[DataProvider(methodName: 'handledProvider')]
 	public function testHandled(string $eventType): void {
-		/** @var IComment|MockObject $comment */
 		$comment = $this->createMock(IComment::class);
 		$comment->expects($this->once())
 			->method('getObjectType')
 			->willReturn('files');
 
-		/** @var CommentsEvent|MockObject $event */
-		$event = $this->createMock(CommentsEvent::class);
-		$event->expects($this->atLeastOnce())
-			->method('getComment')
-			->willReturn($comment);
-		$event->expects($this->atLeastOnce())
-			->method('getEvent')
-			->willReturn($eventType);
+		$event = match ($eventType) {
+			'add' => new CommentAddedEvent($comment),
+			'pre_update' => new BeforeCommentUpdatedEvent($comment),
+			'update' => new CommentUpdatedEvent($comment),
+			'delete' => new CommentDeletedEvent($comment),
+		};
 
 		$this->notificationListener->expects($this->once())
 			->method('evaluate')

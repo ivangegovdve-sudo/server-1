@@ -17,6 +17,7 @@ class ArrayValue implements \JsonSerializable {
 	) {
 	}
 
+	#[\Override]
 	public function jsonSerialize(): mixed {
 		return $this->array;
 	}
@@ -50,7 +51,7 @@ class BaseResponseTest extends \Test\TestCase {
 			$writer->outputMemory(true)
 		);
 	}
-	
+
 	public function testToXmlJsonSerializable(): void {
 		/** @var BaseResponse $response */
 		$response = $this->createMock(BaseResponse::class);

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -22,6 +23,7 @@ class SignCoreTest extends TestCase {
 	/** @var SignCore */
 	private $signCore;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 		$this->checker = $this->createMock(Checker::class);

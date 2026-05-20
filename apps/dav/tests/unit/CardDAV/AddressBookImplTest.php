@@ -53,7 +53,8 @@ class AddressBookImplTest extends TestCase {
 	}
 
 	public function testGetKey(): void {
-		$this->assertSame($this->addressBookInfo['id'],
+		$this->assertIsString($this->addressBookImpl->getKey());
+		$this->assertSame((string)$this->addressBookInfo['id'],
 			$this->addressBookImpl->getKey());
 	}
 
@@ -79,7 +80,7 @@ class AddressBookImplTest extends TestCase {
 			->getMock();
 
 		$pattern = 'pattern';
-		$searchProperties = 'properties';
+		$searchProperties = ['properties'];
 
 		$this->backend->expects($this->once())->method('search')
 			->with($this->addressBookInfo['id'], $pattern, $searchProperties)
@@ -103,9 +104,7 @@ class AddressBookImplTest extends TestCase {
 		$this->assertSame(2, count($result));
 	}
 
-	/**
-	 * @dataProvider dataTestCreate
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataTestCreate')]
 	public function testCreate(array $properties): void {
 		$uid = 'uid';
 
@@ -230,9 +229,7 @@ class AddressBookImplTest extends TestCase {
 		$addressBookImpl->createOrUpdate($properties);
 	}
 
-	/**
-	 * @dataProvider dataTestGetPermissions
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataTestGetPermissions')]
 	public function testGetPermissions(array $permissions, int $expected): void {
 		$this->addressBook->expects($this->once())->method('getACL')
 			->willReturn($permissions);
@@ -245,14 +242,15 @@ class AddressBookImplTest extends TestCase {
 	public static function dataTestGetPermissions(): array {
 		return [
 			[[], 0],
-			[[['privilege' => '{DAV:}read']], 1],
-			[[['privilege' => '{DAV:}write']], 6],
-			[[['privilege' => '{DAV:}all']], 31],
-			[[['privilege' => '{DAV:}read'],['privilege' => '{DAV:}write']], 7],
-			[[['privilege' => '{DAV:}read'],['privilege' => '{DAV:}all']], 31],
-			[[['privilege' => '{DAV:}all'],['privilege' => '{DAV:}write']], 31],
-			[[['privilege' => '{DAV:}read'],['privilege' => '{DAV:}write'],['privilege' => '{DAV:}all']], 31],
-			[[['privilege' => '{DAV:}all'],['privilege' => '{DAV:}read'],['privilege' => '{DAV:}write']], 31],
+			[[['privilege' => '{DAV:}read', 'principal' => 'principals/system/system']], 1],
+			[[['privilege' => '{DAV:}read', 'principal' => 'principals/system/system'], ['privilege' => '{DAV:}write', 'principal' => 'principals/someone/else']], 1],
+			[[['privilege' => '{DAV:}write', 'principal' => 'principals/system/system']], 6],
+			[[['privilege' => '{DAV:}all', 'principal' => 'principals/system/system']], 31],
+			[[['privilege' => '{DAV:}read', 'principal' => 'principals/system/system'],['privilege' => '{DAV:}write', 'principal' => 'principals/system/system']], 7],
+			[[['privilege' => '{DAV:}read', 'principal' => 'principals/system/system'],['privilege' => '{DAV:}all', 'principal' => 'principals/system/system']], 31],
+			[[['privilege' => '{DAV:}all', 'principal' => 'principals/system/system'],['privilege' => '{DAV:}write', 'principal' => 'principals/system/system']], 31],
+			[[['privilege' => '{DAV:}read', 'principal' => 'principals/system/system'],['privilege' => '{DAV:}write', 'principal' => 'principals/system/system'],['privilege' => '{DAV:}all', 'principal' => 'principals/system/system']], 31],
+			[[['privilege' => '{DAV:}all', 'principal' => 'principals/system/system'],['privilege' => '{DAV:}read', 'principal' => 'principals/system/system'],['privilege' => '{DAV:}write', 'principal' => 'principals/system/system']], 31],
 		];
 	}
 

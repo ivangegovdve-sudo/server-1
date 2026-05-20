@@ -16,9 +16,7 @@ use OCP\Server;
 use PHPUnit\Framework\MockObject\MockObject;
 use Test\TestCase;
 
-/**
- * @group DB
- */
+#[\PHPUnit\Framework\Attributes\Group(name: 'DB')]
 class BackupCodeStorageTest extends TestCase {
 	private IManager&MockObject $notificationManager;
 	private string $testUID = 'test123456789';
@@ -44,10 +42,10 @@ class BackupCodeStorageTest extends TestCase {
 		$this->notificationManager->expects($this->once())
 			->method('markProcessed')
 			->with($this->callback(function (INotification $notification) {
-				return $notification->getUser() === $this->testUID &&
-					$notification->getObjectType() === 'create' &&
-					$notification->getObjectId() === 'codes' &&
-					$notification->getApp() === 'twofactor_backupcodes';
+				return $notification->getUser() === $this->testUID
+					&& $notification->getObjectType() === 'create'
+					&& $notification->getObjectId() === 'codes'
+					&& $notification->getApp() === 'twofactor_backupcodes';
 			}));
 
 		// Create codes

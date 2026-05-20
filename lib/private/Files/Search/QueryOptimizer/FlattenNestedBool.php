@@ -11,11 +11,12 @@ use OCP\Files\Search\ISearchBinaryOperator;
 use OCP\Files\Search\ISearchOperator;
 
 class FlattenNestedBool extends QueryOptimizerStep {
+	#[\Override]
 	public function processOperator(ISearchOperator &$operator) {
 		if (
 			$operator instanceof SearchBinaryOperator && (
-				$operator->getType() === ISearchBinaryOperator::OPERATOR_OR ||
-				$operator->getType() === ISearchBinaryOperator::OPERATOR_AND
+				$operator->getType() === ISearchBinaryOperator::OPERATOR_OR
+				|| $operator->getType() === ISearchBinaryOperator::OPERATOR_AND
 			)
 		) {
 			$newArguments = [];

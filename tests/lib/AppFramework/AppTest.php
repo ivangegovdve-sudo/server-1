@@ -29,7 +29,7 @@ function rrmdir($directory) {
 
 
 class AppTest extends \Test\TestCase {
-	private $container;
+	private DIContainer $container;
 	private $io;
 	private $api;
 	private $controller;
@@ -41,6 +41,7 @@ class AppTest extends \Test\TestCase {
 	private $controllerMethod;
 	private $appPath;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -55,19 +56,19 @@ class AppTest extends \Test\TestCase {
 		$this->controllerMethod = 'method';
 
 		$this->container[$this->controllerName] = $this->controller;
-		$this->container['Dispatcher'] = $this->dispatcher;
-		$this->container['OCP\\AppFramework\\Http\\IOutput'] = $this->io;
+		$this->container[Dispatcher::class] = $this->dispatcher;
+		$this->container[IOutput::class] = $this->io;
 		$this->container['urlParams'] = ['_route' => 'not-profiler'];
 
 		$this->appPath = __DIR__ . '/../../../apps/namespacetestapp';
 		$infoXmlPath = $this->appPath . '/appinfo/info.xml';
 		mkdir($this->appPath . '/appinfo', 0777, true);
 
-		$xml = '<?xml version="1.0" encoding="UTF-8"?>' .
-		'<info>' .
-			'<id>namespacetestapp</id>' .
-			'<namespace>NameSpaceTestApp</namespace>' .
-		'</info>';
+		$xml = '<?xml version="1.0" encoding="UTF-8"?>'
+		. '<info>'
+			. '<id>namespacetestapp</id>'
+			. '<namespace>NameSpaceTestApp</namespace>'
+		. '</info>';
 		file_put_contents($infoXmlPath, $xml);
 	}
 
@@ -106,6 +107,7 @@ class AppTest extends \Test\TestCase {
 	}
 
 
+	#[\Override]
 	protected function tearDown(): void {
 		rrmdir($this->appPath);
 		parent::tearDown();
@@ -132,9 +134,7 @@ class AppTest extends \Test\TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider dataNoOutput
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataNoOutput')]
 	public function testNoOutput(string $statusCode): void {
 		$return = [$statusCode, [], [], $this->output, new Response()];
 		$this->dispatcher->expects($this->once())
@@ -167,7 +167,7 @@ class AppTest extends \Test\TestCase {
 	}
 
 	public function testCoreApp(): void {
-		$this->container['AppName'] = 'core';
+		$this->container['appName'] = 'core';
 		$this->container['OC\Core\Controller\Foo'] = $this->controller;
 		$this->container['urlParams'] = ['_route' => 'not-profiler'];
 
@@ -185,7 +185,7 @@ class AppTest extends \Test\TestCase {
 	}
 
 	public function testSettingsApp(): void {
-		$this->container['AppName'] = 'settings';
+		$this->container['appName'] = 'settings';
 		$this->container['OCA\Settings\Controller\Foo'] = $this->controller;
 		$this->container['urlParams'] = ['_route' => 'not-profiler'];
 
@@ -203,7 +203,7 @@ class AppTest extends \Test\TestCase {
 	}
 
 	public function testApp(): void {
-		$this->container['AppName'] = 'bar';
+		$this->container['appName'] = 'bar';
 		$this->container['OCA\Bar\Controller\Foo'] = $this->controller;
 		$this->container['urlParams'] = ['_route' => 'not-profiler'];
 

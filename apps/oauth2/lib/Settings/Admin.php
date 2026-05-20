@@ -13,6 +13,7 @@ use OCP\AppFramework\Http\TemplateResponse;
 use OCP\AppFramework\Services\IInitialState;
 use OCP\IURLGenerator;
 use OCP\Settings\ISettings;
+use OCP\Util;
 use Psr\Log\LoggerInterface;
 
 class Admin implements ISettings {
@@ -25,6 +26,7 @@ class Admin implements ISettings {
 	) {
 	}
 
+	#[\Override]
 	public function getForm(): TemplateResponse {
 		$clients = $this->clientMapper->getClients();
 		$result = [];
@@ -45,6 +47,8 @@ class Admin implements ISettings {
 		$this->initialState->provideInitialState('clients', $result);
 		$this->initialState->provideInitialState('oauth2-doc-link', $this->urlGenerator->linkToDocs('admin-oauth2'));
 
+		Util::addStyle('oauth2', 'settings-admin');
+		Util::addScript('oauth2', 'settings-admin', 'core');
 		return new TemplateResponse(
 			'oauth2',
 			'admin',
@@ -53,10 +57,12 @@ class Admin implements ISettings {
 		);
 	}
 
+	#[\Override]
 	public function getSection(): string {
 		return 'security';
 	}
 
+	#[\Override]
 	public function getPriority(): int {
 		return 100;
 	}

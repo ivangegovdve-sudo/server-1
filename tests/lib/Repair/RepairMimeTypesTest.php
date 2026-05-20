@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2017-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -19,10 +20,10 @@ use OCP\Server;
 /**
  * Tests for the converting of legacy storages to home storages.
  *
- * @group DB
  *
  * @see \OC\Repair\RepairMimeTypes
  */
+#[\PHPUnit\Framework\Attributes\Group('DB')]
 class RepairMimeTypesTest extends \Test\TestCase {
 
 	private RepairMimeTypes $repair;
@@ -30,6 +31,7 @@ class RepairMimeTypesTest extends \Test\TestCase {
 	private IMimeTypeLoader $mimetypeLoader;
 	private IDBConnection $db;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -60,6 +62,7 @@ class RepairMimeTypesTest extends \Test\TestCase {
 		);
 	}
 
+	#[\Override]
 	protected function tearDown(): void {
 		$this->storage->getCache()->clear();
 

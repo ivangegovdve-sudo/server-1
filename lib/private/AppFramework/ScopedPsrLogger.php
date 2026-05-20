@@ -12,18 +12,13 @@ use Psr\Log\LoggerInterface;
 use function array_merge;
 
 class ScopedPsrLogger implements LoggerInterface {
-	/** @var LoggerInterface */
-	private $inner;
-
-	/** @var string */
-	private $appId;
-
-	public function __construct(LoggerInterface $inner,
-		string $appId) {
-		$this->inner = $inner;
-		$this->appId = $appId;
+	public function __construct(
+		private LoggerInterface $inner,
+		private string $appId,
+	) {
 	}
 
+	#[\Override]
 	public function emergency($message, array $context = []): void {
 		$this->inner->emergency(
 			$message,
@@ -36,6 +31,7 @@ class ScopedPsrLogger implements LoggerInterface {
 		);
 	}
 
+	#[\Override]
 	public function alert($message, array $context = []): void {
 		$this->inner->alert(
 			$message,
@@ -48,6 +44,7 @@ class ScopedPsrLogger implements LoggerInterface {
 		);
 	}
 
+	#[\Override]
 	public function critical($message, array $context = []): void {
 		$this->inner->critical(
 			$message,
@@ -60,6 +57,7 @@ class ScopedPsrLogger implements LoggerInterface {
 		);
 	}
 
+	#[\Override]
 	public function error($message, array $context = []): void {
 		$this->inner->error(
 			$message,
@@ -72,6 +70,7 @@ class ScopedPsrLogger implements LoggerInterface {
 		);
 	}
 
+	#[\Override]
 	public function warning($message, array $context = []): void {
 		$this->inner->warning(
 			$message,
@@ -84,6 +83,7 @@ class ScopedPsrLogger implements LoggerInterface {
 		);
 	}
 
+	#[\Override]
 	public function notice($message, array $context = []): void {
 		$this->inner->notice(
 			$message,
@@ -96,6 +96,7 @@ class ScopedPsrLogger implements LoggerInterface {
 		);
 	}
 
+	#[\Override]
 	public function info($message, array $context = []): void {
 		$this->inner->info(
 			$message,
@@ -108,6 +109,7 @@ class ScopedPsrLogger implements LoggerInterface {
 		);
 	}
 
+	#[\Override]
 	public function debug($message, array $context = []): void {
 		$this->inner->debug(
 			$message,
@@ -120,6 +122,7 @@ class ScopedPsrLogger implements LoggerInterface {
 		);
 	}
 
+	#[\Override]
 	public function log($level, $message, array $context = []): void {
 		$this->inner->log(
 			$level,

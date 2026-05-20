@@ -11,26 +11,22 @@ use Closure;
 use OCP\DB\ISchemaWrapper;
 use OCP\Migration\IOutput;
 use OCP\Migration\SimpleMigrationStep;
+use Override;
 
 /**
  *
  */
 class Version29000Date20240131122720 extends SimpleMigrationStep {
 
-	/**
-	 * @param IOutput $output
-	 * @param Closure(): ISchemaWrapper $schemaClosure
-	 * @param array $options
-	 * @return null|ISchemaWrapper
-	 */
+	#[Override]
 	public function changeSchema(IOutput $output, Closure $schemaClosure, array $options): ?ISchemaWrapper {
 		/** @var ISchemaWrapper $schema */
 		$schema = $schemaClosure();
 
 		$tableProperties = $schema->getTable('properties');
 
-		if ($tableProperties->hasIndex('property_index') &&
-			$tableProperties->hasIndex('properties_path_index')) {
+		if ($tableProperties->hasIndex('property_index')
+			&& $tableProperties->hasIndex('properties_path_index')) {
 
 			$tableProperties->dropIndex('property_index');
 		}

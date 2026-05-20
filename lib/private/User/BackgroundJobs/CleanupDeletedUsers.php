@@ -15,6 +15,7 @@ use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\BackgroundJob\TimedJob;
 use OCP\EventDispatcher\IEventDispatcher;
 use OCP\IConfig;
+use OCP\Server;
 use Psr\Log\LoggerInterface;
 
 class CleanupDeletedUsers extends TimedJob {
@@ -29,6 +30,7 @@ class CleanupDeletedUsers extends TimedJob {
 		$this->setInterval(24 * 60 * 60);
 	}
 
+	#[\Override]
 	protected function run($argument): void {
 		$backend = new PartiallyDeletedUsersBackend($this->config);
 		$users = $backend->getUsers();
@@ -49,7 +51,7 @@ class CleanupDeletedUsers extends TimedJob {
 				$user = new User(
 					$userId,
 					$backend,
-					\OCP\Server::get(IEventDispatcher::class),
+					Server::get(IEventDispatcher::class),
 					$this->userManager,
 					$this->config,
 				);

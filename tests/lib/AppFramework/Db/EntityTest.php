@@ -73,8 +73,9 @@ class TestEntity extends Entity {
 
 
 class EntityTest extends \Test\TestCase {
-	private $entity;
+	private TestEntity $entity;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 		$this->entity = new TestEntity();
@@ -225,9 +226,7 @@ class EntityTest extends \Test\TestCase {
 	}
 
 
-	/**
-	 * @dataProvider dataSetterCasts
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataSetterCasts')]
 	public function testSetterCasts(string $field, mixed $in, mixed $out): void {
 		$entity = new TestEntity();
 		$entity->{'set' . $field}($in);

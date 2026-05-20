@@ -24,7 +24,6 @@ use OCP\BeforeSabrePubliclyLoadedEvent;
 use OCP\EventDispatcher\IEventDispatcher;
 use OCP\SystemTag\ManagerEvent;
 use OCP\SystemTag\MapperEvent;
-use OCP\Util;
 
 class Application extends App implements IBootstrap {
 	public const APP_ID = 'systemtags';
@@ -33,6 +32,7 @@ class Application extends App implements IBootstrap {
 		parent::__construct(self::APP_ID);
 	}
 
+	#[\Override]
 	public function register(IRegistrationContext $context): void {
 		$context->registerSearchProvider(TagSearchProvider::class);
 		$context->registerCapability(Capabilities::class);
@@ -41,19 +41,9 @@ class Application extends App implements IBootstrap {
 		$context->registerEventListener(BeforeSabrePubliclyLoadedEvent::class, BeforeSabrePubliclyLoadedListener::class);
 	}
 
+	#[\Override]
 	public function boot(IBootContext $context): void {
 		$context->injectFn(function (IEventDispatcher $dispatcher) use ($context): void {
-			/*
-			 * @todo move the OCP events and then move the registration to `register`
-			 */
-			$dispatcher->addListener(
-				LoadAdditionalScriptsEvent::class,
-				function (): void {
-					Util::addScript('core', 'systemtags');
-					Util::addInitScript(self::APP_ID, 'init');
-				}
-			);
-
 			$managerListener = function (ManagerEvent $event) use ($context): void {
 				/** @var Listener $listener */
 				$listener = $context->getServerContainer()->query(Listener::class);

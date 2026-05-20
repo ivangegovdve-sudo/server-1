@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -27,6 +28,7 @@ class Users extends Base {
 	 * @throws \InvalidArgumentException
 	 * @since 11.0.0
 	 */
+	#[\Override]
 	public function parseShortVersion(IEvent $event) {
 		$parsedParameters = $this->getParsedParameters($event);
 
@@ -71,6 +73,7 @@ class Users extends Base {
 	 * @throws \InvalidArgumentException
 	 * @since 11.0.0
 	 */
+	#[\Override]
 	public function parseLongVersion(IEvent $event, ?IEvent $previousEvent = null) {
 		$parsedParameters = $this->getParsedParameters($event);
 

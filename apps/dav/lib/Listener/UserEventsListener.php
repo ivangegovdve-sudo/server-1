@@ -9,15 +9,19 @@ declare(strict_types=1);
 
 namespace OCA\DAV\Listener;
 
+use OCA\DAV\BackgroundJob\UserStatusAutomation;
 use OCA\DAV\CalDAV\CalDavBackend;
 use OCA\DAV\CardDAV\CardDavBackend;
 use OCA\DAV\CardDAV\SyncService;
 use OCA\DAV\Service\ExampleContactService;
 use OCA\DAV\Service\ExampleEventService;
 use OCP\Accounts\UserUpdatedEvent;
+use OCP\BackgroundJob\IJobList;
 use OCP\Defaults;
 use OCP\EventDispatcher\Event;
 use OCP\EventDispatcher\IEventListener;
+use OCP\Group\Events\BeforeGroupDeletedEvent;
+use OCP\Group\Events\GroupDeletedEvent;
 use OCP\IUser;
 use OCP\IUserManager;
 use OCP\User\Events\BeforeUserDeletedEvent;
@@ -30,7 +34,7 @@ use OCP\User\Events\UserIdAssignedEvent;
 use OCP\User\Events\UserIdUnassignedEvent;
 use Psr\Log\LoggerInterface;
 
-/** @template-implements IEventListener<UserFirstTimeLoggedInEvent|UserIdAssignedEvent|BeforeUserIdUnassignedEvent|UserIdUnassignedEvent|BeforeUserDeletedEvent|UserDeletedEvent|UserCreatedEvent|UserChangedEvent|UserUpdatedEvent> */
+/** @template-implements IEventListener<UserFirstTimeLoggedInEvent|UserIdAssignedEvent|BeforeUserIdUnassignedEvent|UserIdUnassignedEvent|BeforeUserDeletedEvent|UserDeletedEvent|UserCreatedEvent|UserChangedEvent|UserUpdatedEvent|BeforeGroupDeletedEvent|GroupDeletedEvent> */
 class UserEventsListener implements IEventListener {
 
 	/** @var IUser[] */
@@ -49,9 +53,11 @@ class UserEventsListener implements IEventListener {
 		private ExampleContactService $exampleContactService,
 		private ExampleEventService $exampleEventService,
 		private LoggerInterface $logger,
+		private IJobList $jobList,
 	) {
 	}
 
+	#[\Override]
 	public function handle(Event $event): void {
 		if ($event instanceof UserCreatedEvent) {
 			$this->postCreateUser($event->getUser());
@@ -74,6 +80,8 @@ class UserEventsListener implements IEventListener {
 			$this->firstLogin($event->getUser());
 		} elseif ($event instanceof UserUpdatedEvent) {
 			$this->updateUser($event->getUser());
+		} elseif ($event instanceof GroupDeletedEvent) {
+			$this->postDeleteGroup($event->getGroup()->getGID());
 		}
 	}
 
@@ -119,14 +127,23 @@ class UserEventsListener implements IEventListener {
 			);
 		}
 		$this->calDav->deleteAllSharesByUser('principals/users/' . $uid);
+		$this->cardDav->deleteAllSharesByUser('principals/users/' . $uid);
 
 		foreach ($this->addressBooksToDelete[$uid] as $addressBook) {
 			$this->cardDav->deleteAddressBook($addressBook['id']);
 		}
 
+		$this->jobList->remove(UserStatusAutomation::class, ['userId' => $uid]);
+
 		unset($this->calendarsToDelete[$uid]);
 		unset($this->subscriptionsToDelete[$uid]);
 		unset($this->addressBooksToDelete[$uid]);
+	}
+
+	public function postDeleteGroup(string $gid): void {
+		$encodedGid = urlencode($gid);
+		$this->calDav->deleteAllSharesByUser('principals/groups/' . $encodedGid);
+		$this->cardDav->deleteAllSharesByUser('principals/groups/' . $encodedGid);
 	}
 
 	public function changeUser(IUser $user, string $feature): void {

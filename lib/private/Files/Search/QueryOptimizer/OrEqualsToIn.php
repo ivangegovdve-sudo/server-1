@@ -16,10 +16,11 @@ use OCP\Files\Search\ISearchOperator;
  * transform (field == A OR field == B ...) into field IN (A, B, ...)
  */
 class OrEqualsToIn extends ReplacingOptimizerStep {
+	#[\Override]
 	public function processOperator(ISearchOperator &$operator): bool {
 		if (
-			$operator instanceof ISearchBinaryOperator &&
-			$operator->getType() === ISearchBinaryOperator::OPERATOR_OR
+			$operator instanceof ISearchBinaryOperator
+			&& $operator->getType() === ISearchBinaryOperator::OPERATOR_OR
 		) {
 			$groups = $this->groupEqualsComparisonsByField($operator->getArguments());
 			$newParts = array_map(function (array $group) {

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -25,6 +26,7 @@ class ImportTest extends TestCase {
 	/** @var \Symfony\Component\Console\Command\Command */
 	protected $command;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -34,7 +36,7 @@ class ImportTest extends TestCase {
 		$this->consoleInput = $this->getMockBuilder(InputInterface::class)->getMock();
 		$this->consoleOutput = $this->getMockBuilder(OutputInterface::class)->getMock();
 
-		/** @var \OCP\IConfig $config */
+		/** @var IConfig $config */
 		$this->command = new Import($config);
 	}
 
@@ -49,10 +51,9 @@ class ImportTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider validateAppsArrayData
-	 *
 	 * @param mixed $configValue
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('validateAppsArrayData')]
 	public function testValidateAppsArray($configValue): void {
 		$this->invokePrivate($this->command, 'validateAppsArray', [['app' => ['name' => $configValue]]]);
 		$this->assertTrue(true, 'Asserting that no exception is thrown');
@@ -68,10 +69,9 @@ class ImportTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider validateAppsArrayThrowsData
-	 *
 	 * @param mixed $configValue
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('validateAppsArrayThrowsData')]
 	public function testValidateAppsArrayThrows($configValue): void {
 		try {
 			$this->invokePrivate($this->command, 'validateAppsArray', [['app' => ['name' => $configValue]]]);
@@ -98,10 +98,9 @@ class ImportTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider checkTypeRecursivelyData
-	 *
 	 * @param mixed $configValue
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('checkTypeRecursivelyData')]
 	public function testCheckTypeRecursively($configValue): void {
 		$this->invokePrivate($this->command, 'checkTypeRecursively', [$configValue, 'name']);
 		$this->assertTrue(true, 'Asserting that no exception is thrown');
@@ -117,10 +116,9 @@ class ImportTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider checkTypeRecursivelyThrowsData
-	 *
 	 * @param mixed $configValue
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('checkTypeRecursivelyThrowsData')]
 	public function testCheckTypeRecursivelyThrows($configValue): void {
 		try {
 			$this->invokePrivate($this->command, 'checkTypeRecursively', [$configValue, 'name']);
@@ -139,10 +137,9 @@ class ImportTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider validateArrayData
-	 *
 	 * @param array $configArray
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('validateArrayData')]
 	public function testValidateArray($configArray): void {
 		$this->invokePrivate($this->command, 'validateArray', [$configArray]);
 		$this->assertTrue(true, 'Asserting that no exception is thrown');
@@ -157,11 +154,11 @@ class ImportTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider validateArrayThrowsData
 	 *
 	 * @param mixed $configArray
 	 * @param string $expectedException
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('validateArrayThrowsData')]
 	public function testValidateArrayThrows($configArray, $expectedException): void {
 		try {
 			$this->invokePrivate($this->command, 'validateArray', [$configArray]);

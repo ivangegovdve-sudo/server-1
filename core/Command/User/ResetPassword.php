@@ -28,6 +28,7 @@ class ResetPassword extends Base {
 		parent::__construct();
 	}
 
+	#[\Override]
 	protected function configure() {
 		$this
 			->setName('user:resetpassword')
@@ -43,9 +44,16 @@ class ResetPassword extends Base {
 				InputOption::VALUE_NONE,
 				'read password from environment variable NC_PASS/OC_PASS'
 			)
+			->addOption(
+				'no-password',
+				null,
+				InputOption::VALUE_NONE,
+				'Sets the password to blank'
+			)
 		;
 	}
 
+	#[\Override]
 	protected function execute(InputInterface $input, OutputInterface $output): int {
 		$username = $input->getArgument('user');
 
@@ -76,22 +84,32 @@ class ResetPassword extends Base {
 				}
 			}
 
-			$question = new Question('Enter a new password: ');
-			$question->setHidden(true);
-			$password = $helper->ask($input, $output, $question);
+			if ($input->getOption('no-password')) {
+				$question = new ConfirmationQuestion('Are you sure you want to clear the password for ' . $username . '?');
 
-			if ($password === null) {
-				$output->writeln('<error>Password cannot be empty!</error>');
-				return 1;
-			}
+				if (!$helper->ask($input, $output, $question)) {
+					return 1;
+				}
 
-			$question = new Question('Confirm the new password: ');
-			$question->setHidden(true);
-			$confirm = $helper->ask($input, $output, $question);
+				$password = '';
+			} else {
+				$question = new Question('Enter a new password: ');
+				$question->setHidden(true);
+				$password = $helper->ask($input, $output, $question);
 
-			if ($password !== $confirm) {
-				$output->writeln('<error>Passwords did not match!</error>');
-				return 1;
+				if ($password === null) {
+					$output->writeln('<error>Password cannot be empty!</error>');
+					return 1;
+				}
+
+				$question = new Question('Confirm the new password: ');
+				$question->setHidden(true);
+				$confirm = $helper->ask($input, $output, $question);
+
+				if ($password !== $confirm) {
+					$output->writeln('<error>Passwords did not match!</error>');
+					return 1;
+				}
 			}
 		} else {
 			$output->writeln('<error>Interactive input or --password-from-env is needed for entering a new password!</error>');
@@ -120,9 +138,10 @@ class ResetPassword extends Base {
 	 * @param CompletionContext $context
 	 * @return string[]
 	 */
+	#[\Override]
 	public function completeArgumentValues($argumentName, CompletionContext $context) {
 		if ($argumentName === 'user') {
-			return array_map(static fn (IUser $user) => $user->getUID(), $this->userManager->search($context->getCurrentWord()));
+			return array_map(static fn (IUser $user) => $user->getUID(), $this->userManager->searchDisplayName($context->getCurrentWord()));
 		}
 		return [];
 	}

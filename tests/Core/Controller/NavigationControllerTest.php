@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2018 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -26,6 +27,7 @@ class NavigationControllerTest extends TestCase {
 	/** @var NavigationController */
 	private $controller;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -47,7 +49,7 @@ class NavigationControllerTest extends TestCase {
 			[true],
 		];
 	}
-	/** @dataProvider dataGetNavigation */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataGetNavigation')]
 	public function testGetAppNavigation(bool $absolute): void {
 		$this->navigationManager->expects($this->once())
 			->method('getAll')
@@ -75,7 +77,7 @@ class NavigationControllerTest extends TestCase {
 		}
 	}
 
-	/** @dataProvider dataGetNavigation */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataGetNavigation')]
 	public function testGetSettingsNavigation(bool $absolute): void {
 		$this->navigationManager->expects($this->once())
 			->method('getAll')

@@ -11,16 +11,15 @@ namespace OC\Authentication\Login;
 use OCP\IConfig;
 
 class ClearLostPasswordTokensCommand extends ALoginCommand {
-	/** @var IConfig */
-	private $config;
-
-	public function __construct(IConfig $config) {
-		$this->config = $config;
+	public function __construct(
+		private IConfig $config,
+	) {
 	}
 
 	/**
 	 * User has successfully logged in, now remove the password reset link, when it is available
 	 */
+	#[\Override]
 	public function process(LoginData $loginData): LoginResult {
 		$this->config->deleteUserValue(
 			$loginData->getUser()->getUID(),

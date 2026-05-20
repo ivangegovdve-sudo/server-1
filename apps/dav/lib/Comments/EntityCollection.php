@@ -74,9 +74,14 @@ class EntityCollection extends RootCollection implements IProperties {
 	 * @return \Sabre\DAV\INode
 	 * @throws NotFound
 	 */
+	#[\Override]
 	public function getChild($name) {
 		try {
 			$comment = $this->commentsManager->get($name);
+			if ($comment->getObjectType() !== $this->name
+				|| $comment->getObjectId() !== $this->id) {
+				throw new NotFound();
+			}
 			return new CommentNode(
 				$this->commentsManager,
 				$comment,
@@ -94,6 +99,7 @@ class EntityCollection extends RootCollection implements IProperties {
 	 *
 	 * @return \Sabre\DAV\INode[]
 	 */
+	#[\Override]
 	public function getChildren() {
 		return $this->findChildren();
 	}
@@ -128,10 +134,12 @@ class EntityCollection extends RootCollection implements IProperties {
 	 * @param string $name
 	 * @return bool
 	 */
+	#[\Override]
 	public function childExists($name) {
 		try {
-			$this->commentsManager->get($name);
-			return true;
+			$comment = $this->commentsManager->get($name);
+			return $comment->getObjectType() === $this->name
+				&& $comment->getObjectId() === $this->id;
 		} catch (NotFoundException $e) {
 			return false;
 		}
@@ -150,6 +158,7 @@ class EntityCollection extends RootCollection implements IProperties {
 	/**
 	 * @inheritdoc
 	 */
+	#[\Override]
 	public function propPatch(PropPatch $propPatch) {
 		$propPatch->handle(self::PROPERTY_NAME_READ_MARKER, [$this, 'setReadMarker']);
 	}
@@ -157,6 +166,7 @@ class EntityCollection extends RootCollection implements IProperties {
 	/**
 	 * @inheritdoc
 	 */
+	#[\Override]
 	public function getProperties($properties) {
 		$marker = null;
 		$user = $this->userSession->getUser();

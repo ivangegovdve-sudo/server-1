@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -21,6 +23,7 @@ class Enable extends Command {
 		parent::__construct();
 	}
 
+	#[\Override]
 	protected function configure() {
 		$this
 			->setName('encryption:enable')
@@ -28,6 +31,7 @@ class Enable extends Command {
 		;
 	}
 
+	#[\Override]
 	protected function execute(InputInterface $input, OutputInterface $output): int {
 		if ($this->config->getAppValue('core', 'encryption_enabled', 'no') === 'yes') {
 			$output->writeln('Encryption is already enabled');
@@ -42,8 +46,8 @@ class Enable extends Command {
 			$output->writeln('<error>No encryption module is loaded</error>');
 			return 1;
 		}
-		$defaultModule = $this->config->getAppValue('core', 'default_encryption_module', null);
-		if ($defaultModule === null) {
+		$defaultModule = $this->config->getAppValue('core', 'default_encryption_module');
+		if ($defaultModule === '') {
 			$output->writeln('<error>No default module is set</error>');
 			return 1;
 		}

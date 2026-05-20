@@ -13,21 +13,22 @@ use OCP\AppFramework\IAppContainer;
 use OCP\IServerContainer;
 
 class BootContext implements IBootContext {
-	/** @var IAppContainer */
-	private $appContainer;
-
-	public function __construct(IAppContainer $appContainer) {
-		$this->appContainer = $appContainer;
+	public function __construct(
+		private IAppContainer $appContainer,
+	) {
 	}
 
+	#[\Override]
 	public function getAppContainer(): IAppContainer {
 		return $this->appContainer;
 	}
 
+	#[\Override]
 	public function getServerContainer(): IServerContainer {
 		return $this->appContainer->get(IServerContainer::class);
 	}
 
+	#[\Override]
 	public function injectFn(callable $fn) {
 		return (new FunctionInjector($this->appContainer))->injectFn($fn);
 	}

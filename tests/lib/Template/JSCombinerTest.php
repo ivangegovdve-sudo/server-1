@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2017 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -6,7 +9,6 @@
 
 namespace Test\Template;
 
-use OC\SystemConfig;
 use OC\Template\JSCombiner;
 use OCP\Files\IAppData;
 use OCP\Files\NotFoundException;
@@ -15,33 +17,30 @@ use OCP\Files\SimpleFS\ISimpleFile;
 use OCP\Files\SimpleFS\ISimpleFolder;
 use OCP\ICache;
 use OCP\ICacheFactory;
+use OCP\IConfig;
 use OCP\ITempManager;
 use OCP\IURLGenerator;
 use OCP\Server;
+use PHPUnit\Framework\MockObject\MockObject;
 use Psr\Log\LoggerInterface;
 
 class JSCombinerTest extends \Test\TestCase {
-	/** @var IAppData|\PHPUnit\Framework\MockObject\MockObject */
-	protected $appData;
-	/** @var IURLGenerator|\PHPUnit\Framework\MockObject\MockObject */
-	protected $urlGenerator;
-	/** @var SystemConfig|\PHPUnit\Framework\MockObject\MockObject */
-	protected $config;
-	/** @var ICache|\PHPUnit\Framework\MockObject\MockObject */
-	protected $depsCache;
-	/** @var JSCombiner */
-	protected $jsCombiner;
-	/** @var LoggerInterface|\PHPUnit\Framework\MockObject\MockObject */
-	protected $logger;
-	/** @var ICacheFactory|\PHPUnit\Framework\MockObject\MockObject */
-	protected $cacheFactory;
+	private IAppData&MockObject $appData;
+	private IURLGenerator&MockObject $urlGenerator;
+	private IConfig&MockObject $config;
+	private ICache&MockObject $depsCache;
+	private LoggerInterface&MockObject $logger;
+	private ICacheFactory&MockObject $cacheFactory;
 
+	private JSCombiner $jsCombiner;
+
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
 		$this->appData = $this->createMock(IAppData::class);
 		$this->urlGenerator = $this->createMock(IURLGenerator::class);
-		$this->config = $this->createMock(SystemConfig::class);
+		$this->config = $this->createMock(IConfig::class);
 		$this->cacheFactory = $this->createMock(ICacheFactory::class);
 		$this->depsCache = $this->createMock(ICache::class);
 		$this->cacheFactory->expects($this->atLeastOnce())
@@ -60,7 +59,7 @@ class JSCombinerTest extends \Test\TestCase {
 	public function testProcessDebugMode(): void {
 		$this->config
 			->expects($this->once())
-			->method('getValue')
+			->method('getSystemValueBool')
 			->with('debug')
 			->willReturn(true);
 
@@ -71,7 +70,7 @@ class JSCombinerTest extends \Test\TestCase {
 	public function testProcessNotInstalled(): void {
 		$this->config
 			->expects($this->exactly(2))
-			->method('getValue')
+			->method('getSystemValueBool')
 			->willReturnMap([
 				['debug', false],
 				['installed', false]
@@ -84,10 +83,10 @@ class JSCombinerTest extends \Test\TestCase {
 	public function testProcessUncachedFileNoAppDataFolder(): void {
 		$this->config
 			->expects($this->exactly(2))
-			->method('getValue')
+			->method('getSystemValueBool')
 			->willReturnMap([
-				['debug', '', false],
-				['installed', '', true],
+				['debug', false],
+				['installed', true],
 			]);
 		$folder = $this->createMock(ISimpleFolder::class);
 		$this->appData->expects($this->once())->method('getFolder')->with('awesomeapp')->willThrowException(new NotFoundException());
@@ -120,10 +119,10 @@ class JSCombinerTest extends \Test\TestCase {
 	public function testProcessUncachedFile(): void {
 		$this->config
 			->expects($this->exactly(2))
-			->method('getValue')
+			->method('getSystemValueBool')
 			->willReturnMap([
-				['debug', '', false],
-				['installed', '', true],
+				['debug', false],
+				['installed', true],
 			]);
 		$folder = $this->createMock(ISimpleFolder::class);
 		$this->appData->expects($this->once())->method('getFolder')->with('awesomeapp')->willReturn($folder);
@@ -154,10 +153,10 @@ class JSCombinerTest extends \Test\TestCase {
 	public function testProcessCachedFile(): void {
 		$this->config
 			->expects($this->exactly(2))
-			->method('getValue')
+			->method('getSystemValueBool')
 			->willReturnMap([
-				['debug', '', false],
-				['installed', '', true],
+				['debug', false],
+				['installed', true],
 			]);
 		$folder = $this->createMock(ISimpleFolder::class);
 		$this->appData->expects($this->once())->method('getFolder')->with('awesomeapp')->willReturn($folder);
@@ -191,10 +190,10 @@ class JSCombinerTest extends \Test\TestCase {
 	public function testProcessCachedFileMemcache(): void {
 		$this->config
 			->expects($this->exactly(2))
-			->method('getValue')
+			->method('getSystemValueBool')
 			->willReturnMap([
-				['debug', '', false],
-				['installed', '', true],
+				['debug', false],
+				['installed', true],
 			]);
 		$folder = $this->createMock(ISimpleFolder::class);
 		$this->appData->expects($this->once())
@@ -473,8 +472,8 @@ var b = \'world\';
 	 * @param $appName
 	 * @param $fileName
 	 * @param $result
-	 * @dataProvider dataGetCachedSCSS
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataGetCachedSCSS')]
 	public function testGetCachedSCSS($appName, $fileName, $result): void {
 		$this->urlGenerator->expects($this->once())
 			->method('linkToRoute')

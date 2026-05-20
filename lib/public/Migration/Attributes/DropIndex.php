@@ -9,18 +9,19 @@ declare(strict_types=1);
 namespace OCP\Migration\Attributes;
 
 use Attribute;
+use OCP\AppFramework\Attribute\Consumable;
 
 /**
  * attribute on index drop
- *
- * @since 30.0.0
  */
 #[Attribute(Attribute::IS_REPEATABLE | Attribute::TARGET_CLASS)]
+#[Consumable(since: '30.0.0')]
 class DropIndex extends IndexMigrationAttribute {
 	/**
 	 * @return string
 	 * @since 30.0.0
 	 */
+	#[\Override]
 	public function definition(): string {
 		return 'Deletion of an index from table \'' . $this->getTable() . '\'';
 	}

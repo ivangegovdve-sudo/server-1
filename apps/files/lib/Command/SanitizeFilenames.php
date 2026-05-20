@@ -11,6 +11,8 @@ namespace OCA\Files\Command;
 use Exception;
 use OC\Core\Command\Base;
 use OC\Files\FilenameValidator;
+use OCA\Files\Service\SettingsService;
+use OCP\AppFramework\Services\IAppConfig;
 use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
 use OCP\Files\NotPermittedException;
@@ -29,6 +31,7 @@ class SanitizeFilenames extends Base {
 	private OutputInterface $output;
 	private ?string $charReplacement;
 	private bool $dryRun;
+	private bool $errorsOrSkipped = false;
 
 	public function __construct(
 		private IUserManager $userManager,
@@ -36,10 +39,13 @@ class SanitizeFilenames extends Base {
 		private IUserSession $session,
 		private IFactory $l10nFactory,
 		private FilenameValidator $filenameValidator,
+		private SettingsService $service,
+		private IAppConfig $appConfig,
 	) {
 		parent::__construct();
 	}
 
+	#[\Override]
 	protected function configure(): void {
 		parent::configure();
 
@@ -62,9 +68,10 @@ class SanitizeFilenames extends Base {
 				mode: InputOption::VALUE_REQUIRED,
 				description: 'Replacement for invalid character (by default space, underscore or dash is used)',
 			);
-			
+
 	}
 
+	#[\Override]
 	protected function execute(InputInterface $input, OutputInterface $output): int {
 		$this->charReplacement = $input->getOption('char-replacement');
 		// check if replacement is needed
@@ -100,6 +107,10 @@ class SanitizeFilenames extends Base {
 			}
 		} else {
 			$this->userManager->callForSeenUsers($this->sanitizeUserFiles(...));
+			if ($this->service->hasFilesWindowsSupport() && $this->appConfig->getAppValueInt('sanitize_filenames_status') === 0) {
+				// we are done - if this is for sanitizing all users for windows filename support then set this UI flag
+				$this->appConfig->setAppValueInt('sanitize_filenames_status', SettingsService::STATUS_WCF_DONE);
+			}
 		}
 		return self::SUCCESS;
 	}
@@ -137,8 +148,9 @@ class SanitizeFilenames extends Base {
 				$this->output->writeln('<comment>skipping: ' . $node->getPath() . ' (file is locked)</>');
 			} catch (NotPermittedException) {
 				$this->output->writeln('<comment>skipping: ' . $node->getPath() . ' (no permissions)</>');
-			} catch (Exception) {
+			} catch (Exception $error) {
 				$this->output->writeln('<error>failed: ' . $node->getPath() . '</>');
+				$this->output->writeln('<error>' . $error->getMessage() . '</>', OutputInterface::OUTPUT_NORMAL | OutputInterface::VERBOSITY_VERBOSE);
 			}
 
 			if ($node instanceof Folder) {

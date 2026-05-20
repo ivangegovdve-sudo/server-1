@@ -29,16 +29,17 @@ class DbalExceptionTest extends \Test\TestCase {
 	/** @var TheDriverException */
 	protected $driverException;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 		$this->driverException = $this->createMock(TheDriverException::class);
 	}
 
 	/**
-	 * @dataProvider dataDriverException
 	 * @param string $class
 	 * @param int $reason
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataDriverException')]
 	public function testDriverException(string $class, int $reason): void {
 		$result = DbalException::wrap(new $class($this->driverException, null));
 		$this->assertSame($reason, $result->getReason());

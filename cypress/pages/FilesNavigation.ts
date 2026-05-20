@@ -7,13 +7,23 @@
  * Page object model for the files app navigation
  */
 export class FilesNavigationPage {
-
 	navigation() {
 		return cy.findByRole('navigation', { name: 'Files' })
 	}
 
 	searchInput() {
-		return this.navigation().findByRole('searchbox', { name: /filter file names/i })
+		return this.navigation().findByRole('searchbox')
+	}
+
+	searchScopeTrigger() {
+		return this.navigation().findByRole('button', { name: /search scope options/i })
+	}
+
+	/**
+	 * Only available after clicking on the search scope trigger
+	 */
+	searchScopeMenu() {
+		return cy.findByRole('menu', { name: /search scope options/i })
 	}
 
 	searchClearButton() {
@@ -31,5 +41,4 @@ export class FilesNavigationPage {
 	quota() {
 		return this.navigation().find('[data-cy-files-navigation-settings-quota]')
 	}
-
 }

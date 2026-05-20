@@ -14,17 +14,18 @@ use OCP\Migration\IOutput;
 use OCP\Migration\IRepairStep;
 
 class AddCleanupDeletedUsersBackgroundJob implements IRepairStep {
-	private IJobList $jobList;
-
-	public function __construct(IJobList $jobList) {
-		$this->jobList = $jobList;
+	public function __construct(
+		private IJobList $jobList,
+	) {
 	}
 
+	#[\Override]
 	public function getName(): string {
 		return 'Add cleanup-deleted-users background job';
 	}
 
-	public function run(IOutput $output) {
+	#[\Override]
+	public function run(IOutput $output): void {
 		$this->jobList->add(CleanupDeletedUsers::class);
 	}
 }

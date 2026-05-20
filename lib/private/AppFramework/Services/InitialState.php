@@ -12,21 +12,18 @@ use OCP\AppFramework\Services\IInitialState;
 use OCP\IInitialStateService;
 
 class InitialState implements IInitialState {
-	/** @var IInitialStateService */
-	private $state;
-
-	/** @var string */
-	private $appName;
-
-	public function __construct(IInitialStateService $state, string $appName) {
-		$this->state = $state;
-		$this->appName = $appName;
+	public function __construct(
+		private IInitialStateService $state,
+		private string $appName,
+	) {
 	}
 
+	#[\Override]
 	public function provideInitialState(string $key, $data): void {
 		$this->state->provideInitialState($this->appName, $key, $data);
 	}
 
+	#[\Override]
 	public function provideLazyInitialState(string $key, \Closure $closure): void {
 		$this->state->provideLazyInitialState($this->appName, $key, $closure);
 	}

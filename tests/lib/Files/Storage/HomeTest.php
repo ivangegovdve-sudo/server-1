@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -14,21 +15,19 @@ use OCP\ITempManager;
 use OCP\Server;
 
 class DummyUser extends User {
-	/**
-	 * @param string $uid
-	 * @param string $home
-	 */
 	public function __construct(
-		private $uid,
-		private $home,
+		private readonly string $uid,
+		private readonly string $home,
 	) {
 	}
 
-	public function getHome() {
+	#[\Override]
+	public function getHome(): string {
 		return $this->home;
 	}
 
-	public function getUID() {
+	#[\Override]
+	public function getUID(): string {
 		return $this->uid;
 	}
 }
@@ -36,10 +35,10 @@ class DummyUser extends User {
 /**
  * Class Home
  *
- * @group DB
  *
  * @package Test\Files\Storage
  */
+#[\PHPUnit\Framework\Attributes\Group('DB')]
 class HomeTest extends Storage {
 	/**
 	 * @var string tmpDir
@@ -49,10 +48,11 @@ class HomeTest extends Storage {
 	private $userId;
 
 	/**
-	 * @var \OC\User\User $user
+	 * @var User $user
 	 */
 	private $user;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -62,6 +62,7 @@ class HomeTest extends Storage {
 		$this->instance = new Home(['user' => $this->user]);
 	}
 
+	#[\Override]
 	protected function tearDown(): void {
 		Files::rmdirr($this->tmpDir);
 		parent::tearDown();

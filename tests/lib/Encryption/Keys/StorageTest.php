@@ -17,23 +17,15 @@ use PHPUnit\Framework\MockObject\MockObject;
 use Test\TestCase;
 
 class StorageTest extends TestCase {
-	/** @var Storage */
-	protected $storage;
-
-	/** @var MockObject|\OC\Encryption\Util */
-	protected $util;
-
-	/** @var MockObject|View */
-	protected $view;
-
-	/** @var MockObject|IConfig */
-	protected $config;
-
-	/** @var MockObject|ICrypto */
-	protected $crypto;
+	protected Storage $storage;
+	protected Util&MockObject $util;
+	protected View&MockObject $view;
+	protected IConfig&MockObject $config;
+	protected ICrypto&MockObject $crypto;
 
 	private array $mkdirStack = [];
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -124,13 +116,13 @@ class StorageTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider dataTestGetFileKey
 	 *
 	 * @param string $path
 	 * @param string $strippedPartialName
 	 * @param bool $originalKeyExists
 	 * @param string $expectedKeyContent
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataTestGetFileKey')]
 	public function testGetFileKey($path, $strippedPartialName, $originalKeyExists, $expectedKeyContent): void {
 		$this->config->method('getSystemValueString')
 			->with('version')
@@ -408,9 +400,7 @@ class StorageTest extends TestCase {
 		);
 	}
 
-	/**
-	 * @dataProvider dataProviderCopyRename
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataProviderCopyRename')]
 	public function testRenameKeys($source, $target, $systemWideMountSource, $systemWideMountTarget, $expectedSource, $expectedTarget): void {
 		$this->view->expects($this->any())
 			->method('file_exists')
@@ -439,9 +429,7 @@ class StorageTest extends TestCase {
 		$this->storage->renameKeys($source, $target);
 	}
 
-	/**
-	 * @dataProvider dataProviderCopyRename
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataProviderCopyRename')]
 	public function testCopyKeys($source, $target, $systemWideMountSource, $systemWideMountTarget, $expectedSource, $expectedTarget): void {
 		$this->view->expects($this->any())
 			->method('file_exists')
@@ -510,13 +498,13 @@ class StorageTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider dataTestGetPathToKeys
 	 *
 	 * @param string $path
 	 * @param boolean $systemWideMountPoint
 	 * @param string $storageRoot
 	 * @param string $expected
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataTestGetPathToKeys')]
 	public function testGetPathToKeys($path, $systemWideMountPoint, $storageRoot, $expected): void {
 		$this->invokePrivate($this->storage, 'root_dir', [$storageRoot]);
 
@@ -569,9 +557,9 @@ class StorageTest extends TestCase {
 
 
 	/**
-	 * @dataProvider dataTestBackupUserKeys
 	 * @param bool $createBackupDir
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataTestBackupUserKeys')]
 	public function testBackupUserKeys($createBackupDir): void {
 		$storage = $this->getMockBuilder('OC\Encryption\Keys\Storage')
 			->setConstructorArgs([$this->view, $this->util, $this->crypto, $this->config])

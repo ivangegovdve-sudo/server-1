@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -22,6 +23,7 @@ class Backends extends Base {
 		parent::__construct();
 	}
 
+	#[\Override]
 	protected function configure(): void {
 		$this
 			->setName('files_external:backends')
@@ -38,6 +40,7 @@ class Backends extends Base {
 		parent::configure();
 	}
 
+	#[\Override]
 	protected function execute(InputInterface $input, OutputInterface $output): int {
 		$authBackends = $this->backendService->getAuthMechanisms();
 		$storageBackends = $this->backendService->getBackends();
@@ -94,7 +97,7 @@ class Backends extends Base {
 	 */
 	private function formatConfiguration(array $parameters): array {
 		$configuration = array_filter($parameters, function (DefinitionParameter $parameter) {
-			return $parameter->isFlagSet(DefinitionParameter::FLAG_HIDDEN);
+			return !$parameter->isFlagSet(DefinitionParameter::FLAG_HIDDEN);
 		});
 		return array_map(function (DefinitionParameter $parameter) {
 			return $parameter->getTypeName();

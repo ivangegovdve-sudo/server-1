@@ -44,12 +44,20 @@ use Test\Traits\MountProviderTrait;
 use Test\Traits\UserTrait;
 
 /**
+ * Internal helper to mock legacy hook receiver.
+ */
+interface EventHandlerMock {
+	public function writeCallback(): void;
+	public function postWriteCallback(): void;
+}
+
+/**
  * Class File
  *
- * @group DB
  *
  * @package OCA\DAV\Tests\unit\Connector\Sabre
  */
+#[\PHPUnit\Framework\Attributes\Group(name: 'DB')]
 class FileTest extends TestCase {
 	use MountProviderTrait;
 	use UserTrait;
@@ -150,9 +158,7 @@ class FileTest extends TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider fopenFailuresProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'fopenFailuresProvider')]
 	public function testSimplePutFails(?\Throwable $thrownException, string $expectedException, bool $checkPreviousClass = true): void {
 		// setup
 		$storage = $this->getMockBuilder(Local::class)
@@ -175,7 +181,7 @@ class FileTest extends TestCase {
 		if ($thrownException !== null) {
 			$storage->expects($this->once())
 				->method('writeStream')
-				->will($this->throwException($thrownException));
+				->willThrowException($thrownException);
 		} else {
 			$storage->expects($this->once())
 				->method('writeStream')
@@ -316,8 +322,8 @@ class FileTest extends TestCase {
 
 	/**
 	 * Test putting a file with string Mtime
-	 * @dataProvider legalMtimeProvider
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'legalMtimeProvider')]
 	public function testPutSingleFileLegalMtime(mixed $requestMtime, ?int $resultMtime): void {
 		$request = new Request([
 			'server' => [
@@ -675,6 +681,10 @@ class FileTest extends TestCase {
 		/** @var View&MockObject */
 		$view = $this->getMockBuilder(View::class)
 			->getMock();
+		$view
+			->method('getRelativePath')
+			->with('/test.txt')
+			->willReturn('');
 
 		$view->expects($this->once())
 			->method('unlink')
@@ -699,6 +709,10 @@ class FileTest extends TestCase {
 		/** @var View&MockObject */
 		$view = $this->getMockBuilder(View::class)
 			->getMock();
+		$view
+			->method('getRelativePath')
+			->with('/test.txt')
+			->willReturn('');
 
 		$info = new \OC\Files\FileInfo('/test.txt', $this->getMockStorage(), null, [
 			'permissions' => 0,
@@ -719,6 +733,10 @@ class FileTest extends TestCase {
 		/** @var View&MockObject */
 		$view = $this->getMockBuilder(View::class)
 			->getMock();
+		$view
+			->method('getRelativePath')
+			->with('/test.txt')
+			->willReturn('');
 
 		// but fails
 		$view->expects($this->once())
@@ -744,6 +762,10 @@ class FileTest extends TestCase {
 		/** @var View&MockObject */
 		$view = $this->getMockBuilder(View::class)
 			->getMock();
+		$view
+			->method('getRelativePath')
+			->with('/test.txt')
+			->willReturn('');
 
 		// but fails
 		$view->expects($this->once())
@@ -808,9 +830,7 @@ class FileTest extends TestCase {
 
 		$wasLockedPre = false;
 		$wasLockedPost = false;
-		$eventHandler = $this->getMockBuilder(\stdclass::class)
-			->addMethods(['writeCallback', 'postWriteCallback'])
-			->getMock();
+		$eventHandler = $this->createMock(EventHandlerMock::class);
 
 		// both pre and post hooks might need access to the file,
 		// so only shared lock is acceptable

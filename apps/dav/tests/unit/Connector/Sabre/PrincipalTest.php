@@ -78,7 +78,7 @@ class PrincipalTest extends TestCase {
 	}
 
 	public function testGetPrincipalsByPrefixWithUsers(): void {
-		$fooUser = $this->createMock(User::class);
+		$fooUser = $this->createMock(IUser::class);
 		$fooUser
 			->expects($this->once())
 			->method('getUID')
@@ -91,7 +91,7 @@ class PrincipalTest extends TestCase {
 			->expects($this->once())
 			->method('getSystemEMailAddress')
 			->willReturn('');
-		$barUser = $this->createMock(User::class);
+		$barUser = $this->createMock(IUser::class);
 		$barUser
 			->expects($this->once())
 			->method('getUID')
@@ -183,7 +183,7 @@ class PrincipalTest extends TestCase {
 	}
 
 	public function testGetPrincipalsByPathWithoutMail(): void {
-		$fooUser = $this->createMock(User::class);
+		$fooUser = $this->createMock(IUser::class);
 		$fooUser
 			->expects($this->once())
 			->method('getUID')
@@ -211,7 +211,7 @@ class PrincipalTest extends TestCase {
 	}
 
 	public function testGetPrincipalsByPathWithMail(): void {
-		$fooUser = $this->createMock(User::class);
+		$fooUser = $this->createMock(IUser::class);
 		$fooUser
 			->expects($this->once())
 			->method('getSystemEMailAddress')
@@ -463,9 +463,7 @@ class PrincipalTest extends TestCase {
 			['{http://sabredav.org/ns}email-address' => 'foo']));
 	}
 
-	/**
-	 * @dataProvider searchPrincipalsDataProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'searchPrincipalsDataProvider')]
 	public function testSearchPrincipals(bool $sharingEnabled, bool $groupsOnly, string $test, array $result): void {
 		$this->shareManager->expects($this->once())
 			->method('shareAPIEnabled')
@@ -826,9 +824,7 @@ class PrincipalTest extends TestCase {
 		$this->assertEquals(null, $this->connector->findByUri('mailto:user@foo.com', 'principals/users'));
 	}
 
-	/**
-	 * @dataProvider findByUriWithGroupRestrictionDataProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'findByUriWithGroupRestrictionDataProvider')]
 	public function testFindByUriWithGroupRestriction(string $uri, string $email, ?string $expects): void {
 		$this->shareManager->expects($this->once())
 			->method('shareApiEnabled')
@@ -879,9 +875,7 @@ class PrincipalTest extends TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider findByUriWithoutGroupRestrictionDataProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'findByUriWithoutGroupRestrictionDataProvider')]
 	public function testFindByUriWithoutGroupRestriction(string $uri, string $email, string $expects): void {
 		$this->shareManager->expects($this->once())
 			->method('shareApiEnabled')

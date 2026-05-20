@@ -13,50 +13,24 @@ use OCP\Files\Node;
 use OCP\IUser;
 
 class CachedMountInfo implements ICachedMountInfo {
-	protected IUser $user;
-	protected int $storageId;
-	protected int $rootId;
-	protected string $mountPoint;
-	protected ?int $mountId;
-	protected string $rootInternalPath;
-	protected string $mountProvider;
 	protected string $key;
 
-	/**
-	 * CachedMountInfo constructor.
-	 *
-	 * @param IUser $user
-	 * @param int $storageId
-	 * @param int $rootId
-	 * @param string $mountPoint
-	 * @param int|null $mountId
-	 * @param string $rootInternalPath
-	 */
 	public function __construct(
-		IUser $user,
-		int $storageId,
-		int $rootId,
-		string $mountPoint,
-		string $mountProvider,
-		?int $mountId = null,
-		string $rootInternalPath = '',
+		protected IUser $user,
+		protected int $storageId,
+		protected int $rootId,
+		protected string $mountPoint,
+		protected string $mountProvider,
+		protected ?int $mountId = null,
+		protected string $rootInternalPath = '',
 	) {
-		$this->user = $user;
-		$this->storageId = $storageId;
-		$this->rootId = $rootId;
-		$this->mountPoint = $mountPoint;
-		$this->mountId = $mountId;
-		$this->rootInternalPath = $rootInternalPath;
-		if (strlen($mountProvider) > 128) {
-			throw new \Exception("Mount provider $mountProvider name exceeds the limit of 128 characters");
+		if (strlen($this->mountProvider) > 128) {
+			throw new \Exception("Mount provider $this->mountProvider name exceeds the limit of 128 characters");
 		}
-		$this->mountProvider = $mountProvider;
-		$this->key = $rootId . '::' . $mountPoint;
+		$this->key = $this->rootId . '::' . $this->mountPoint;
 	}
 
-	/**
-	 * @return IUser
-	 */
+	#[\Override]
 	public function getUser(): IUser {
 		return $this->user;
 	}
@@ -64,6 +38,7 @@ class CachedMountInfo implements ICachedMountInfo {
 	/**
 	 * @return int the numeric storage id of the mount
 	 */
+	#[\Override]
 	public function getStorageId(): int {
 		return $this->storageId;
 	}
@@ -71,6 +46,7 @@ class CachedMountInfo implements ICachedMountInfo {
 	/**
 	 * @return int the fileid of the root of the mount
 	 */
+	#[\Override]
 	public function getRootId(): int {
 		return $this->rootId;
 	}
@@ -78,6 +54,7 @@ class CachedMountInfo implements ICachedMountInfo {
 	/**
 	 * @return Node|null the root node of the mount
 	 */
+	#[\Override]
 	public function getMountPointNode(): ?Node {
 		// TODO injection etc
 		Filesystem::initMountPoints($this->getUser()->getUID());
@@ -88,6 +65,7 @@ class CachedMountInfo implements ICachedMountInfo {
 	/**
 	 * @return string the mount point of the mount for the user
 	 */
+	#[\Override]
 	public function getMountPoint(): string {
 		return $this->mountPoint;
 	}
@@ -98,6 +76,7 @@ class CachedMountInfo implements ICachedMountInfo {
 	 * @return int|null mount id or null if not applicable
 	 * @since 9.1.0
 	 */
+	#[\Override]
 	public function getMountId(): ?int {
 		return $this->mountId;
 	}
@@ -107,14 +86,17 @@ class CachedMountInfo implements ICachedMountInfo {
 	 *
 	 * @return string
 	 */
+	#[\Override]
 	public function getRootInternalPath(): string {
 		return $this->rootInternalPath;
 	}
 
+	#[\Override]
 	public function getMountProvider(): string {
 		return $this->mountProvider;
 	}
 
+	#[\Override]
 	public function getKey(): string {
 		return $this->key;
 	}

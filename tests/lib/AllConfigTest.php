@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -7,21 +8,19 @@
 
 namespace Test;
 
-/**
- * Class AllConfigTest
- *
- * @group DB
- *
- * @package Test
- */
 use OC\AllConfig;
-use OC\SystemConfig;
 use OCP\IDBConnection;
 use OCP\PreConditionNotMetException;
 use OCP\Server;
 
+/**
+ * Class AllConfigTest
+ *
+ * @package Test
+ */
+#[\PHPUnit\Framework\Attributes\Group('DB')]
 class AllConfigTest extends \Test\TestCase {
-	/** @var \OCP\IDBConnection */
+	/** @var IDBConnection */
 	protected $connection;
 
 	protected function getConfig($systemConfig = null, $connection = null) {
@@ -44,8 +43,8 @@ class AllConfigTest extends \Test\TestCase {
 
 		// preparation - add something to the database
 		$this->connection->executeUpdate(
-			'INSERT INTO `*PREFIX*preferences` (`userid`, `appid`, ' .
-			'`configkey`, `configvalue`) VALUES (?, ?, ?, ?)',
+			'INSERT INTO `*PREFIX*preferences` (`userid`, `appid`, '
+			. '`configkey`, `configvalue`) VALUES (?, ?, ?, ?)',
 			['userDelete', 'appDelete', 'keyDelete', 'valueDelete']
 		);
 
@@ -54,7 +53,7 @@ class AllConfigTest extends \Test\TestCase {
 		$result = $this->connection->executeQuery(
 			'SELECT COUNT(*) AS `count` FROM `*PREFIX*preferences` WHERE `userid` = ?',
 			['userDelete']
-		)->fetch();
+		)->fetchAssociative();
 		$actualCount = $result['count'];
 
 		$this->assertEquals(0, $actualCount, 'There was one value in the database and after the tests there should be no entry left.');
@@ -66,7 +65,7 @@ class AllConfigTest extends \Test\TestCase {
 
 		$config->setUserValue('userSet', 'appSet', 'keySet', 'valueSet');
 
-		$result = $this->connection->executeQuery($selectAllSQL, ['userSet'])->fetchAll();
+		$result = $this->connection->executeQuery($selectAllSQL, ['userSet'])->fetchAllAssociative();
 
 		$this->assertEquals(1, count($result));
 		$this->assertEquals([
@@ -79,7 +78,7 @@ class AllConfigTest extends \Test\TestCase {
 		// test if the method overwrites existing database entries
 		$config->setUserValue('userSet', 'appSet', 'keySet', 'valueSet2');
 
-		$result = $this->connection->executeQuery($selectAllSQL, ['userSet'])->fetchAll();
+		$result = $this->connection->executeQuery($selectAllSQL, ['userSet'])->fetchAllAssociative();
 
 		$this->assertEquals(1, count($result));
 		$this->assertEquals([
@@ -93,6 +92,27 @@ class AllConfigTest extends \Test\TestCase {
 		$config->deleteUserValue('userSet', 'appSet', 'keySet');
 	}
 
+	/**
+	 * This test needs to stay! Emails are expected to be lowercase due to performance reasons.
+	 * This way we can skip the expensive casing change on the database.
+	 */
+	public function testSetUserValueSettingsEmail(): void {
+		$selectAllSQL = 'SELECT `userid`, `appid`, `configkey`, `configvalue` FROM `*PREFIX*preferences` WHERE `userid` = ?';
+		$config = $this->getConfig();
+
+		$config->setUserValue('userSet', 'settings', 'email', 'mixed.CASE@domain.COM');
+
+		$result = $this->connection->executeQuery($selectAllSQL, ['userSet'])->fetchAllAssociative();
+
+		$this->assertEquals(1, count($result));
+		$this->assertEquals([
+			'userid' => 'userSet',
+			'appid' => 'settings',
+			'configkey' => 'email',
+			'configvalue' => 'mixed.case@domain.com'
+		], $result[0]);
+	}
+
 	public function testSetUserValueWithPreCondition(): void {
 		$config = $this->getConfig();
 
@@ -100,7 +120,7 @@ class AllConfigTest extends \Test\TestCase {
 
 		$config->setUserValue('userPreCond', 'appPreCond', 'keyPreCond', 'valuePreCond');
 
-		$result = $this->connection->executeQuery($selectAllSQL, ['userPreCond'])->fetchAll();
+		$result = $this->connection->executeQuery($selectAllSQL, ['userPreCond'])->fetchAllAssociative();
 
 		$this->assertEquals(1, count($result));
 		$this->assertEquals([
@@ -113,7 +133,7 @@ class AllConfigTest extends \Test\TestCase {
 		// test if the method overwrites existing database entries with valid precond
 		$config->setUserValue('userPreCond', 'appPreCond', 'keyPreCond', 'valuePreCond2', 'valuePreCond');
 
-		$result = $this->connection->executeQuery($selectAllSQL, ['userPreCond'])->fetchAll();
+		$result = $this->connection->executeQuery($selectAllSQL, ['userPreCond'])->fetchAllAssociative();
 
 		$this->assertEquals(1, count($result));
 		$this->assertEquals([
@@ -137,9 +157,9 @@ class AllConfigTest extends \Test\TestCase {
 	}
 
 	/**
-	 * @dataProvider dataSetUserValueUnexpectedValue
 	 * @param mixed $value
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataSetUserValueUnexpectedValue')]
 	public function testSetUserValueUnexpectedValue($value): void {
 		$this->expectException(\UnexpectedValueException::class);
 
@@ -157,7 +177,7 @@ class AllConfigTest extends \Test\TestCase {
 
 		$config->setUserValue('userPreCond1', 'appPreCond', 'keyPreCond', 'valuePreCond');
 
-		$result = $this->connection->executeQuery($selectAllSQL, ['userPreCond1'])->fetchAll();
+		$result = $this->connection->executeQuery($selectAllSQL, ['userPreCond1'])->fetchAllAssociative();
 
 		$this->assertEquals(1, count($result));
 		$this->assertEquals([
@@ -170,7 +190,7 @@ class AllConfigTest extends \Test\TestCase {
 		// test if the method overwrites existing database entries with valid precond
 		$config->setUserValue('userPreCond1', 'appPreCond', 'keyPreCond', 'valuePreCond2', 'valuePreCond3');
 
-		$result = $this->connection->executeQuery($selectAllSQL, ['userPreCond1'])->fetchAll();
+		$result = $this->connection->executeQuery($selectAllSQL, ['userPreCond1'])->fetchAllAssociative();
 
 		$this->assertEquals(1, count($result));
 		$this->assertEquals([
@@ -193,7 +213,7 @@ class AllConfigTest extends \Test\TestCase {
 
 		$config->setUserValue('userPreCond1', 'appPreCond', 'keyPreCond', 'valuePreCond');
 
-		$result = $this->connection->executeQuery($selectAllSQL, ['userPreCond1'])->fetchAll();
+		$result = $this->connection->executeQuery($selectAllSQL, ['userPreCond1'])->fetchAllAssociative();
 
 		$this->assertCount(1, $result);
 		$this->assertEquals([
@@ -206,7 +226,7 @@ class AllConfigTest extends \Test\TestCase {
 		// test if the method throws with invalid precondition when the value is the same
 		$config->setUserValue('userPreCond1', 'appPreCond', 'keyPreCond', 'valuePreCond', 'valuePreCond3');
 
-		$result = $this->connection->executeQuery($selectAllSQL, ['userPreCond1'])->fetchAll();
+		$result = $this->connection->executeQuery($selectAllSQL, ['userPreCond1'])->fetchAllAssociative();
 
 		$this->assertCount(1, $result);
 		$this->assertEquals([
@@ -233,8 +253,8 @@ class AllConfigTest extends \Test\TestCase {
 		$connectionMock = $this->createMock(IDBConnection::class);
 		$connectionMock->expects($this->once())
 			->method('executeQuery')
-			->with($this->equalTo('SELECT `configvalue` FROM `*PREFIX*preferences` ' .
-					'WHERE `userid` = ? AND `appid` = ? AND `configkey` = ?'),
+			->with($this->equalTo('SELECT `configvalue` FROM `*PREFIX*preferences` '
+					. 'WHERE `userid` = ? AND `appid` = ? AND `configkey` = ?'),
 				$this->equalTo(['userSetUnchanged', 'appSetUnchanged', 'keySetUnchanged']))
 			->willReturn($resultMock);
 		$connectionMock->expects($this->never())
@@ -257,7 +277,7 @@ class AllConfigTest extends \Test\TestCase {
 		$result = $this->connection->executeQuery(
 			'SELECT `userid`, `appid`, `configkey`, `configvalue` FROM `*PREFIX*preferences` WHERE `userid` = ?',
 			['userGet']
-		)->fetchAll();
+		)->fetchAllAssociative();
 
 		$this->assertEquals(1, count($result));
 		$this->assertEquals([
@@ -278,7 +298,7 @@ class AllConfigTest extends \Test\TestCase {
 		$result = $this->connection->executeQuery(
 			'SELECT `userid`, `appid`, `configkey`, `configvalue` FROM `*PREFIX*preferences` WHERE `userid` = ?',
 			['userGet']
-		)->fetchAll();
+		)->fetchAllAssociative();
 
 		$this->assertEquals(0, count($result));
 	}
@@ -298,8 +318,8 @@ class AllConfigTest extends \Test\TestCase {
 		];
 		foreach ($data as $entry) {
 			$this->connection->executeUpdate(
-				'INSERT INTO `*PREFIX*preferences` (`userid`, `appid`, ' .
-				'`configkey`, `configvalue`) VALUES (?, ?, ?, ?)',
+				'INSERT INTO `*PREFIX*preferences` (`userid`, `appid`, '
+				. '`configkey`, `configvalue`) VALUES (?, ?, ?, ?)',
 				$entry
 			);
 		}
@@ -324,8 +344,8 @@ class AllConfigTest extends \Test\TestCase {
 		];
 		foreach ($data as $entry) {
 			$this->connection->executeUpdate(
-				'INSERT INTO `*PREFIX*preferences` (`userid`, `appid`, ' .
-				'`configkey`, `configvalue`) VALUES (?, ?, ?, ?)',
+				'INSERT INTO `*PREFIX*preferences` (`userid`, `appid`, '
+				. '`configkey`, `configvalue`) VALUES (?, ?, ?, ?)',
 				$entry
 			);
 		}
@@ -362,8 +382,8 @@ class AllConfigTest extends \Test\TestCase {
 		];
 		foreach ($data as $entry) {
 			$this->connection->executeUpdate(
-				'INSERT INTO `*PREFIX*preferences` (`userid`, `appid`, ' .
-				'`configkey`, `configvalue`) VALUES (?, ?, ?, ?)',
+				'INSERT INTO `*PREFIX*preferences` (`userid`, `appid`, '
+				. '`configkey`, `configvalue`) VALUES (?, ?, ?, ?)',
 				$entry
 			);
 		}
@@ -403,8 +423,8 @@ class AllConfigTest extends \Test\TestCase {
 		];
 		foreach ($data as $entry) {
 			$this->connection->executeUpdate(
-				'INSERT INTO `*PREFIX*preferences` (`userid`, `appid`, ' .
-				'`configkey`, `configvalue`) VALUES (?, ?, ?, ?)',
+				'INSERT INTO `*PREFIX*preferences` (`userid`, `appid`, '
+				. '`configkey`, `configvalue`) VALUES (?, ?, ?, ?)',
 				$entry
 			);
 		}
@@ -413,7 +433,7 @@ class AllConfigTest extends \Test\TestCase {
 
 		$result = $this->connection->executeQuery(
 			'SELECT COUNT(*) AS `count` FROM `*PREFIX*preferences`'
-		)->fetch();
+		)->fetchAssociative();
 		$actualCount = $result['count'];
 
 		$this->assertEquals(1, $actualCount, 'After removing `userFetch3` there should be exactly 1 entry left.');
@@ -437,8 +457,8 @@ class AllConfigTest extends \Test\TestCase {
 		];
 		foreach ($data as $entry) {
 			$this->connection->executeUpdate(
-				'INSERT INTO `*PREFIX*preferences` (`userid`, `appid`, ' .
-				'`configkey`, `configvalue`) VALUES (?, ?, ?, ?)',
+				'INSERT INTO `*PREFIX*preferences` (`userid`, `appid`, '
+				. '`configkey`, `configvalue`) VALUES (?, ?, ?, ?)',
 				$entry
 			);
 		}
@@ -447,7 +467,7 @@ class AllConfigTest extends \Test\TestCase {
 
 		$result = $this->connection->executeQuery(
 			'SELECT COUNT(*) AS `count` FROM `*PREFIX*preferences`'
-		)->fetch();
+		)->fetchAssociative();
 		$actualCount = $result['count'];
 
 		$this->assertEquals(4, $actualCount, 'After removing `appFetch1` there should be exactly 4 entries left.');
@@ -456,7 +476,7 @@ class AllConfigTest extends \Test\TestCase {
 
 		$result = $this->connection->executeQuery(
 			'SELECT COUNT(*) AS `count` FROM `*PREFIX*preferences`'
-		)->fetch();
+		)->fetchAssociative();
 		$actualCount = $result['count'];
 
 		$this->assertEquals(2, $actualCount, 'After removing `appFetch2` there should be exactly 2 entries left.');
@@ -483,8 +503,8 @@ class AllConfigTest extends \Test\TestCase {
 		];
 		foreach ($data as $entry) {
 			$this->connection->executeUpdate(
-				'INSERT INTO `*PREFIX*preferences` (`userid`, `appid`, ' .
-				'`configkey`, `configvalue`) VALUES (?, ?, ?, ?)',
+				'INSERT INTO `*PREFIX*preferences` (`userid`, `appid`, '
+				. '`configkey`, `configvalue`) VALUES (?, ?, ?, ?)',
 				$entry
 			);
 		}
@@ -494,19 +514,5 @@ class AllConfigTest extends \Test\TestCase {
 
 		// cleanup
 		$this->connection->executeUpdate('DELETE FROM `*PREFIX*preferences`');
-	}
-
-	public function testGetUsersForUserValueCaseInsensitive(): void {
-		// mock the check for the database to run the correct SQL statements for each database type
-		$systemConfig = $this->createMock(SystemConfig::class);
-		$config = $this->getConfig($systemConfig);
-
-		$config->setUserValue('user1', 'myApp', 'myKey', 'test123');
-		$config->setUserValue('user2', 'myApp', 'myKey', 'TEST123');
-		$config->setUserValue('user3', 'myApp', 'myKey', 'test12345');
-
-		$users = $config->getUsersForUserValueCaseInsensitive('myApp', 'myKey', 'test123');
-		$this->assertSame(2, count($users));
-		$this->assertSame(['user1', 'user2'], $users);
 	}
 }

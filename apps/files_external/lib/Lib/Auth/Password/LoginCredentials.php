@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2018-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2015 ownCloud, Inc.
@@ -10,18 +11,14 @@ use OCA\Files_External\Lib\Auth\AuthMechanism;
 use OCA\Files_External\Lib\DefinitionParameter;
 use OCA\Files_External\Lib\InsufficientDataForMeaningfulAnswerException;
 use OCA\Files_External\Lib\StorageConfig;
-use OCA\Files_External\Listener\StorePasswordListener;
 use OCP\Authentication\Exceptions\CredentialsUnavailableException;
 use OCP\Authentication\LoginCredentials\IStore as CredentialsStore;
-use OCP\EventDispatcher\IEventDispatcher;
 use OCP\IL10N;
 use OCP\ISession;
 use OCP\IUser;
 use OCP\IUserBackend;
 use OCP\LDAP\ILDAPProviderFactory;
 use OCP\Security\ICredentialsManager;
-use OCP\User\Events\PasswordUpdatedEvent;
-use OCP\User\Events\UserLoggedInEvent;
 
 /**
  * Username and password from login credentials, saved in DB
@@ -34,7 +31,6 @@ class LoginCredentials extends AuthMechanism {
 		protected ISession $session,
 		protected ICredentialsManager $credentialsManager,
 		private CredentialsStore $credentialsStore,
-		IEventDispatcher $eventDispatcher,
 		private ILDAPProviderFactory $ldapFactory,
 	) {
 		$this
@@ -47,9 +43,6 @@ class LoginCredentials extends AuthMechanism {
 					->setFlag(DefinitionParameter::FLAG_HIDDEN)
 					->setFlag(DefinitionParameter::FLAG_OPTIONAL),
 			]);
-
-		$eventDispatcher->addServiceListener(UserLoggedInEvent::class, StorePasswordListener::class);
-		$eventDispatcher->addServiceListener(PasswordUpdatedEvent::class, StorePasswordListener::class);
 	}
 
 	private function getCredentials(IUser $user): array {
@@ -82,6 +75,7 @@ class LoginCredentials extends AuthMechanism {
 	/**
 	 * @return void
 	 */
+	#[\Override]
 	public function manipulateStorageConfig(StorageConfig &$storage, ?IUser $user = null) {
 		if (!isset($user)) {
 			throw new InsufficientDataForMeaningfulAnswerException('No login credentials saved');

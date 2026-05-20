@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -6,6 +7,7 @@
 namespace OC\Core\Command\User;
 
 use OC\Core\Command\Base;
+use OCP\Files\ISetupManager;
 use OCP\Files\NotFoundException;
 use OCP\IGroupManager;
 use OCP\IUser;
@@ -20,11 +22,13 @@ class Info extends Base {
 	public function __construct(
 		protected IUserManager $userManager,
 		protected IGroupManager $groupManager,
+		protected ISetupManager $setupManager,
 	) {
 		parent::__construct();
 	}
 
-	protected function configure() {
+	#[\Override]
+	protected function configure(): void {
 		$this
 			->setName('user:info')
 			->setDescription('show user info')
@@ -41,6 +45,7 @@ class Info extends Base {
 			);
 	}
 
+	#[\Override]
 	protected function execute(InputInterface $input, OutputInterface $output): int {
 		$user = $this->userManager->get($input->getArgument('user'));
 		if (is_null($user)) {
@@ -81,8 +86,8 @@ class Info extends Base {
 	 * @return array
 	 */
 	protected function getStorageInfo(IUser $user): array {
-		\OC_Util::tearDownFS();
-		\OC_Util::setupFS($user->getUID());
+		$this->setupManager->tearDown();
+		$this->setupManager->setupForUser($user);
 		try {
 			$storage = \OC_Helper::getStorageInfo('/');
 		} catch (NotFoundException $e) {
@@ -102,9 +107,10 @@ class Info extends Base {
 	 * @param CompletionContext $context
 	 * @return string[]
 	 */
+	#[\Override]
 	public function completeArgumentValues($argumentName, CompletionContext $context) {
 		if ($argumentName === 'user') {
-			return array_map(static fn (IUser $user) => $user->getUID(), $this->userManager->search($context->getCurrentWord()));
+			return array_map(static fn (IUser $user) => $user->getUID(), $this->userManager->searchDisplayName($context->getCurrentWord()));
 		}
 		return [];
 	}

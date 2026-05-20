@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -46,6 +49,7 @@ class EncryptAll extends Command {
 		}
 	}
 
+	#[\Override]
 	protected function configure() {
 		parent::configure();
 
@@ -57,8 +61,12 @@ class EncryptAll extends Command {
 		);
 	}
 
+	/**
+	 * @throws \Exception
+	 */
+	#[\Override]
 	protected function execute(InputInterface $input, OutputInterface $output): int {
-		if (!$input->isInteractive()) {
+		if (!$input->isInteractive() && !$input->getOption('no-interaction')) {
 			$output->writeln('Invalid TTY.');
 			$output->writeln('If you are trying to execute the command in a Docker ');
 			$output->writeln("container, do not forget to execute 'docker exec' with");
@@ -82,8 +90,9 @@ class EncryptAll extends Command {
 		$output->writeln('Please ensure that no user accesses their files during this time!');
 		$output->writeln('Note: The encryption module you use determines which files get encrypted.');
 		$output->writeln('');
-		$question = new ConfirmationQuestion('Do you really want to continue? (y/n) ', false);
+		$question = new ConfirmationQuestion('Do you really want to continue? (y/n) ', true);
 		if ($this->questionHelper->ask($input, $output, $question)) {
+			//run encryption with the answer yes in interactive mode
 			$this->forceMaintenanceAndTrashbin();
 
 			try {
@@ -97,6 +106,7 @@ class EncryptAll extends Command {
 			$this->resetMaintenanceAndTrashbin();
 			return self::SUCCESS;
 		}
+		//abort on no in interactive mode
 		$output->writeln('aborted');
 		return self::FAILURE;
 	}

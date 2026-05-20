@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -7,7 +8,7 @@ use Behat\Behat\Context\Context;
 use Behat\Behat\Context\SnippetAcceptingContext;
 use GuzzleHttp\Client;
 
-require __DIR__ . '/../../vendor/autoload.php';
+require __DIR__ . '/autoload.php';
 
 class FilesDropContext implements Context, SnippetAcceptingContext {
 	use WebDav;
@@ -43,8 +44,8 @@ class FilesDropContext implements Context, SnippetAcceptingContext {
 			$this->response = $e->getResponse();
 		}
 	}
-		
-		
+
+
 	/**
 	 * @When Dropping file :path with :content as :nickName
 	 */

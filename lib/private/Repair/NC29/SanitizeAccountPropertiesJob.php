@@ -35,10 +35,11 @@ class SanitizeAccountPropertiesJob extends QueuedJob {
 		$this->setAllowParallelRuns(false);
 	}
 
+	#[\Override]
 	protected function run(mixed $argument): void {
 		$numRemoved = 0;
 
-		$this->userManager->callForSeenUsers(function (IUser $user) use (&$numRemoved) {
+		$this->userManager->callForSeenUsers(function (IUser $user) use (&$numRemoved): void {
 			$account = $this->accountManager->getAccount($user);
 			$properties = array_keys($account->jsonSerialize());
 

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -19,7 +20,11 @@ use OCP\IUserSession;
 use OCP\ServerVersion;
 use OCP\Util;
 
-class OCSController extends \OCP\AppFramework\OCSController {
+/**
+ * If you are here because you can't extend the OCSController class, you got the wrong one.
+ * Please use {@see \OCP\AppFramework\OCSController}!
+ */
+final class OCSController extends \OCP\AppFramework\OCSController {
 	public function __construct(
 		string $appName,
 		IRequest $request,

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2017 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -33,12 +34,13 @@ class ClassB {
 }
 
 class DIIntergrationTests extends TestCase {
-	/** @var DIContainer */
-	private $container;
+	public function __construct() {
+		parent::__construct(static::class);
+	}
+	private DIContainer $container;
+	private ServerContainer $server;
 
-	/** @var ServerContainer */
-	private $server;
-
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 

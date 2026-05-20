@@ -10,12 +10,14 @@ declare(strict_types=1);
 
 namespace OCA\DAV\Tests\unit\DAV\Listener;
 
+use OCA\DAV\BackgroundJob\UserStatusAutomation;
 use OCA\DAV\CalDAV\CalDavBackend;
 use OCA\DAV\CardDAV\CardDavBackend;
 use OCA\DAV\CardDAV\SyncService;
 use OCA\DAV\Listener\UserEventsListener;
 use OCA\DAV\Service\ExampleContactService;
 use OCA\DAV\Service\ExampleEventService;
+use OCP\BackgroundJob\IJobList;
 use OCP\Defaults;
 use OCP\IUser;
 use OCP\IUserManager;
@@ -32,6 +34,7 @@ class UserEventsListenerTest extends TestCase {
 	private ExampleContactService&MockObject $exampleContactService;
 	private ExampleEventService&MockObject $exampleEventService;
 	private LoggerInterface&MockObject $logger;
+	private IJobList&MockObject $jobList;
 
 	private UserEventsListener $userEventsListener;
 
@@ -46,6 +49,7 @@ class UserEventsListenerTest extends TestCase {
 		$this->exampleContactService = $this->createMock(ExampleContactService::class);
 		$this->exampleEventService = $this->createMock(ExampleEventService::class);
 		$this->logger = $this->createMock(LoggerInterface::class);
+		$this->jobList = $this->createMock(IJobList::class);
 
 		$this->userEventsListener = new UserEventsListener(
 			$this->userManager,
@@ -56,6 +60,7 @@ class UserEventsListenerTest extends TestCase {
 			$this->exampleContactService,
 			$this->exampleEventService,
 			$this->logger,
+			$this->jobList,
 		);
 	}
 
@@ -128,7 +133,7 @@ class UserEventsListenerTest extends TestCase {
 		$this->userEventsListener->firstLogin($user);
 	}
 
-	public function testDeleteCalendar(): void {
+	public function testDeleteUser(): void {
 		$user = $this->createMock(IUser::class);
 		$user->expects($this->once())->method('getUID')->willReturn('newUser');
 
@@ -144,6 +149,7 @@ class UserEventsListenerTest extends TestCase {
 		$this->calDavBackend->expects($this->once())->method('deleteCalendar')->with('personal');
 		$this->calDavBackend->expects($this->once())->method('deleteSubscription')->with('some-subscription');
 		$this->calDavBackend->expects($this->once())->method('deleteAllSharesByUser');
+		$this->cardDavBackend->expects($this->once())->method('deleteAllSharesByUser');
 
 		$this->cardDavBackend->expects($this->once())->method('getUsersOwnAddressBooks')->willReturn([
 			['id' => 'personal']
@@ -152,5 +158,39 @@ class UserEventsListenerTest extends TestCase {
 
 		$this->userEventsListener->preDeleteUser($user);
 		$this->userEventsListener->postDeleteUser('newUser');
+	}
+
+	public function testDeleteUserAutomationEvent(): void {
+		$user = $this->createMock(IUser::class);
+		$user->expects($this->once())->method('getUID')->willReturn('newUser');
+
+		$this->syncService->expects($this->once())
+			->method('deleteUser');
+
+		$this->calDavBackend->expects($this->once())->method('getUsersOwnCalendars')->willReturn([
+			['id' => []]
+		]);
+		$this->calDavBackend->expects($this->once())->method('getSubscriptionsForUser')->willReturn([
+			['id' => []]
+		]);
+		$this->cardDavBackend->expects($this->once())->method('getUsersOwnAddressBooks')->willReturn([
+			['id' => []]
+		]);
+
+		$this->jobList->expects(self::once())->method('remove')->with(UserStatusAutomation::class, ['userId' => 'newUser']);
+
+		$this->userEventsListener->preDeleteUser($user);
+		$this->userEventsListener->postDeleteUser('newUser');
+	}
+
+	public function testDeleteGroup(): void {
+		$this->calDavBackend->expects($this->once())
+			->method('deleteAllSharesByUser')
+			->with('principals/groups/testGroup');
+		$this->cardDavBackend->expects($this->once())
+			->method('deleteAllSharesByUser')
+			->with('principals/groups/testGroup');
+
+		$this->userEventsListener->postDeleteGroup('testGroup');
 	}
 }

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2018-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -11,9 +12,7 @@ use OCA\Files_Sharing\External\Scanner;
 use OCA\Files_Sharing\External\Storage;
 use Test\TestCase;
 
-/**
- * @group DB
- */
+#[\PHPUnit\Framework\Attributes\Group(name: 'DB')]
 class ScannerTest extends TestCase {
 	protected Scanner $scanner;
 	/** @var Storage|\PHPUnit\Framework\MockObject\MockObject */

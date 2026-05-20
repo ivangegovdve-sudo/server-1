@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2018 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -43,6 +46,7 @@ class Outbox extends \Sabre\CalDAV\Schedule\Outbox {
 	 *
 	 * @return array
 	 */
+	#[\Override]
 	public function getACL() {
 		// getACL is called so frequently that we cache the config result
 		if ($this->disableFreeBusy === null) {

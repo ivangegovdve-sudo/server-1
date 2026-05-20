@@ -15,26 +15,18 @@ use OCP\Share\IShare;
 
 class OldGroupMembershipShares implements IRepairStep {
 	/**
-	 * @var array [gid => [uid => (bool)]]
+	 * @var array<string, array<string, bool>> [gid => [uid => (bool)]]
 	 */
-	protected $memberships;
+	protected array $memberships = [];
 
-	/**
-	 * @param IDBConnection $connection
-	 * @param IGroupManager $groupManager
-	 */
 	public function __construct(
-		protected IDBConnection $connection,
-		protected IGroupManager $groupManager,
+		protected readonly IDBConnection $connection,
+		protected readonly IGroupManager $groupManager,
 	) {
 	}
 
-	/**
-	 * Returns the step's name
-	 *
-	 * @return string
-	 */
-	public function getName() {
+	#[\Override]
+	public function getName(): string {
 		return 'Remove shares of old group memberships';
 	}
 
@@ -44,7 +36,8 @@ class OldGroupMembershipShares implements IRepairStep {
 	 *
 	 * @throws \Exception in case of failure
 	 */
-	public function run(IOutput $output) {
+	#[\Override]
+	public function run(IOutput $output): void {
 		$deletedEntries = 0;
 
 		$query = $this->connection->getQueryBuilder();
@@ -75,12 +68,7 @@ class OldGroupMembershipShares implements IRepairStep {
 		}
 	}
 
-	/**
-	 * @param string $gid
-	 * @param string $uid
-	 * @return bool
-	 */
-	protected function isMember($gid, $uid) {
+	protected function isMember(string $gid, string $uid): bool {
 		if (isset($this->memberships[$gid][$uid])) {
 			return $this->memberships[$gid][$uid];
 		}

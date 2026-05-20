@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -21,9 +22,10 @@ class LargeFileHelperGetFileSizeTest extends TestCase {
 	protected $filename;
 	/** @var int */
 	protected $fileSize;
-	/** @var \OC\LargeFileHelper */
+	/** @var LargeFileHelper */
 	protected $helper;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 		$this->helper = new LargeFileHelper();
@@ -38,9 +40,7 @@ class LargeFileHelperGetFileSizeTest extends TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider dataFileNameProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataFileNameProvider')]
 	public function XtestGetFileSizeViaCurl($filename, $fileSize) {
 		if (!extension_loaded('curl')) {
 			$this->markTestSkipped(
@@ -58,9 +58,7 @@ class LargeFileHelperGetFileSizeTest extends TestCase {
 		);
 	}
 
-	/**
-	 * @dataProvider dataFileNameProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataFileNameProvider')]
 	public function testGetFileSizeViaExec($filename, $fileSize): void {
 		if (escapeshellarg('strängé') !== '\'strängé\'') {
 			$this->markTestSkipped('Your escapeshell args removes accents');
@@ -76,9 +74,7 @@ class LargeFileHelperGetFileSizeTest extends TestCase {
 		);
 	}
 
-	/**
-	 * @dataProvider dataFileNameProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataFileNameProvider')]
 	public function testGetFileSizeNative($filename, $fileSize): void {
 		$this->assertSame(
 			$fileSize,

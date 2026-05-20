@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2017 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -17,30 +20,37 @@ class LinkAction implements ILinkAction {
 	/**
 	 * @param string $icon absolute URI to an icon
 	 */
+	#[\Override]
 	public function setIcon(string $icon): void {
 		$this->icon = $icon;
 	}
 
+	#[\Override]
 	public function setName(string $name): void {
 		$this->name = $name;
 	}
 
+	#[\Override]
 	public function getName(): string {
 		return $this->name;
 	}
 
+	#[\Override]
 	public function setPriority(int $priority): void {
 		$this->priority = $priority;
 	}
 
+	#[\Override]
 	public function getPriority(): int {
 		return $this->priority;
 	}
 
+	#[\Override]
 	public function setHref(string $href): void {
 		$this->href = $href;
 	}
 
+	#[\Override]
 	public function getHref(): string {
 		return $this->href;
 	}
@@ -48,6 +58,7 @@ class LinkAction implements ILinkAction {
 	/**
 	 * @since 23.0.0
 	 */
+	#[\Override]
 	public function setAppId(string $appId): void {
 		$this->appId = $appId;
 	}
@@ -55,6 +66,7 @@ class LinkAction implements ILinkAction {
 	/**
 	 * @since 23.0.0
 	 */
+	#[\Override]
 	public function getAppId(): string {
 		return $this->appId;
 	}
@@ -62,6 +74,7 @@ class LinkAction implements ILinkAction {
 	/**
 	 * @return array{title: string, icon: string, hyperlink: string, appId: string}
 	 */
+	#[\Override]
 	public function jsonSerialize(): array {
 		return [
 			'title' => $this->name,

@@ -37,9 +37,7 @@ class AuthMechanismTest extends \Test\TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider validateStorageProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'validateStorageProvider')]
 	public function testValidateStorage(bool $expectedSuccess, string $scheme, bool $definitionSuccess): void {
 		$mechanism = $this->getMockBuilder(AuthMechanism::class)
 			->onlyMethods(['validateStorageDefinition'])

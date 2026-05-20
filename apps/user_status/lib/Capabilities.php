@@ -23,14 +23,16 @@ class Capabilities implements ICapability {
 	}
 
 	/**
-	 * @return array{user_status: array{enabled: bool, restore: bool, supports_emoji: bool}}
+	 * @return array{user_status: array{enabled: bool, restore: bool, supports_emoji: bool, supports_busy: bool}}
 	 */
+	#[\Override]
 	public function getCapabilities() {
 		return [
 			'user_status' => [
 				'enabled' => true,
 				'restore' => true,
 				'supports_emoji' => $this->emojiHelper->doesPlatformSupportEmoji(),
+				'supports_busy' => true,
 			],
 		];
 	}

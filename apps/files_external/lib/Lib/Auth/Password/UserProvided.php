@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2018-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2015 ownCloud, Inc.
@@ -44,6 +45,7 @@ class UserProvided extends AuthMechanism implements IUserProvided {
 		return self::CREDENTIALS_IDENTIFIER_PREFIX . $storageId;
 	}
 
+	#[\Override]
 	public function saveBackendOptions(IUser $user, $mountId, array $options) {
 		if ($options['password'] === DefinitionParameter::UNMODIFIED_PLACEHOLDER) {
 			$oldCredentials = $this->credentialsManager->retrieve($user->getUID(), $this->getCredentialsIdentifier($mountId));
@@ -59,6 +61,7 @@ class UserProvided extends AuthMechanism implements IUserProvided {
 	/**
 	 * @return void
 	 */
+	#[\Override]
 	public function manipulateStorageConfig(StorageConfig &$storage, ?IUser $user = null) {
 		if (!isset($user)) {
 			throw new InsufficientDataForMeaningfulAnswerException('No credentials saved');

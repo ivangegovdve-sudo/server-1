@@ -254,6 +254,7 @@ class DeclarativeManagerTest extends TestCase {
 
 	public static bool $testSetInternalValueAfterChange = false;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -345,9 +346,7 @@ class DeclarativeManagerTest extends TestCase {
 		$this->assertFalse(isset($formIds[$app]) && in_array($schemaDuplicateFields['id'], $formIds[$app]));
 	}
 
-	/**
-	 * @dataProvider dataValidateSchema
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataValidateSchema')]
 	public function testValidateSchema(bool $expected, bool $expectException, string $app, array $schema): void {
 		if ($expectException) {
 			$this->expectException(\Exception::class);

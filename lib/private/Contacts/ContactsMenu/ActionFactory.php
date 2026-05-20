@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2017 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -13,6 +14,7 @@ class ActionFactory implements IActionFactory {
 	/**
 	 * {@inheritDoc}
 	 */
+	#[\Override]
 	public function newLinkAction(string $icon, string $name, string $href, string $appId = ''): ILinkAction {
 		$action = new LinkAction();
 		$action->setName($name);
@@ -25,6 +27,7 @@ class ActionFactory implements IActionFactory {
 	/**
 	 * {@inheritDoc}
 	 */
+	#[\Override]
 	public function newEMailAction(string $icon, string $name, string $email, string $appId = ''): ILinkAction {
 		return $this->newLinkAction($icon, $name, 'mailto:' . $email, $appId);
 	}

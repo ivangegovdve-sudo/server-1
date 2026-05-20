@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2018-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -20,7 +23,7 @@ class Local extends Backend {
 			->setIdentifier('local')
 			->addIdentifierAlias('\OC\Files\Storage\Local') // legacy compat
 			->setStorageClass('\OC\Files\Storage\Local')
-			->setText($l->t('Local'))
+			->setText($l->t('Local (server storage)'))
 			->addParameters([
 				new DefinitionParameter('datadir', $l->t('Location')),
 			])
@@ -31,6 +34,7 @@ class Local extends Backend {
 		;
 	}
 
+	#[\Override]
 	public function manipulateStorageConfig(StorageConfig &$storage, ?IUser $user = null): void {
 		$storage->setBackendOption('isExternal', true);
 	}

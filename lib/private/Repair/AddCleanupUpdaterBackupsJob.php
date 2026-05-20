@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2018 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -11,18 +14,18 @@ use OCP\Migration\IOutput;
 use OCP\Migration\IRepairStep;
 
 class AddCleanupUpdaterBackupsJob implements IRepairStep {
-	/** @var IJobList */
-	protected $jobList;
-
-	public function __construct(IJobList $jobList) {
-		$this->jobList = $jobList;
+	public function __construct(
+		protected readonly IJobList $jobList,
+	) {
 	}
 
-	public function getName() {
+	#[\Override]
+	public function getName(): string {
 		return 'Queue a one-time job to cleanup old backups of the updater';
 	}
 
-	public function run(IOutput $output) {
+	#[\Override]
+	public function run(IOutput $output): void {
 		$this->jobList->add(BackgroundCleanupUpdaterBackupsJob::class);
 	}
 }

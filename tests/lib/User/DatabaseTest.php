@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -17,24 +18,25 @@ use PHPUnit\Framework\MockObject\MockObject;
 
 /**
  * Class DatabaseTest
- *
- * @group DB
  */
+#[\PHPUnit\Framework\Attributes\Group('DB')]
 class DatabaseTest extends Backend {
 	/** @var array */
 	private $users;
 	/** @var IEventDispatcher|MockObject */
 	private $eventDispatcher;
 
-	/** @var \OC\User\Database */
+	/** @var Database */
 	protected $backend;
 
+	#[\Override]
 	public function getUser() {
 		$user = parent::getUser();
 		$this->users[] = $user;
 		return $user;
 	}
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -43,6 +45,7 @@ class DatabaseTest extends Backend {
 		$this->backend = new Database($this->eventDispatcher);
 	}
 
+	#[\Override]
 	protected function tearDown(): void {
 		if (!isset($this->users)) {
 			return;
@@ -109,6 +112,7 @@ class DatabaseTest extends Backend {
 		$this->assertTrue($this->backend->userExists($user1));
 	}
 
+	#[\Override]
 	public function testSearch(): void {
 		parent::testSearch();
 

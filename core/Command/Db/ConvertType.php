@@ -10,10 +10,12 @@ namespace OC\Core\Command\Db;
 use Doctrine\DBAL\Exception;
 use Doctrine\DBAL\Schema\AbstractAsset;
 use Doctrine\DBAL\Schema\Table;
+use Doctrine\DBAL\Types\Type;
 use OC\DB\Connection;
 use OC\DB\ConnectionFactory;
 use OC\DB\MigrationService;
 use OC\DB\PgSqlTools;
+use OCP\App\IAppManager;
 use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\DB\Types;
 use OCP\IConfig;
@@ -38,10 +40,12 @@ class ConvertType extends Command implements CompletionAwareInterface {
 	public function __construct(
 		protected IConfig $config,
 		protected ConnectionFactory $connectionFactory,
+		protected IAppManager $appManager,
 	) {
 		parent::__construct();
 	}
 
+	#[\Override]
 	protected function configure() {
 		$this
 			->setName('db:convert-type')
@@ -156,6 +160,7 @@ class ConvertType extends Command implements CompletionAwareInterface {
 		}
 	}
 
+	#[\Override]
 	protected function execute(InputInterface $input, OutputInterface $output): int {
 		$this->validateInput($input, $output);
 		$this->readPassword($input, $output);
@@ -208,11 +213,13 @@ class ConvertType extends Command implements CompletionAwareInterface {
 			$toMS->migrate($currentMigration);
 		}
 
-		$apps = $input->getOption('all-apps') ? \OC_App::getAllApps() : \OC_App::getEnabledApps();
+		$apps = $input->getOption('all-apps')
+			? $this->appManager->getAllAppsInAppsFolders()
+			: $this->appManager->getEnabledApps();
 		foreach ($apps as $app) {
 			$output->writeln('<info> - ' . $app . '</info>');
 			// Make sure autoloading works...
-			\OC_App::loadApp($app);
+			$this->appManager->loadApp($app);
 			$fromMS = new MigrationService($app, $fromDB);
 			$currentMigration = $fromMS->getMigration('current');
 			if ($currentMigration !== '0') {
@@ -337,7 +344,7 @@ class ConvertType extends Command implements CompletionAwareInterface {
 			try {
 				$toDB->beginTransaction();
 
-				while ($row = $result->fetch()) {
+				foreach ($result->iterateAssociative() as $row) {
 					$progress->advance();
 					if (!$parametersCreated) {
 						foreach ($row as $key => $value) {
@@ -354,7 +361,7 @@ class ConvertType extends Command implements CompletionAwareInterface {
 							$insertQuery->setParameter($key, $value);
 						}
 					}
-					$insertQuery->execute();
+					$insertQuery->executeStatement();
 				}
 				$result->closeCursor();
 
@@ -375,7 +382,7 @@ class ConvertType extends Command implements CompletionAwareInterface {
 			return $this->columnTypes[$tableName][$columnName];
 		}
 
-		$type = $table->getColumn($columnName)->getType()->getName();
+		$type = Type::lookupName($table->getColumn($columnName)->getType());
 
 		switch ($type) {
 			case Types::BLOB:
@@ -441,6 +448,7 @@ class ConvertType extends Command implements CompletionAwareInterface {
 	 * @param CompletionContext $context
 	 * @return string[]
 	 */
+	#[\Override]
 	public function completeOptionValues($optionName, CompletionContext $context) {
 		return [];
 	}
@@ -452,6 +460,7 @@ class ConvertType extends Command implements CompletionAwareInterface {
 	 * @param CompletionContext $context
 	 * @return string[]
 	 */
+	#[\Override]
 	public function completeArgumentValues($argumentName, CompletionContext $context) {
 		if ($argumentName === 'type') {
 			return ['mysql', 'oci', 'pgsql'];

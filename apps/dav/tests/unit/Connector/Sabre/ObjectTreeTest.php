@@ -23,10 +23,10 @@ use OCP\Files\Mount\IMountManager;
 /**
  * Class ObjectTreeTest
  *
- * @group DB
  *
  * @package OCA\DAV\Tests\Unit\Connector\Sabre
  */
+#[\PHPUnit\Framework\Attributes\Group(name: 'DB')]
 class ObjectTreeTest extends \Test\TestCase {
 	public static function copyDataProvider(): array {
 		return [
@@ -39,9 +39,7 @@ class ObjectTreeTest extends \Test\TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider copyDataProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'copyDataProvider')]
 	public function testCopy(string $sourcePath, string $targetPath, string $targetParent): void {
 		$view = $this->createMock(View::class);
 		$view->expects($this->once())
@@ -65,6 +63,10 @@ class ObjectTreeTest extends \Test\TestCase {
 			->method('getFileInfo')
 			->with($targetParent === '' ? '.' : $targetParent)
 			->willReturn($info);
+		$view
+			->method('getRelativePath')
+			->with(null)
+			->willReturn('');
 
 		$rootDir = new Directory($view, $info);
 		$objectTree = $this->getMockBuilder(ObjectTree::class)
@@ -83,9 +85,7 @@ class ObjectTreeTest extends \Test\TestCase {
 		$objectTree->copy($sourcePath, $targetPath);
 	}
 
-	/**
-	 * @dataProvider copyDataProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'copyDataProvider')]
 	public function testCopyFailNotCreatable($sourcePath, $targetPath, $targetParent): void {
 		$this->expectException(\Sabre\DAV\Exception\Forbidden::class);
 
@@ -108,6 +108,10 @@ class ObjectTreeTest extends \Test\TestCase {
 			->method('getFileInfo')
 			->with($targetParent === '' ? '.' : $targetParent)
 			->willReturn($info);
+		$view
+			->method('getRelativePath')
+			->with(null)
+			->willReturn('');
 
 		$rootDir = new Directory($view, $info);
 		$objectTree = $this->getMockBuilder(ObjectTree::class)
@@ -124,9 +128,7 @@ class ObjectTreeTest extends \Test\TestCase {
 		$objectTree->copy($sourcePath, $targetPath);
 	}
 
-	/**
-	 * @dataProvider nodeForPathProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'nodeForPathProvider')]
 	public function testGetNodeForPath(
 		string $inputFileName,
 		string $fileInfoQueryPath,
@@ -147,6 +149,10 @@ class ObjectTreeTest extends \Test\TestCase {
 		$view->method('getFileInfo')
 			->with($fileInfoQueryPath)
 			->willReturn($fileInfo);
+		$view
+			->method('getRelativePath')
+			->with(null)
+			->willReturn('');
 
 		$tree = new ObjectTree();
 		$tree->init($rootNode, $view, $mountManager);

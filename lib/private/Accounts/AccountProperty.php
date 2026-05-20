@@ -29,6 +29,7 @@ class AccountProperty implements IAccountProperty {
 		$this->setScope($scope);
 	}
 
+	#[\Override]
 	public function jsonSerialize(): array {
 		return [
 			'name' => $this->getName(),
@@ -44,6 +45,7 @@ class AccountProperty implements IAccountProperty {
 	 *
 	 * @since 15.0.0
 	 */
+	#[\Override]
 	public function setValue(string $value): IAccountProperty {
 		$this->value = $value;
 		return $this;
@@ -54,12 +56,18 @@ class AccountProperty implements IAccountProperty {
 	 *
 	 * @since 15.0.0
 	 */
+	#[\Override]
 	public function setScope(string $scope): IAccountProperty {
-		if (!in_array($scope, IAccountManager::ALLOWED_SCOPES, )) {
+		$newScope = $this->mapScopeToV2($scope);
+		if (!in_array($newScope, [
+			IAccountManager::SCOPE_LOCAL,
+			IAccountManager::SCOPE_FEDERATED,
+			IAccountManager::SCOPE_PRIVATE,
+			IAccountManager::SCOPE_PUBLISHED
+		])) {
 			throw new InvalidArgumentException('Invalid scope');
 		}
-		/** @var IAccountManager::SCOPE_* $scope */
-		$this->scope = $scope;
+		$this->scope = $newScope;
 		return $this;
 	}
 
@@ -68,6 +76,7 @@ class AccountProperty implements IAccountProperty {
 	 *
 	 * @since 15.0.0
 	 */
+	#[\Override]
 	public function setVerified(string $verified): IAccountProperty {
 		$this->verified = $verified;
 		return $this;
@@ -78,6 +87,7 @@ class AccountProperty implements IAccountProperty {
 	 *
 	 * @since 15.0.0
 	 */
+	#[\Override]
 	public function getName(): string {
 		return $this->name;
 	}
@@ -87,6 +97,7 @@ class AccountProperty implements IAccountProperty {
 	 *
 	 * @since 15.0.0
 	 */
+	#[\Override]
 	public function getValue(): string {
 		return $this->value;
 	}
@@ -96,8 +107,22 @@ class AccountProperty implements IAccountProperty {
 	 *
 	 * @since 15.0.0
 	 */
+	#[\Override]
 	public function getScope(): string {
 		return $this->scope;
+	}
+
+	public static function mapScopeToV2(string $scope): string {
+		if (str_starts_with($scope, 'v2-')) {
+			return $scope;
+		}
+
+		return match ($scope) {
+			'private', '' => IAccountManager::SCOPE_LOCAL,
+			'contacts' => IAccountManager::SCOPE_FEDERATED,
+			'public' => IAccountManager::SCOPE_PUBLISHED,
+			default => $scope,
+		};
 	}
 
 	/**
@@ -105,19 +130,23 @@ class AccountProperty implements IAccountProperty {
 	 *
 	 * @since 15.0.0
 	 */
+	#[\Override]
 	public function getVerified(): string {
 		return $this->verified;
 	}
 
+	#[\Override]
 	public function setVerificationData(string $verificationData): IAccountProperty {
 		$this->verificationData = $verificationData;
 		return $this;
 	}
 
+	#[\Override]
 	public function getVerificationData(): string {
 		return $this->verificationData;
 	}
 
+	#[\Override]
 	public function setLocallyVerified(string $verified): IAccountProperty {
 		if (!in_array($verified, [
 			IAccountManager::NOT_VERIFIED,
@@ -130,6 +159,7 @@ class AccountProperty implements IAccountProperty {
 		return $this;
 	}
 
+	#[\Override]
 	public function getLocallyVerified(): string {
 		return $this->locallyVerified;
 	}

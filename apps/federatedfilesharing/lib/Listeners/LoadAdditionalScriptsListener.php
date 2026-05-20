@@ -8,6 +8,7 @@ declare(strict_types=1);
  */
 namespace OCA\FederatedFileSharing\Listeners;
 
+use OCA\FederatedFileSharing\AppInfo\Application;
 use OCA\FederatedFileSharing\FederatedShareProvider;
 use OCA\Files\Event\LoadAdditionalScriptsEvent;
 use OCP\App\IAppManager;
@@ -28,6 +29,7 @@ class LoadAdditionalScriptsListener implements IEventListener {
 		$this->appManager = $appManager;
 	}
 
+	#[\Override]
 	public function handle(Event $event): void {
 		if (!$event instanceof LoadAdditionalScriptsEvent) {
 			return;
@@ -35,7 +37,8 @@ class LoadAdditionalScriptsListener implements IEventListener {
 
 		if ($this->federatedShareProvider->isIncomingServer2serverShareEnabled()) {
 			$this->initialState->provideInitialState('notificationsEnabled', $this->appManager->isEnabledForUser('notifications'));
-			Util::addInitScript('federatedfilesharing', 'external');
+			Util::addStyle(Application::APP_ID, 'init-files');
+			Util::addInitScript(Application::APP_ID, 'init-files');
 		}
 	}
 }

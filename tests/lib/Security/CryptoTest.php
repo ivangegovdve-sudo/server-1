@@ -26,14 +26,13 @@ class CryptoTest extends \Test\TestCase {
 	/** @var Crypto */
 	protected $crypto;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 		$this->crypto = new Crypto(Server::get(IConfig::class));
 	}
 
-	/**
-	 * @dataProvider defaultEncryptionProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('defaultEncryptionProvider')]
 	public function testDefaultEncrypt($stringToEncrypt): void {
 		$ciphertext = $this->crypto->encrypt($stringToEncrypt);
 		$this->assertEquals($stringToEncrypt, $this->crypto->decrypt($ciphertext));

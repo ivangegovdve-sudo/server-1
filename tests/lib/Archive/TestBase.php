@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -7,24 +8,25 @@
 
 namespace Test\Archive;
 
+use OC\Archive\Archive;
 use OCP\Files;
 use OCP\ITempManager;
 use OCP\Server;
 
 abstract class TestBase extends \Test\TestCase {
 	/**
-	 * @var \OC\Archive\Archive
+	 * @var Archive
 	 */
 	protected $instance;
 
 	/**
 	 * get the existing test archive
-	 * @return \OC\Archive\Archive
+	 * @return Archive
 	 */
 	abstract protected function getExisting();
 	/**
 	 * get a new archive for write testing
-	 * @return \OC\Archive\Archive
+	 * @return Archive
 	 */
 	abstract protected function getNew();
 
@@ -94,7 +96,8 @@ abstract class TestBase extends \Test\TestCase {
 		$this->instance = $this->getNew();
 		$fh = $this->instance->getStream('lorem.txt', 'w');
 		$source = fopen($dir . '/lorem.txt', 'r');
-		Files::streamCopy($source, $fh);
+		$result = stream_copy_to_stream($source, $fh);
+		$this->assertNotFalse($result);
 		fclose($source);
 		fclose($fh);
 		$this->assertTrue($this->instance->fileExists('lorem.txt'));

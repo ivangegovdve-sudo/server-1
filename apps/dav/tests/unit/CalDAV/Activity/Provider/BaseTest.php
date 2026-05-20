@@ -44,9 +44,7 @@ class BaseTest extends TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider dataSetSubjects
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataSetSubjects')]
 	public function testSetSubjects(string $subject, array $parameters): void {
 		$event = $this->createMock(IEvent::class);
 		$event->expects($this->once())
@@ -68,9 +66,7 @@ class BaseTest extends TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider dataGenerateCalendarParameter
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataGenerateCalendarParameter')]
 	public function testGenerateCalendarParameter(array $data, string $name): void {
 		$l = $this->createMock(IL10N::class);
 		$l->expects($this->any())
@@ -93,9 +89,7 @@ class BaseTest extends TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider dataGenerateLegacyCalendarParameter
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataGenerateLegacyCalendarParameter')]
 	public function testGenerateLegacyCalendarParameter(int $id, string $name): void {
 		$this->assertEquals([
 			'type' => 'calendar',
@@ -111,9 +105,7 @@ class BaseTest extends TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider dataGenerateGroupParameter
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataGenerateGroupParameter')]
 	public function testGenerateGroupParameter(string $gid): void {
 		$this->assertEquals([
 			'type' => 'user-group',

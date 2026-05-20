@@ -10,6 +10,7 @@ namespace OCA\DAV\Tests\unit\DAV;
 use OCA\DAV\CalDAV\Calendar;
 use OCA\DAV\CalDAV\DefaultCalendarValidator;
 use OCA\DAV\DAV\CustomPropertiesBackend;
+use OCA\DAV\Db\PropertyMapper;
 use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\IDBConnection;
 use OCP\IUser;
@@ -24,9 +25,7 @@ use Sabre\DAVACL\IACL;
 use Sabre\DAVACL\IPrincipal;
 use Test\TestCase;
 
-/**
- * @group DB
- */
+#[\PHPUnit\Framework\Attributes\Group(name: 'DB')]
 class CustomPropertiesBackendTest extends TestCase {
 	private const BASE_URI = '/remote.php/dav/';
 
@@ -36,6 +35,7 @@ class CustomPropertiesBackendTest extends TestCase {
 	private IUser&MockObject $user;
 	private DefaultCalendarValidator&MockObject $defaultCalendarValidator;
 	private CustomPropertiesBackend $backend;
+	private PropertyMapper $propertyMapper;
 
 	protected function setUp(): void {
 		parent::setUp();
@@ -49,6 +49,7 @@ class CustomPropertiesBackendTest extends TestCase {
 			->with()
 			->willReturn('dummy_user_42');
 		$this->dbConnection = \OCP\Server::get(IDBConnection::class);
+		$this->propertyMapper = \OCP\Server::get(PropertyMapper::class);
 		$this->defaultCalendarValidator = $this->createMock(DefaultCalendarValidator::class);
 
 		$this->backend = new CustomPropertiesBackend(
@@ -56,6 +57,7 @@ class CustomPropertiesBackendTest extends TestCase {
 			$this->tree,
 			$this->dbConnection,
 			$this->user,
+			$this->propertyMapper,
 			$this->defaultCalendarValidator,
 		);
 	}
@@ -63,7 +65,7 @@ class CustomPropertiesBackendTest extends TestCase {
 	protected function tearDown(): void {
 		$query = $this->dbConnection->getQueryBuilder();
 		$query->delete('properties');
-		$query->execute();
+		$query->executeStatement();
 
 		parent::tearDown();
 	}
@@ -98,7 +100,7 @@ class CustomPropertiesBackendTest extends TestCase {
 				'propertyvalue' => $query->createNamedParameter($value),
 				'valuetype' => $query->createNamedParameter($type, IQueryBuilder::PARAM_INT)
 			]);
-		$query->execute();
+		$query->executeStatement();
 	}
 
 	protected function getProps(string $user, string $path): array {
@@ -108,9 +110,9 @@ class CustomPropertiesBackendTest extends TestCase {
 			->where($query->expr()->eq('userid', $query->createNamedParameter($user)))
 			->andWhere($query->expr()->eq('propertypath', $query->createNamedParameter($this->formatPath($path))));
 
-		$result = $query->execute();
+		$result = $query->executeQuery();
 		$data = [];
-		while ($row = $result->fetch()) {
+		while ($row = $result->fetchAssociative()) {
 			$value = $row['propertyvalue'];
 			if ((int)$row['valuetype'] === CustomPropertiesBackend::PROPERTY_TYPE_HREF) {
 				$value = new Href($value);
@@ -129,6 +131,7 @@ class CustomPropertiesBackendTest extends TestCase {
 			$this->tree,
 			$db,
 			$this->user,
+			$this->propertyMapper,
 			$this->defaultCalendarValidator,
 		);
 
@@ -271,9 +274,7 @@ class CustomPropertiesBackendTest extends TestCase {
 
 	}
 
-	/**
-	 * @dataProvider propFindPrincipalScheduleDefaultCalendarProviderUrlProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'propFindPrincipalScheduleDefaultCalendarProviderUrlProvider')]
 	public function testPropFindPrincipalScheduleDefaultCalendarUrl(
 		string $user,
 		array $nodes,
@@ -335,9 +336,7 @@ class CustomPropertiesBackendTest extends TestCase {
 		$this->assertEquals($returnedProps, $setProps);
 	}
 
-	/**
-	 * @dataProvider propPatchProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'propPatchProvider')]
 	public function testPropPatch(string $path, array $existing, array $props, array $result): void {
 		$this->server->method('calculateUri')
 			->willReturnCallback(function ($uri) {
@@ -418,9 +417,7 @@ class CustomPropertiesBackendTest extends TestCase {
 		$this->assertEquals([], $storedProps);
 	}
 
-	/**
-	 * @dataProvider deleteProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'deleteProvider')]
 	public function testDelete(string $path): void {
 		$this->insertProps('dummy_user_42', $path, ['foo' => 'bar']);
 		$this->backend->delete($path);
@@ -434,9 +431,7 @@ class CustomPropertiesBackendTest extends TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider moveProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'moveProvider')]
 	public function testMove(string $source, string $target): void {
 		$this->insertProps('dummy_user_42', $source, ['foo' => 'bar']);
 		$this->backend->move($source, $target);

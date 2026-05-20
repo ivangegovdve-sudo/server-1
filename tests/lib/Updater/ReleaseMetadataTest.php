@@ -15,6 +15,7 @@ use PHPUnit\Framework\MockObject\MockObject;
 class ReleaseMetadataTest extends \Test\TestCase {
 	private IClientService|MockObject $clientService;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 		$this->clientService = $this->createMock(IClientService::class);
@@ -41,11 +42,11 @@ class ReleaseMetadataTest extends \Test\TestCase {
 	}
 
 	/**
-	 * @dataProvider getMetadataUrlProvider
 	 *
 	 * @param string $version
 	 * @param string $url
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('getMetadataUrlProvider')]
 	public function testGetMetadata(string $version, string $url): void {
 		$client = $this->createMock(IClient::class);
 		$response = $this->createMock(IResponse::class);

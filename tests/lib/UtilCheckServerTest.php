@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -7,6 +8,7 @@
 
 namespace Test;
 
+use OC\SystemConfig;
 use OCP\ICacheFactory;
 use OCP\ISession;
 use OCP\ITempManager;
@@ -15,15 +17,14 @@ use OCP\Util;
 
 /**
  * Tests for server check functions
- *
- * @group DB
  */
+#[\PHPUnit\Framework\Attributes\Group('DB')]
 class UtilCheckServerTest extends \Test\TestCase {
 	private $datadir;
 
 	/**
 	 * @param array $systemOptions
-	 * @return \OC\SystemConfig | \PHPUnit\Framework\MockObject\MockObject
+	 * @return SystemConfig|\PHPUnit\Framework\MockObject\MockObject
 	 */
 	protected function getConfig($systemOptions) {
 		$systemOptions['datadirectory'] = $this->datadir;
@@ -40,6 +41,7 @@ class UtilCheckServerTest extends \Test\TestCase {
 		return $config;
 	}
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -49,6 +51,7 @@ class UtilCheckServerTest extends \Test\TestCase {
 		Server::get(ICacheFactory::class)->createLocal('system')->set('checkServer_succeeded', false, 10);
 	}
 
+	#[\Override]
 	protected function tearDown(): void {
 		// clean up
 		@unlink($this->datadir . '/.ncdata');

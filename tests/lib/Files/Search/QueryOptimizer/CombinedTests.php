@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2023 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -13,8 +14,12 @@ use OCP\Files\Search\ISearchComparison;
 use Test\TestCase;
 
 class CombinedTests extends TestCase {
+	public function __construct() {
+		parent::__construct(static::class);
+	}
 	private QueryOptimizer $optimizer;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 

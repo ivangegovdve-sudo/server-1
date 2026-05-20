@@ -24,9 +24,10 @@ class SanitizeAccountPropertiesJobTest extends TestCase {
 	private IUserManager&MockObject $userManager;
 	private IAccountManager&MockObject $accountManager;
 	private LoggerInterface&MockObject $logger;
-	
+
 	private SanitizeAccountPropertiesJob $job;
 
+	#[\Override]
 	protected function setUp(): void {
 		$this->userManager = $this->createMock(IUserManager::class);
 		$this->accountManager = $this->createMock(IAccountManager::class);

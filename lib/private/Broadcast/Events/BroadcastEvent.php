@@ -14,27 +14,28 @@ use OCP\EventDispatcher\ABroadcastedEvent;
 use OCP\EventDispatcher\Event;
 
 class BroadcastEvent extends Event implements IBroadcastEvent {
-	/** @var ABroadcastedEvent */
-	private $event;
-
-	public function __construct(ABroadcastedEvent $event) {
+	public function __construct(
+		private ABroadcastedEvent $event,
+	) {
 		parent::__construct();
-
-		$this->event = $event;
 	}
 
+	#[\Override]
 	public function getName(): string {
 		return $this->event->broadcastAs();
 	}
 
+	#[\Override]
 	public function getUids(): array {
 		return $this->event->getUids();
 	}
 
+	#[\Override]
 	public function getPayload(): JsonSerializable {
 		return $this->event;
 	}
 
+	#[\Override]
 	public function setBroadcasted(): void {
 		$this->event->setBroadcasted();
 	}

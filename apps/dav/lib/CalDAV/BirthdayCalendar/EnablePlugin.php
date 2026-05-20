@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2017 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -51,6 +52,7 @@ class EnablePlugin extends ServerPlugin {
 	 *
 	 * @return string[]
 	 */
+	#[\Override]
 	public function getFeatures() {
 		return ['nc-enable-birthday-calendar'];
 	}
@@ -63,6 +65,7 @@ class EnablePlugin extends ServerPlugin {
 	 *
 	 * @return string
 	 */
+	#[\Override]
 	public function getPluginName() {
 		return 'nc-enable-birthday-calendar';
 	}
@@ -77,6 +80,7 @@ class EnablePlugin extends ServerPlugin {
 	 *
 	 * @param Server $server
 	 */
+	#[\Override]
 	public function initialize(Server $server) {
 		$this->server = $server;
 

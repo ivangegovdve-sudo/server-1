@@ -18,6 +18,7 @@ use OCP\Http\Client\IClientService;
 use OCP\ICertificateManager;
 use OCP\IConfig;
 use OCP\Security\IRemoteHostValidator;
+use OCP\ServerVersion;
 use Psr\Http\Message\RequestInterface;
 use Psr\Log\LoggerInterface;
 
@@ -27,42 +28,27 @@ use Psr\Log\LoggerInterface;
  * @package OC\Http
  */
 class ClientService implements IClientService {
-	/** @var IConfig */
-	private $config;
-	/** @var ICertificateManager */
-	private $certificateManager;
-	/** @var DnsPinMiddleware */
-	private $dnsPinMiddleware;
-	private IRemoteHostValidator $remoteHostValidator;
-	private IEventLogger $eventLogger;
-
 	public function __construct(
-		IConfig $config,
-		ICertificateManager $certificateManager,
-		DnsPinMiddleware $dnsPinMiddleware,
-		IRemoteHostValidator $remoteHostValidator,
-		IEventLogger $eventLogger,
+		private IConfig $config,
+		private ICertificateManager $certificateManager,
+		private DnsPinMiddleware $dnsPinMiddleware,
+		private IRemoteHostValidator $remoteHostValidator,
+		private IEventLogger $eventLogger,
 		protected LoggerInterface $logger,
+		protected ServerVersion $serverVersion,
 	) {
-		$this->config = $config;
-		$this->certificateManager = $certificateManager;
-		$this->dnsPinMiddleware = $dnsPinMiddleware;
-		$this->remoteHostValidator = $remoteHostValidator;
-		$this->eventLogger = $eventLogger;
 	}
 
-	/**
-	 * @return Client
-	 */
+	#[\Override]
 	public function newClient(): IClient {
 		$handler = new CurlHandler();
 		$stack = HandlerStack::create($handler);
 		if ($this->config->getSystemValueBool('dns_pinning', true)) {
 			$stack->push($this->dnsPinMiddleware->addDnsPinning());
 		}
-		$stack->push(Middleware::tap(function (RequestInterface $request) {
+		$stack->push(Middleware::tap(function (RequestInterface $request): void {
 			$this->eventLogger->start('http:request', $request->getMethod() . ' request to ' . $request->getRequestTarget());
-		}, function () {
+		}, function (): void {
 			$this->eventLogger->end('http:request');
 		}), 'event logger');
 
@@ -74,6 +60,7 @@ class ClientService implements IClientService {
 			$client,
 			$this->remoteHostValidator,
 			$this->logger,
+			$this->serverVersion,
 		);
 	}
 }

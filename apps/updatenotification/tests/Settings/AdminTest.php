@@ -448,9 +448,7 @@ class AdminTest extends TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider changesProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'changesProvider')]
 	public function testFilterChanges($changes, $userLang, $expectation): void {
 		$iterator = $this->createMock(ILanguageIterator::class);
 		$iterator->expects($this->any())

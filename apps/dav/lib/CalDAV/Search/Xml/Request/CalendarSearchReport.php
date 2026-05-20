@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2017 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -65,6 +66,7 @@ class CalendarSearchReport implements XmlDeserializable {
 	 * @param Reader $reader
 	 * @return mixed
 	 */
+	#[\Override]
 	public static function xmlDeserialize(Reader $reader) {
 		$elems = $reader->parseInnerTree([
 			'{http://nextcloud.com/ns}comp-filter' => 'OCA\\DAV\\CalDAV\\Search\\Xml\\Filter\\CompFilter',

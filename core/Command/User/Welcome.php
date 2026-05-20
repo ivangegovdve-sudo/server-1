@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2023 FedericoHeichou <federicoheichou@gmail.com>
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -29,6 +30,7 @@ class Welcome extends Base {
 	/**
 	 * @return void
 	 */
+	#[\Override]
 	protected function configure() {
 		$this
 			->setName('user:welcome')
@@ -52,6 +54,7 @@ class Welcome extends Base {
 	 * @param OutputInterface $output
 	 * @return int
 	 */
+	#[\Override]
 	protected function execute(InputInterface $input, OutputInterface $output): int {
 		$userId = $input->getArgument('user');
 		// check if user exists

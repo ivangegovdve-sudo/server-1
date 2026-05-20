@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2017 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -29,6 +30,7 @@ class ExpireVersions extends TimedJob {
 		$this->setInterval(60 * 30);
 	}
 
+	#[\Override]
 	public function run($argument) {
 		$backgroundJob = $this->config->getAppValue('files_versions', 'background_job_expire_versions', 'yes');
 		if ($backgroundJob === 'no') {

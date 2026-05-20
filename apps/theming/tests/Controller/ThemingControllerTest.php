@@ -89,22 +89,21 @@ class ThemingControllerTest extends TestCase {
 			['name', str_repeat('a', 250), 'Saved'],
 			['url', 'https://nextcloud.com/' . str_repeat('a', 478), 'Saved'],
 			['slogan', str_repeat('a', 500), 'Saved'],
-			['color', '#0082c9', 'Saved'],
-			['color', '#0082C9', 'Saved'],
-			['color', '#0082C9', 'Saved'],
+			['primaryColor', '#0082c9', 'Saved', 'primary_color'],
+			['primary_color', '#0082C9', 'Saved'],
+			['backgroundColor', '#0082C9', 'Saved', 'background_color'],
+			['background_color', '#0082C9', 'Saved'],
 			['imprintUrl', 'https://nextcloud.com/' . str_repeat('a', 478), 'Saved'],
 			['privacyUrl', 'https://nextcloud.com/' . str_repeat('a', 478), 'Saved'],
 		];
 	}
 
-	/**
-	 * @dataProvider dataUpdateStylesheetSuccess
-	 */
-	public function testUpdateStylesheetSuccess(string $setting, string $value, string $message): void {
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataUpdateStylesheetSuccess')]
+	public function testUpdateStylesheetSuccess(string $setting, string $value, string $message, ?string $realSetting = null): void {
 		$this->themingDefaults
 			->expects($this->once())
 			->method('set')
-			->with($setting, $value);
+			->with($realSetting ?? $setting, $value);
 		$this->l10n
 			->expects($this->once())
 			->method('t')
@@ -114,8 +113,8 @@ class ThemingControllerTest extends TestCase {
 
 		$expected = new DataResponse(
 			[
-				'data' =>
-					[
+				'data'
+					=> [
 						'message' => $message,
 					],
 				'status' => 'success',
@@ -151,13 +150,13 @@ class ThemingControllerTest extends TestCase {
 			['background_color', '#0082Z9', 'The given color is invalid'],
 			['background_color', 'Nextcloud', 'The given color is invalid'],
 
+			['doesnotexist', 'value', 'Invalid setting key'],
+
 			...$urlTests,
 		];
 	}
 
-	/**
-	 * @dataProvider dataUpdateStylesheetError
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataUpdateStylesheetError')]
 	public function testUpdateStylesheetError(string $setting, string $value, string $message): void {
 		$this->themingDefaults
 			->expects($this->never())
@@ -172,8 +171,8 @@ class ThemingControllerTest extends TestCase {
 
 		$expected = new DataResponse(
 			[
-				'data' =>
-					[
+				'data'
+					=> [
 						'message' => $message,
 					],
 				'status' => 'error',
@@ -203,8 +202,8 @@ class ThemingControllerTest extends TestCase {
 
 		$expected = new DataResponse(
 			[
-				'data' =>
-					[
+				'data'
+					=> [
 						'message' => 'No file uploaded',
 					],
 				'status' => 'failure',
@@ -233,8 +232,8 @@ class ThemingControllerTest extends TestCase {
 
 		$expected = new DataResponse(
 			[
-				'data' =>
-					[
+				'data'
+					=> [
 						'message' => 'Invalid key',
 					],
 				'status' => 'failure',
@@ -282,8 +281,8 @@ class ThemingControllerTest extends TestCase {
 
 		$expected = new DataResponse(
 			[
-				'data' =>
-					[
+				'data'
+					=> [
 						'message' => 'Unsupported image type',
 					],
 				'status' => 'failure'
@@ -323,8 +322,8 @@ class ThemingControllerTest extends TestCase {
 
 		$expected = new DataResponse(
 			[
-				'data' =>
-					[
+				'data'
+					=> [
 						'message' => 'Unsupported image type',
 					],
 				'status' => 'failure'
@@ -346,9 +345,7 @@ class ThemingControllerTest extends TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider dataUpdateImages
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataUpdateImages')]
 	public function testUpdateLogoNormalLogoUpload(string $mimeType, bool $folderExists = true): void {
 		$tmpLogo = Server::get(ITempManager::class)->getTemporaryFolder() . '/logo.svg';
 		$destination = Server::get(ITempManager::class)->getTemporaryFolder();
@@ -387,8 +384,8 @@ class ThemingControllerTest extends TestCase {
 
 		$expected = new DataResponse(
 			[
-				'data' =>
-					[
+				'data'
+					=> [
 						'name' => 'logo.svg',
 						'message' => 'Saved',
 						'url' => 'imageUrl',
@@ -436,8 +433,8 @@ class ThemingControllerTest extends TestCase {
 			->willReturn('imageUrl');
 		$expected = new DataResponse(
 			[
-				'data' =>
-					[
+				'data'
+					=> [
 						'name' => 'logo.svg',
 						'message' => 'Saved',
 						'url' => 'imageUrl',
@@ -481,8 +478,8 @@ class ThemingControllerTest extends TestCase {
 
 		$expected = new DataResponse(
 			[
-				'data' =>
-					[
+				'data'
+					=> [
 						'message' => 'Unsupported image type',
 					],
 				'status' => 'failure'
@@ -504,9 +501,7 @@ class ThemingControllerTest extends TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider dataPhpUploadErrors
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataPhpUploadErrors')]
 	public function testUpdateLogoLoginScreenUploadWithInvalidImageUpload(int $error, string $expectedErrorMessage): void {
 		$this->request
 			->expects($this->once())
@@ -532,8 +527,8 @@ class ThemingControllerTest extends TestCase {
 
 		$expected = new DataResponse(
 			[
-				'data' =>
-					[
+				'data'
+					=> [
 						'message' => $expectedErrorMessage,
 					],
 				'status' => 'failure'
@@ -543,9 +538,7 @@ class ThemingControllerTest extends TestCase {
 		$this->assertEquals($expected, $this->themingController->uploadImage());
 	}
 
-	/**
-	 * @dataProvider dataPhpUploadErrors
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataPhpUploadErrors')]
 	public function testUpdateLogoUploadWithInvalidImageUpload($error, $expectedErrorMessage): void {
 		$this->request
 			->expects($this->once())
@@ -571,8 +564,8 @@ class ThemingControllerTest extends TestCase {
 
 		$expected = new DataResponse(
 			[
-				'data' =>
-					[
+				'data'
+					=> [
 						'message' => $expectedErrorMessage
 					],
 				'status' => 'failure'
@@ -596,8 +589,8 @@ class ThemingControllerTest extends TestCase {
 
 		$expected = new DataResponse(
 			[
-				'data' =>
-					[
+				'data'
+					=> [
 						'value' => 'MyValue',
 						'message' => 'Saved'
 					],
@@ -614,9 +607,7 @@ class ThemingControllerTest extends TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider dataUndoDelete
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataUndoDelete')]
 	public function testUndoDelete(string $value, string $filename): void {
 		$this->l10n
 			->expects($this->once())
@@ -631,8 +622,8 @@ class ThemingControllerTest extends TestCase {
 
 		$expected = new DataResponse(
 			[
-				'data' =>
-					[
+				'data'
+					=> [
 						'value' => $value,
 						'message' => 'Saved',
 					],
@@ -657,6 +648,7 @@ class ThemingControllerTest extends TestCase {
 		$file = $this->createMock(ISimpleFile::class);
 		$file->method('getName')->willReturn('logo.svg');
 		$file->method('getMTime')->willReturn(42);
+		$file->method('getMimeType')->willReturn('text/svg');
 		$this->imageManager->expects($this->once())
 			->method('getImage')
 			->willReturn($file);
@@ -673,9 +665,32 @@ class ThemingControllerTest extends TestCase {
 		$csp = new ContentSecurityPolicy();
 		$csp->allowInlineStyle();
 		$expected->setContentSecurityPolicy($csp);
-		@$this->assertEquals($expected, $this->themingController->getImage('logo'));
+		@$this->assertEquals($expected, $this->themingController->getImage('logo', true));
 	}
 
+
+	public function testGetLogoOriginalFile(): void {
+		$file = $this->createMock(ISimpleFile::class);
+		$file->method('getName')->willReturn('logo');
+		$file->method('getMTime')->willReturn(42);
+		$this->imageManager->expects($this->once())
+			->method('getImage')
+			->willReturn($file);
+		$this->appConfig
+			->expects($this->once())
+			->method('getAppValueString')
+			->with('logoMime', '')
+			->willReturn('image/png');
+
+		@$expected = new FileDisplayResponse($file);
+		$expected->cacheFor(3600);
+		$expected->addHeader('Content-Type', 'image/png');
+		$expected->addHeader('Content-Disposition', 'attachment; filename="logo"');
+		$csp = new ContentSecurityPolicy();
+		$csp->allowInlineStyle();
+		$expected->setContentSecurityPolicy($csp);
+		@$this->assertEquals($expected, $this->themingController->getImage('logo', false));
+	}
 
 	public function testGetLoginBackgroundNotExistent(): void {
 		$this->imageManager->method('getImage')
@@ -689,6 +704,7 @@ class ThemingControllerTest extends TestCase {
 		$file = $this->createMock(ISimpleFile::class);
 		$file->method('getName')->willReturn('background.png');
 		$file->method('getMTime')->willReturn(42);
+		$file->method('getMimeType')->willReturn('image/png');
 		$this->imageManager->expects($this->once())
 			->method('getImage')
 			->willReturn($file);
@@ -716,14 +732,12 @@ class ThemingControllerTest extends TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider dataGetManifest
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataGetManifest')]
 	public function testGetManifest(bool $standalone): void {
-		$this->config
+		$this->appConfig
 			->expects($this->once())
-			->method('getAppValue')
-			->with('theming', 'cachebuster', '0')
+			->method('getAppValueString')
+			->with('cachebuster', '0')
 			->willReturn('0');
 		$this->themingDefaults
 			->expects($this->any())
@@ -748,8 +762,8 @@ class ThemingControllerTest extends TestCase {
 		$response = new JSONResponse([
 			'name' => 'Nextcloud',
 			'start_url' => 'localhost',
-			'icons' =>
-				[
+			'icons'
+				=> [
 					[
 						'src' => 'touchicon?v=0',
 						'type' => 'image/png',

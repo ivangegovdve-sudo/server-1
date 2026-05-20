@@ -1,38 +1,45 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2017 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 use Behat\Behat\Context\Context;
+use OC\Remote\Api\OCS;
+use OC\Remote\Credentials;
+use OC\Remote\Instance;
+use OC\Remote\User;
 use OCP\Http\Client\IClientService;
+use OCP\ICacheFactory;
+use OCP\IConfig;
+use OCP\Server;
 use PHPUnit\Framework\Assert;
 
-require __DIR__ . '/../../vendor/autoload.php';
+require __DIR__ . '/autoload.php';
 
 /**
  * Remote context.
  */
 class RemoteContext implements Context {
-	/** @var \OC\Remote\Instance */
+	/** @var Instance */
 	protected $remoteInstance;
 
-	/** @var \OC\Remote\Credentials */
+	/** @var Credentials */
 	protected $credentails;
 
-	/** @var \OC\Remote\User */
+	/** @var User */
 	protected $userResult;
-
-	protected $remoteUrl;
 
 	protected $lastException;
 
-	public function __construct($remote) {
+	public function __construct(
+		private string $remote,
+	) {
 		require_once __DIR__ . '/../../../../lib/base.php';
-		$this->remoteUrl = $remote;
 	}
 
 	protected function getApiClient() {
-		return new \OC\Remote\Api\OCS($this->remoteInstance, $this->credentails, \OC::$server->get(IClientService::class));
+		return new OCS($this->remoteInstance, $this->credentails, Server::get(IClientService::class));
 	}
 
 	/**
@@ -42,13 +49,13 @@ class RemoteContext implements Context {
 	 */
 	public function selectRemoteInstance($remoteServer) {
 		if ($remoteServer == 'REMOTE') {
-			$baseUri = $this->remoteUrl;
+			$baseUri = $this->remote;
 		} else {
 			$baseUri = 'nonexistingnextcloudserver.local';
 		}
 		$this->lastException = null;
 		try {
-			$this->remoteInstance = new \OC\Remote\Instance($baseUri, \OC::$server->getMemCacheFactory()->createLocal(), \OC::$server->get(IClientService::class));
+			$this->remoteInstance = new Instance($baseUri, Server::get(ICacheFactory::class)->createLocal(), Server::get(IClientService::class));
 			// trigger the status request
 			$this->remoteInstance->getProtocol();
 		} catch (\Exception $e) {
@@ -62,7 +69,7 @@ class RemoteContext implements Context {
 	 */
 	public function theRemoteVersionShouldBe($version) {
 		if ($version === '__current_version__') {
-			$version = \OC::$server->getConfig()->getSystemValue('version', '0.0.0.0');
+			$version = Server::get(IConfig::class)->getSystemValue('version', '0.0.0.0');
 		}
 
 		Assert::assertEquals($version, $this->remoteInstance->getVersion());
@@ -82,7 +89,7 @@ class RemoteContext implements Context {
 	 * @param string $password
 	 */
 	public function usingCredentials($user, $password) {
-		$this->credentails = new \OC\Remote\Credentials($user, $password);
+		$this->credentails = new Credentials($user, $password);
 	}
 
 	/**

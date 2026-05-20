@@ -32,6 +32,7 @@ class DummyGetResponsePlugin extends \Sabre\DAV\ServerPlugin {
 	 * @param \Sabre\DAV\Server $server
 	 * @return void
 	 */
+	#[\Override]
 	public function initialize(\Sabre\DAV\Server $server) {
 		$this->server = $server;
 		$this->server->on('method:GET', [$this, 'httpGet'], 200);
@@ -43,8 +44,8 @@ class DummyGetResponsePlugin extends \Sabre\DAV\ServerPlugin {
 	 * @return false
 	 */
 	public function httpGet(RequestInterface $request, ResponseInterface $response) {
-		$string = 'This is the WebDAV interface. It can only be accessed by ' .
-			'WebDAV clients such as the Nextcloud desktop sync client.';
+		$string = 'This is the WebDAV interface. It can only be accessed by '
+			. 'WebDAV clients such as the Nextcloud desktop sync client.';
 		$stream = fopen('php://memory', 'r+');
 		fwrite($stream, $string);
 		rewind($stream);

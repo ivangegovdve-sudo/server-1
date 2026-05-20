@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -18,10 +19,10 @@ use PHPUnit\Framework\MockObject\MockObject;
 /**
  * Tests for the cleaning the tags tables
  *
- * @group DB
  *
  * @see \OC\Repair\CleanTags
  */
+#[\PHPUnit\Framework\Attributes\Group('DB')]
 class CleanTagsTest extends \Test\TestCase {
 
 	private ?int $createdFile = null;
@@ -31,6 +32,7 @@ class CleanTagsTest extends \Test\TestCase {
 	private IUserManager&MockObject $userManager;
 	private IOutput&MockObject $outputMock;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -47,6 +49,7 @@ class CleanTagsTest extends \Test\TestCase {
 		$this->cleanUpTables();
 	}
 
+	#[\Override]
 	protected function tearDown(): void {
 		$this->cleanUpTables();
 

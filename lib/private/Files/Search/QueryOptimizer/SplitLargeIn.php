@@ -16,11 +16,12 @@ use OCP\Files\Search\ISearchOperator;
  * transform IN (1000+ element) into (IN (1000 elements) OR IN(...))
  */
 class SplitLargeIn extends ReplacingOptimizerStep {
+	#[\Override]
 	public function processOperator(ISearchOperator &$operator): bool {
 		if (
-			$operator instanceof ISearchComparison &&
-			$operator->getType() === ISearchComparison::COMPARE_IN &&
-			count($operator->getValue()) > 1000
+			$operator instanceof ISearchComparison
+			&& $operator->getType() === ISearchComparison::COMPARE_IN
+			&& count($operator->getValue()) > 1000
 		) {
 			$chunks = array_chunk($operator->getValue(), 1000);
 			$chunkComparisons = array_map(function (array $values) use ($operator) {

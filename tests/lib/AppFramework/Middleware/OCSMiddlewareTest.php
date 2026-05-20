@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -27,6 +28,7 @@ class OCSMiddlewareTest extends \Test\TestCase {
 	 */
 	private $request;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -60,9 +62,7 @@ class OCSMiddlewareTest extends \Test\TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider dataAfterException
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataAfterException')]
 	public function testAfterExceptionOCSv1(string $controller, \Exception $exception, bool $forward, string $message = '', int $code = 0): void {
 		$controller = $this->createMock($controller);
 		$this->request
@@ -91,9 +91,7 @@ class OCSMiddlewareTest extends \Test\TestCase {
 		$this->assertSame(Http::STATUS_OK, $result->getStatus());
 	}
 
-	/**
-	 * @dataProvider dataAfterException
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataAfterException')]
 	public function testAfterExceptionOCSv2(string $controller, \Exception $exception, bool $forward, string $message = '', int $code = 0): void {
 		$controller = $this->createMock($controller);
 		$this->request
@@ -120,9 +118,7 @@ class OCSMiddlewareTest extends \Test\TestCase {
 		$this->assertSame($code, $result->getStatus());
 	}
 
-	/**
-	 * @dataProvider dataAfterException
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataAfterException')]
 	public function testAfterExceptionOCSv2SubFolder(string $controller, \Exception $exception, bool $forward, string $message = '', int $code = 0): void {
 		$controller = $this->createMock($controller);
 		$this->request
@@ -166,9 +162,7 @@ class OCSMiddlewareTest extends \Test\TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider dataAfterController
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataAfterController')]
 	public function testAfterController(string $controller, Response $response, bool $converted, int $convertedOCSStatus = 0): void {
 		$controller = $this->createMock($controller);
 		$OCSMiddleware = new OCSMiddleware($this->request);

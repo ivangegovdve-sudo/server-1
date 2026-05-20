@@ -7,10 +7,12 @@
  */
 namespace OC\Group;
 
+use OCP\GroupInterface;
+
 /**
  * Abstract base class for user management
  */
-abstract class Backend implements \OCP\GroupInterface {
+abstract class Backend implements GroupInterface {
 	/**
 	 * error code for functions not provided by the group backend
 	 */
@@ -52,6 +54,7 @@ abstract class Backend implements \OCP\GroupInterface {
 	 * Returns the supported actions as int to be
 	 * compared with \OC\Group\Backend::CREATE_GROUP etc.
 	 */
+	#[\Override]
 	public function implementsActions($actions) {
 		return (bool)($this->getSupportedActions() & $actions);
 	}
@@ -64,6 +67,7 @@ abstract class Backend implements \OCP\GroupInterface {
 	 *
 	 * Checks whether the user is member of a group or not.
 	 */
+	#[\Override]
 	public function inGroup($uid, $gid) {
 		return in_array($gid, $this->getUserGroups($uid));
 	}
@@ -76,6 +80,7 @@ abstract class Backend implements \OCP\GroupInterface {
 	 * This function fetches all groups a user belongs to. It does not check
 	 * if the user exists at all.
 	 */
+	#[\Override]
 	public function getUserGroups($uid) {
 		return [];
 	}
@@ -90,6 +95,7 @@ abstract class Backend implements \OCP\GroupInterface {
 	 * Returns a list with all groups
 	 */
 
+	#[\Override]
 	public function getGroups($search = '', $limit = -1, $offset = 0) {
 		return [];
 	}
@@ -99,6 +105,7 @@ abstract class Backend implements \OCP\GroupInterface {
 	 * @param string $gid
 	 * @return bool
 	 */
+	#[\Override]
 	public function groupExists($gid) {
 		return in_array($gid, $this->getGroups($gid, 1));
 	}
@@ -111,6 +118,7 @@ abstract class Backend implements \OCP\GroupInterface {
 	 * @param int $offset
 	 * @return array<int,string> an array of user ids
 	 */
+	#[\Override]
 	public function usersInGroup($gid, $search = '', $limit = -1, $offset = 0) {
 		return [];
 	}

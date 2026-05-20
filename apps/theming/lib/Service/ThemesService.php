@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2022 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -150,9 +151,9 @@ class ThemesService {
 	/**
 	 * Get the list of all enabled themes IDs for the current user.
 	 *
-	 * @return string[]
+	 * @return list<string>
 	 */
-	public function getEnabledThemes(): array {
+	public function getEnabledThemes() {
 		$enforcedTheme = $this->config->getSystemValueString('enforce_theme', '');
 		$user = $this->userSession->getUser();
 		if ($user === null) {
@@ -162,6 +163,7 @@ class ThemesService {
 			return [];
 		}
 
+		/** @var list<string> */
 		$enabledThemes = json_decode($this->config->getUserValue($user->getUID(), Application::APP_ID, 'enabled-themes', '["default"]'));
 		if ($enforcedTheme !== '') {
 			return array_merge([$enforcedTheme], $enabledThemes);

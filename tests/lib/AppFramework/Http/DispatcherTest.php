@@ -32,7 +32,7 @@ use Psr\Log\LoggerInterface;
 class TestController extends Controller {
 	/**
 	 * @param string $appName
-	 * @param \OCP\IRequest $request
+	 * @param IRequest $request
 	 */
 	public function __construct($appName, $request) {
 		parent::__construct($appName, $request);
@@ -76,8 +76,8 @@ class TestController extends Controller {
  * Class DispatcherTest
  *
  * @package Test\AppFramework\Http
- * @group DB
  */
+#[\PHPUnit\Framework\Attributes\Group('DB')]
 class DispatcherTest extends \Test\TestCase {
 	/** @var MiddlewareDispatcher */
 	private $middlewareDispatcher;
@@ -103,6 +103,7 @@ class DispatcherTest extends \Test\TestCase {
 	/** @var ContainerInterface|MockObject */
 	private $container;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 		$this->controllerMethod = 'test';
@@ -123,7 +124,7 @@ class DispatcherTest extends \Test\TestCase {
 
 		$this->request = $this->createMock(Request::class);
 
-		$this->reflector = new ControllerMethodReflector();
+		$this->reflector = new ControllerMethodReflector(Server::get(LoggerInterface::class));
 
 		$this->dispatcher = new Dispatcher(
 			$this->http,
@@ -541,23 +542,42 @@ class DispatcherTest extends \Test\TestCase {
 			[PHP_INT_MIN, PHP_INT_MAX, 42, false],
 			[0, 12, -5, true],
 			[-12, 0, 5, true],
+			[1, 200, 0, true],
+			[-15, -5, 0, true],
+			[-15, 15, 0, false],
+			[0, 200, 0, false],
+			[-200, 0, 0, false],
 			[7, 14, 5, true],
 			[7, 14, 10, false],
 			[-14, -7, -10, false],
+			[null, null, -1, false],
+
+			// $limit comes with default limits of self::DEFAULT_MIN (1) <= $limit <= self::DEFAULT_MAX (500)
+			[null, null, -1, true, 'limit'],
+			[null, null, -1, false, 'limit', -1],
+			[null, null, 0, true, 'limit'],
+			[null, null, 0, true, 'limit', -1],
+			[null, null, 1, false, 'limit'],
+			[null, null, 500, false, 'limit'],
+			[null, null, 501, true, 'limit'],
 		];
 	}
 
-	/**
-	 * @dataProvider rangeDataProvider
-	 */
-	public function testEnsureParameterValueSatisfiesRange(int $min, int $max, int $input, bool $throw): void {
+	#[\PHPUnit\Framework\Attributes\DataProvider('rangeDataProvider')]
+	public function testEnsureParameterValueSatisfiesRange(?int $min, ?int $max, int $input, bool $throw, string $param = 'myArgument', ?int $default = null): void {
 		$this->reflector = $this->createMock(ControllerMethodReflector::class);
-		$this->reflector->expects($this->any())
-			->method('getRange')
-			->willReturn([
-				'min' => $min,
-				'max' => $max,
-			]);
+		if ($min === null && $max === null) {
+			$this->reflector->expects($this->any())
+				->method('getRange')
+				->willReturn(null);
+		} else {
+			$this->reflector->expects($this->any())
+				->method('getRange')
+				->willReturn([
+					'min' => $min,
+					'max' => $max,
+				]);
+		}
 
 		$this->dispatcher = new Dispatcher(
 			$this->http,
@@ -575,7 +595,7 @@ class DispatcherTest extends \Test\TestCase {
 			$this->expectException(ParameterOutOfRangeException::class);
 		}
 
-		$this->invokePrivate($this->dispatcher, 'ensureParameterValueSatisfiesRange', ['myArgument', $input]);
+		self::invokePrivate($this->dispatcher, 'ensureParameterValueSatisfiesRange', [$param, $input, $default]);
 		if (!$throw) {
 			// do not mark this test risky
 			$this->assertTrue(true);

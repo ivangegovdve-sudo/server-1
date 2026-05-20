@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -16,6 +17,7 @@ class FileAccessHelperTest extends TestCase {
 	/** @var FileAccessHelper */
 	private $fileAccessHelper;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 		$this->fileAccessHelper = new FileAccessHelper();
@@ -30,7 +32,7 @@ class FileAccessHelperTest extends TestCase {
 		$this->assertSame($data, $this->fileAccessHelper->file_get_contents($filePath));
 	}
 
-	
+
 	public function testFile_put_contentsWithException(): void {
 		$this->expectException(\Exception::class);
 		$this->expectExceptionMessage('Failed to write into /anabsolutelynotexistingfolder/on/the/system.txt');
@@ -43,7 +45,7 @@ class FileAccessHelperTest extends TestCase {
 		$this->assertTrue($this->fileAccessHelper->is_writable(Server::get(ITempManager::class)->getTemporaryFile('MyFile')));
 	}
 
-	
+
 	public function testAssertDirectoryExistsWithException(): void {
 		$this->expectException(\Exception::class);
 		$this->expectExceptionMessage('Directory /anabsolutelynotexistingfolder/on/the/system does not exist.');

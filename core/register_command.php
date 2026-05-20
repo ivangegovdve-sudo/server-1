@@ -27,6 +27,7 @@ use OC\Core\Command\Config\App\GetConfig;
 use OC\Core\Command\Config\App\SetConfig;
 use OC\Core\Command\Config\Import;
 use OC\Core\Command\Config\ListConfigs;
+use OC\Core\Command\Config\Preset;
 use OC\Core\Command\Db\AddMissingColumns;
 use OC\Core\Command\Db\AddMissingIndices;
 use OC\Core\Command\Db\AddMissingPrimaryKeys;
@@ -68,9 +69,15 @@ use OC\Core\Command\Maintenance\Repair;
 use OC\Core\Command\Maintenance\RepairShareOwnership;
 use OC\Core\Command\Maintenance\UpdateHtaccess;
 use OC\Core\Command\Maintenance\UpdateTheme;
+use OC\Core\Command\Memcache\DistributedClear;
+use OC\Core\Command\Memcache\DistributedDelete;
+use OC\Core\Command\Memcache\DistributedGet;
+use OC\Core\Command\Memcache\DistributedSet;
 use OC\Core\Command\Memcache\RedisCommand;
 use OC\Core\Command\Preview\Generate;
 use OC\Core\Command\Preview\ResetRenderedTexts;
+use OC\Core\Command\Router\ListRoutes;
+use OC\Core\Command\Router\MatchRoute;
 use OC\Core\Command\Security\BruteforceAttempts;
 use OC\Core\Command\Security\BruteforceResetAttempts;
 use OC\Core\Command\Security\ExportCertificates;
@@ -78,11 +85,13 @@ use OC\Core\Command\Security\ImportCertificate;
 use OC\Core\Command\Security\ListCertificates;
 use OC\Core\Command\Security\RemoveCertificate;
 use OC\Core\Command\SetupChecks;
+use OC\Core\Command\SnowflakeDecodeId;
 use OC\Core\Command\Status;
 use OC\Core\Command\SystemTag\Edit;
 use OC\Core\Command\TaskProcessing\EnabledCommand;
 use OC\Core\Command\TaskProcessing\GetCommand;
 use OC\Core\Command\TaskProcessing\Statistics;
+use OC\Core\Command\TaskProcessing\WorkerCommand;
 use OC\Core\Command\TwoFactorAuth\Cleanup;
 use OC\Core\Command\TwoFactorAuth\Enforce;
 use OC\Core\Command\TwoFactorAuth\State;
@@ -110,6 +119,8 @@ $application->add(Server::get(SignApp::class));
 $application->add(Server::get(SignCore::class));
 $application->add(Server::get(CheckApp::class));
 $application->add(Server::get(CheckCore::class));
+$application->add(Server::get(ListRoutes::class));
+$application->add(Server::get(MatchRoute::class));
 
 $config = Server::get(IConfig::class);
 
@@ -141,6 +152,7 @@ if ($config->getSystemValueBool('installed', false)) {
 	$application->add(Server::get(SetConfig::class));
 	$application->add(Server::get(Import::class));
 	$application->add(Server::get(ListConfigs::class));
+	$application->add(Server::get(Preset::class));
 	$application->add(Server::get(Command\Config\System\DeleteConfig::class));
 	$application->add(Server::get(Command\Config\System\GetConfig::class));
 	$application->add(Server::get(Command\Config\System\SetConfig::class));
@@ -196,7 +208,6 @@ if ($config->getSystemValueBool('installed', false)) {
 
 	$application->add(Server::get(Command\Preview\Cleanup::class));
 	$application->add(Server::get(Generate::class));
-	$application->add(Server::get(Command\Preview\Repair::class));
 	$application->add(Server::get(ResetRenderedTexts::class));
 
 	$application->add(Server::get(Add::class));
@@ -237,14 +248,21 @@ if ($config->getSystemValueBool('installed', false)) {
 	$application->add(Server::get(BruteforceAttempts::class));
 	$application->add(Server::get(BruteforceResetAttempts::class));
 	$application->add(Server::get(SetupChecks::class));
+	$application->add(Server::get(SnowflakeDecodeId::class));
 	$application->add(Server::get(Get::class));
 
 	$application->add(Server::get(GetCommand::class));
 	$application->add(Server::get(EnabledCommand::class));
 	$application->add(Server::get(Command\TaskProcessing\ListCommand::class));
 	$application->add(Server::get(Statistics::class));
+	$application->add(Server::get(Command\TaskProcessing\Cleanup::class));
+	$application->add(Server::get(WorkerCommand::class));
 
 	$application->add(Server::get(RedisCommand::class));
+	$application->add(Server::get(DistributedClear::class));
+	$application->add(Server::get(DistributedDelete::class));
+	$application->add(Server::get(DistributedGet::class));
+	$application->add(Server::get(DistributedSet::class));
 } else {
 	$application->add(Server::get(Command\Maintenance\Install::class));
 }

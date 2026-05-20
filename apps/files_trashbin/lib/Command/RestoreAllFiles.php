@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2021 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-only
@@ -6,6 +7,7 @@
 namespace OCA\Files_Trashbin\Command;
 
 use OC\Core\Command\Base;
+use OC\Files\SetupManager;
 use OCA\Files_Trashbin\Trash\ITrashManager;
 use OCA\Files_Trashbin\Trash\TrashItem;
 use OCP\Files\IRootFolder;
@@ -13,6 +15,7 @@ use OCP\IDBConnection;
 use OCP\IL10N;
 use OCP\IUserBackend;
 use OCP\IUserManager;
+use OCP\IUserSession;
 use OCP\L10N\IFactory;
 use Symfony\Component\Console\Exception\InvalidOptionException;
 use Symfony\Component\Console\Input\InputArgument;
@@ -47,12 +50,15 @@ class RestoreAllFiles extends Base {
 		protected IUserManager $userManager,
 		protected IDBConnection $dbConnection,
 		protected ITrashManager $trashManager,
+		protected SetupManager $setupManager,
+		protected IUserSession $userSession,
 		IFactory $l10nFactory,
 	) {
 		parent::__construct();
 		$this->l10n = $l10nFactory->get('files_trashbin');
 	}
 
+	#[\Override]
 	protected function configure(): void {
 		parent::configure();
 		$this
@@ -96,6 +102,7 @@ class RestoreAllFiles extends Base {
 			);
 	}
 
+	#[\Override]
 	protected function execute(InputInterface $input, OutputInterface $output): int {
 		/** @var string[] $users */
 		$users = $input->getArgument('user_id');
@@ -139,16 +146,15 @@ class RestoreAllFiles extends Base {
 	 * Restore deleted files for the given user according to the given filters
 	 */
 	protected function restoreDeletedFiles(string $uid, int $scope, ?int $since, ?int $until, bool $dryRun, OutputInterface $output): void {
-		\OC_Util::tearDownFS();
-		\OC_Util::setupFS($uid);
-		\OC_User::setUserId($uid);
-
 		$user = $this->userManager->get($uid);
-
-		if ($user === null) {
+		if (!$user) {
 			$output->writeln("<error>Unknown user $uid</error>");
 			return;
 		}
+
+		$this->setupManager->tearDown();
+		$this->setupManager->setupForUser($user);
+		$this->userSession->setUser($user);
 
 		$userTrashItems = $this->filterTrashItems(
 			$this->trashManager->listTrashRoot($user),

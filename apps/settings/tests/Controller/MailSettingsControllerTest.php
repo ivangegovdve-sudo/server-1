@@ -19,6 +19,7 @@ use OCP\IUserSession;
 use OCP\Mail\IEMailTemplate;
 use OCP\Mail\IMailer;
 use PHPUnit\Framework\MockObject\MockObject;
+use Psr\Log\LoggerInterface;
 
 /**
  * @package Tests\Settings\Controller
@@ -29,6 +30,7 @@ class MailSettingsControllerTest extends \Test\TestCase {
 	private IMailer&MockObject $mailer;
 	private IL10N&MockObject $l;
 	private IURLGenerator&MockObject $urlGenerator;
+	private LoggerInterface&MockObject $logger;
 	private MailSettingsController $mailController;
 
 	protected function setUp(): void {
@@ -39,6 +41,7 @@ class MailSettingsControllerTest extends \Test\TestCase {
 		$this->userSession = $this->createMock(IUserSession::class);
 		$this->mailer = $this->createMock(IMailer::class);
 		$this->urlGenerator = $this->createMock(IURLGenerator::class);
+		$this->logger = $this->createMock(LoggerInterface::class);
 		/** @var IRequest&MockObject $request */
 		$request = $this->createMock(IRequest::class);
 		$this->mailController = new MailSettingsController(
@@ -49,6 +52,7 @@ class MailSettingsControllerTest extends \Test\TestCase {
 			$this->userSession,
 			$this->urlGenerator,
 			$this->mailer,
+			$this->logger,
 		);
 	}
 
@@ -79,7 +83,7 @@ class MailSettingsControllerTest extends \Test\TestCase {
 		];
 		$this->config->expects($this->exactly(2))
 			->method('setSystemValues')
-			->willReturnCallback(function () use (&$calls) {
+			->willReturnCallback(function () use (&$calls): void {
 				$expected = array_shift($calls);
 				$this->assertEquals($expected, func_get_args());
 			});
@@ -91,7 +95,7 @@ class MailSettingsControllerTest extends \Test\TestCase {
 			'smtp',
 			'ssl',
 			'mx.nextcloud.org',
-			'1',
+			true,
 			'25',
 			'smtp'
 		);
@@ -104,7 +108,7 @@ class MailSettingsControllerTest extends \Test\TestCase {
 			'smtp',
 			'ssl',
 			'mx.nextcloud.org',
-			'0',
+			false,
 			'25',
 			'smtp'
 		);
@@ -112,15 +116,29 @@ class MailSettingsControllerTest extends \Test\TestCase {
 	}
 
 	public function testStoreCredentials(): void {
+		$calls = [];
 		$this->config
-			->expects($this->once())
-			->method('setSystemValues')
-			->with([
-				'mail_smtpname' => 'UsernameToStore',
-				'mail_smtppassword' => 'PasswordToStore',
-			]);
+			->expects($this->exactly(2))
+			->method('setSystemValue')
+			->willReturnCallback(function (string $key, ?string $value) use (&$calls): void {
+				$calls[] = [$key, $value];
+			});
 
 		$response = $this->mailController->storeCredentials('UsernameToStore', 'PasswordToStore');
+		$this->assertSame(Http::STATUS_OK, $response->getStatus());
+		self::assertEqualsCanonicalizing([
+			['mail_smtpname', 'UsernameToStore'],
+			['mail_smtppassword', 'PasswordToStore'],
+		], $calls);
+	}
+
+	public function testStoreCredentialsWithoutPassword(): void {
+		$this->config
+			->expects($this->exactly(1))
+			->method('setSystemValue')
+			->with('mail_smtpname', 'UsernameToStore');
+
+		$response = $this->mailController->storeCredentials('UsernameToStore', null);
 		$this->assertSame(Http::STATUS_OK, $response->getStatus());
 	}
 

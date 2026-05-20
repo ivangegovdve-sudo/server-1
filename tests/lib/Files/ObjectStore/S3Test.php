@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -12,6 +13,7 @@ use OCP\IConfig;
 use OCP\Server;
 
 class MultiPartUploadS3 extends S3 {
+	#[\Override]
 	public function writeObject($urn, $stream, ?string $mimetype = null) {
 		$this->getConnection()->upload($this->bucket, $urn, $stream, 'private', [
 			'mup_threshold' => 1,
@@ -29,30 +31,33 @@ class NonSeekableStream extends Wrapper {
 		return Wrapper::wrapSource($source, $context, 'nonseek', self::class);
 	}
 
+	#[\Override]
 	public function dir_opendir($path, $options) {
 		return false;
 	}
 
+	#[\Override]
 	public function stream_open($path, $mode, $options, &$opened_path) {
 		$this->loadContext('nonseek');
 		return true;
 	}
 
+	#[\Override]
 	public function stream_seek($offset, $whence = SEEK_SET) {
 		return false;
 	}
 }
 
-/**
- * @group PRIMARY-s3
- */
+#[\PHPUnit\Framework\Attributes\Group('PRIMARY-s3')]
 class S3Test extends ObjectStoreTestCase {
+	#[\Override]
 	public function setUp(): void {
 		parent::setUp();
 		$s3 = $this->getInstance();
 		$s3->deleteObject('multiparttest');
 	}
 
+	#[\Override]
 	protected function getInstance() {
 		$config = Server::get(IConfig::class)->getSystemValue('objectstore');
 		if (!is_array($config) || $config['class'] !== S3::class) {
@@ -93,7 +98,7 @@ class S3Test extends ObjectStoreTestCase {
 	}
 
 	public function assertNoUpload($objectUrn) {
-		/** @var \OC\Files\ObjectStore\S3 */
+		/** @var S3 */
 		$s3 = $this->getInstance();
 		$s3client = $s3->getConnection();
 		$uploads = $s3client->listMultipartUploads([
@@ -108,6 +113,13 @@ class S3Test extends ObjectStoreTestCase {
 
 		$emptyStream = fopen('php://memory', 'r');
 		fwrite($emptyStream, '');
+
+		$warnings = [];
+		set_error_handler(
+			function (int $errno, string $errstr) use (&$warnings): void {
+				$warnings[] = $errstr;
+			},
+		);
 
 		$s3->writeObject('emptystream', $emptyStream);
 
@@ -125,6 +137,8 @@ class S3Test extends ObjectStoreTestCase {
 		self::assertTrue($thrown, 'readObject with range requests are not expected to work on empty objects');
 
 		$s3->deleteObject('emptystream');
+		$this->assertOnlyExpectedWarnings($warnings);
+		restore_error_handler();
 	}
 
 	/** File size to upload in bytes */
@@ -134,7 +148,7 @@ class S3Test extends ObjectStoreTestCase {
 		];
 	}
 
-	/** @dataProvider dataFileSizes */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataFileSizes')]
 	public function testFileSizes($size): void {
 		if (str_starts_with(PHP_VERSION, '8.3') && getenv('CI')) {
 			$this->markTestSkipped('Test is unreliable and skipped on 8.3');

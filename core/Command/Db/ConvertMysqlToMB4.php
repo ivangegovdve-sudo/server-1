@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2017 ownCloud GmbH
  * SPDX-License-Identifier: AGPL-3.0-only
@@ -26,12 +27,14 @@ class ConvertMysqlToMB4 extends Command {
 		parent::__construct();
 	}
 
+	#[\Override]
 	protected function configure() {
 		$this
 			->setName('db:convert-mysql-charset')
 			->setDescription('Convert charset of MySQL/MariaDB to use utf8mb4');
 	}
 
+	#[\Override]
 	protected function execute(InputInterface $input, OutputInterface $output): int {
 		if ($this->connection->getDatabaseProvider() !== IDBConnection::PLATFORM_MYSQL) {
 			$output->writeln('This command is only valid for MySQL/MariaDB databases.');

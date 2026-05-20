@@ -9,14 +9,14 @@ declare(strict_types=1);
 namespace OC\Security\Signature\Model;
 
 use JsonSerializable;
-use NCU\Security\Signature\Enum\DigestAlgorithm;
-use NCU\Security\Signature\Enum\SignatureAlgorithm;
-use NCU\Security\Signature\Exceptions\SignatoryException;
-use NCU\Security\Signature\Exceptions\SignatoryNotFoundException;
-use NCU\Security\Signature\IOutgoingSignedRequest;
-use NCU\Security\Signature\ISignatoryManager;
-use NCU\Security\Signature\ISignatureManager;
 use OC\Security\Signature\SignatureManager;
+use OCP\Security\Signature\Enum\DigestAlgorithm;
+use OCP\Security\Signature\Enum\SignatureAlgorithm;
+use OCP\Security\Signature\Exceptions\SignatoryException;
+use OCP\Security\Signature\Exceptions\SignatoryNotFoundException;
+use OCP\Security\Signature\IOutgoingSignedRequest;
+use OCP\Security\Signature\ISignatoryManager;
+use OCP\Security\Signature\ISignatureManager;
 
 /**
  * extends ISignedRequest to add info requested at the generation of the signature
@@ -75,6 +75,7 @@ class OutgoingSignedRequest extends SignedRequest implements
 	 * @return $this
 	 * @since 31.0.0
 	 */
+	#[\Override]
 	public function setHost(string $host): self {
 		$this->host = $host;
 		return $this;
@@ -86,6 +87,7 @@ class OutgoingSignedRequest extends SignedRequest implements
 	 * @return string
 	 * @since 31.0.0
 	 */
+	#[\Override]
 	public function getHost(): string {
 		return $this->host;
 	}
@@ -99,6 +101,7 @@ class OutgoingSignedRequest extends SignedRequest implements
 	 * @return self
 	 * @since 31.0.0
 	 */
+	#[\Override]
 	public function addHeader(string $key, string|int|float $value): self {
 		$this->headers[$key] = $value;
 		return $this;
@@ -110,6 +113,7 @@ class OutgoingSignedRequest extends SignedRequest implements
 	 * @return array
 	 * @since 31.0.0
 	 */
+	#[\Override]
 	public function getHeaders(): array {
 		return $this->headers;
 	}
@@ -122,6 +126,7 @@ class OutgoingSignedRequest extends SignedRequest implements
 	 * @return self
 	 * @since 31.0.0
 	 */
+	#[\Override]
 	public function setHeaderList(array $list): self {
 		$this->headerList = $list;
 		return $this;
@@ -133,6 +138,7 @@ class OutgoingSignedRequest extends SignedRequest implements
 	 * @return list<string>
 	 * @since 31.0.0
 	 */
+	#[\Override]
 	public function getHeaderList(): array {
 		return $this->headerList;
 	}
@@ -145,6 +151,7 @@ class OutgoingSignedRequest extends SignedRequest implements
 	 * @return self
 	 * @since 31.0.0
 	 */
+	#[\Override]
 	public function setAlgorithm(SignatureAlgorithm $algorithm): self {
 		$this->algorithm = $algorithm;
 		return $this;
@@ -156,6 +163,7 @@ class OutgoingSignedRequest extends SignedRequest implements
 	 * @return SignatureAlgorithm
 	 * @since 31.0.0
 	 */
+	#[\Override]
 	public function getAlgorithm(): SignatureAlgorithm {
 		return $this->algorithm;
 	}
@@ -168,6 +176,7 @@ class OutgoingSignedRequest extends SignedRequest implements
 	 * @throws SignatoryNotFoundException
 	 * @since 31.0.0
 	 */
+	#[\Override]
 	public function sign(): self {
 		$privateKey = $this->getSignatory()->getPrivateKey();
 		if ($privateKey === '') {
@@ -213,6 +222,7 @@ class OutgoingSignedRequest extends SignedRequest implements
 		return base64_encode($signed);
 	}
 
+	#[\Override]
 	public function jsonSerialize(): array {
 		return array_merge(
 			parent::jsonSerialize(),

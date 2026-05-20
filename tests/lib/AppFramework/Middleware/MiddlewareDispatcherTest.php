@@ -46,6 +46,7 @@ class TestMiddleware extends Middleware {
 		self::$beforeOutputCalled = 0;
 	}
 
+	#[\Override]
 	public function beforeController($controller, $methodName) {
 		self::$beforeControllerCalled++;
 		$this->beforeControllerOrder = self::$beforeControllerCalled;
@@ -56,6 +57,7 @@ class TestMiddleware extends Middleware {
 		}
 	}
 
+	#[\Override]
 	public function afterException($controller, $methodName, \Exception $exception) {
 		self::$afterExceptionCalled++;
 		$this->afterExceptionOrder = self::$afterExceptionCalled;
@@ -65,6 +67,7 @@ class TestMiddleware extends Middleware {
 		parent::afterException($controller, $methodName, $exception);
 	}
 
+	#[\Override]
 	public function afterController($controller, $methodName, Response $response) {
 		self::$afterControllerCalled++;
 		$this->afterControllerOrder = self::$afterControllerCalled;
@@ -74,6 +77,7 @@ class TestMiddleware extends Middleware {
 		return parent::afterController($controller, $methodName, $response);
 	}
 
+	#[\Override]
 	public function beforeOutput($controller, $methodName, $output) {
 		self::$beforeOutputCalled++;
 		$this->beforeOutputOrder = self::$beforeOutputCalled;
@@ -85,7 +89,7 @@ class TestMiddleware extends Middleware {
 }
 
 class TestController extends Controller {
-	public function method(): void {
+	public function controllerMethod(): void {
 	}
 }
 
@@ -101,6 +105,7 @@ class MiddlewareDispatcherTest extends \Test\TestCase {
 	 */
 	private $dispatcher;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -115,10 +120,10 @@ class MiddlewareDispatcherTest extends \Test\TestCase {
 
 	private function getControllerMock() {
 		return $this->getMockBuilder(TestController::class)
-			->onlyMethods(['method'])
+			->onlyMethods(['controllerMethod'])
 			->setConstructorArgs(['app',
 				new Request(
-					['method' => 'GET'],
+					['controllerMethod' => 'GET'],
 					$this->createMock(IRequestId::class),
 					$this->createMock(IConfig::class)
 				)

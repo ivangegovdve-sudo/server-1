@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -12,6 +13,7 @@ use OC\Installer;
 use OC\Setup;
 use OC\SystemConfig;
 use OCP\Defaults;
+use OCP\EventDispatcher\IEventDispatcher;
 use OCP\IL10N;
 use OCP\L10N\IFactory as IL10NFactory;
 use OCP\Security\ISecureRandom;
@@ -27,7 +29,9 @@ class SetupTest extends \Test\TestCase {
 	protected LoggerInterface $logger;
 	protected ISecureRandom $random;
 	protected Installer $installer;
+	protected IEventDispatcher $eventDispatcher;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -41,9 +45,10 @@ class SetupTest extends \Test\TestCase {
 		$this->logger = $this->createMock(LoggerInterface::class);
 		$this->random = $this->createMock(ISecureRandom::class);
 		$this->installer = $this->createMock(Installer::class);
+		$this->eventDispatcher = $this->createMock(IEventDispatcher::class);
 		$this->setupClass = $this->getMockBuilder(Setup::class)
 			->onlyMethods(['class_exists', 'is_callable', 'getAvailableDbDriversForPdo'])
-			->setConstructorArgs([$this->config, $this->iniWrapper, $this->l10nFactory, $this->defaults, $this->logger, $this->random, $this->installer])
+			->setConstructorArgs([$this->config, $this->iniWrapper, $this->l10nFactory, $this->defaults, $this->logger, $this->random, $this->installer, $this->eventDispatcher])
 			->getMock();
 	}
 
@@ -128,10 +133,10 @@ class SetupTest extends \Test\TestCase {
 	}
 
 	/**
-	 * @dataProvider findWebRootProvider
 	 * @param $url
 	 * @param $expected
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('findWebRootProvider')]
 	public function testFindWebRootCli($url, $expected): void {
 		$cliState = \OC::$CLI;
 

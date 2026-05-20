@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2018-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -8,6 +9,7 @@
 namespace Test\Hooks;
 
 use OC\Hooks\BasicEmitter;
+use OC\Hooks\Emitter;
 
 /**
  * Class DummyEmitter
@@ -34,10 +36,11 @@ class EmittedException extends \Exception {
 
 class BasicEmitterTest extends \Test\TestCase {
 	/**
-	 * @var \OC\Hooks\Emitter $emitter
+	 * @var Emitter $emitter
 	 */
 	protected $emitter;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 		$this->emitter = new DummyEmitter();
@@ -131,7 +134,7 @@ class BasicEmitterTest extends \Test\TestCase {
 		$this->expectException(\Test\Hooks\EmittedException::class);
 
 		$this->emitter->listen('Test', 'test', function ($foo, $bar): void {
-			if ($foo == 'foo' and $bar == 'bar') {
+			if ($foo === 'foo' && $bar === 'bar') {
 				throw new EmittedException;
 			}
 		});
@@ -143,7 +146,7 @@ class BasicEmitterTest extends \Test\TestCase {
 		$this->expectException(\Test\Hooks\EmittedException::class);
 
 		$this->emitter->listen('Test', 'test', function ($foo, $bar): void {
-			if ($foo == 'foo' and $bar == 'bar') {
+			if ($foo === 'foo' && $bar === 'bar') {
 				throw new EmittedException;
 			}
 		});

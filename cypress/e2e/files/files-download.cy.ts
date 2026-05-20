@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-import type { User } from '@nextcloud/cypress'
-import { getRowForFile, navigateToFolder, triggerActionForFile } from './FilesUtils'
-import { deleteDownloadsFolderBeforeEach } from 'cypress-delete-downloads-folder'
-import { zipFileContains } from '../../support/utils/assertions.ts'
+import type { User } from '@nextcloud/e2e-test-server/cypress'
 
-import randomString from 'crypto-random-string'
+import { zipFileContains } from '../../support/utils/assertions.ts'
+import { deleteDownloadsFolderBeforeEach } from '../../support/utils/deleteDownloadsFolder.ts'
+import { randomString } from '../../support/utils/randomString.ts'
+import { getRowForFile, navigateToFolder, triggerActionForFile, triggerSelectionAction } from './FilesUtils.ts'
 
 describe('files: Download files using file actions', { testIsolation: true }, () => {
 	let user: User
@@ -171,7 +171,6 @@ describe('files: Download files using default action', { testIsolation: true }, 
 })
 
 describe('files: Download files using selection', () => {
-
 	deleteDownloadsFolderBeforeEach()
 
 	it('can download selected files', () => {
@@ -195,12 +194,7 @@ describe('files: Download files using selection', () => {
 		})
 
 		// click download
-		cy.get('[data-cy-files-list-selection-actions]')
-			.findByRole('button', { name: 'Actions' })
-			.click()
-		cy.findByRole('menuitem', { name: 'Download (selected)' })
-			.should('be.visible')
-			.click()
+		triggerSelectionAction('download')
 
 		// check a file is downloaded
 		const downloadsFolder = Cypress.config('downloadsFolder')
@@ -238,11 +232,7 @@ describe('files: Download files using selection', () => {
 		})
 
 		// click download
-		cy.get('[data-cy-files-list-selection-actions]')
-			.findByRole('button', { name: 'Actions' })
-			.click()
-		cy.findByRole('menuitem', { name: 'Download (selected)' })
-			.click()
+		triggerSelectionAction('download')
 
 		// check a file is downloaded
 		const downloadsFolder = Cypress.config('downloadsFolder')
@@ -283,11 +273,7 @@ describe('files: Download files using selection', () => {
 		})
 
 		// click download
-		cy.get('[data-cy-files-list-selection-actions]')
-			.findByRole('button', { name: 'Actions' })
-			.click()
-		cy.findByRole('menuitem', { name: 'Download (selected)' })
-			.click()
+		triggerSelectionAction('download')
 
 		// check a file is downloaded
 		const downloadsFolder = Cypress.config('downloadsFolder')
@@ -331,11 +317,7 @@ describe('files: Download files using selection', () => {
 		})
 
 		// click download
-		cy.get('[data-cy-files-list-selection-actions]')
-			.findByRole('button', { name: 'Actions' })
-			.click()
-		cy.findByRole('menuitem', { name: 'Download (selected)' })
-			.click()
+		triggerSelectionAction('download')
 
 		// check a file is downloaded
 		const downloadsFolder = Cypress.config('downloadsFolder')

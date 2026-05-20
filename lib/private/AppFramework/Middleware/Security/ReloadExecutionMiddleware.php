@@ -19,22 +19,20 @@ use OCP\IURLGenerator;
  * a reload but if the session variable is set we properly redirect to the login page.
  */
 class ReloadExecutionMiddleware extends Middleware {
-	/** @var ISession */
-	private $session;
-	/** @var IURLGenerator */
-	private $urlGenerator;
-
-	public function __construct(ISession $session, IURLGenerator $urlGenerator) {
-		$this->session = $session;
-		$this->urlGenerator = $urlGenerator;
+	public function __construct(
+		private ISession $session,
+		private IURLGenerator $urlGenerator,
+	) {
 	}
 
+	#[\Override]
 	public function beforeController($controller, $methodName) {
 		if ($this->session->exists('clearingExecutionContexts')) {
 			throw new ReloadExecutionException();
 		}
 	}
 
+	#[\Override]
 	public function afterException($controller, $methodName, \Exception $exception) {
 		if ($exception instanceof ReloadExecutionException) {
 			$this->session->remove('clearingExecutionContexts');

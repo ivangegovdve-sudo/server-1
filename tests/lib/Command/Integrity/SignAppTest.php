@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -25,6 +26,7 @@ class SignAppTest extends TestCase {
 	/** @var IURLGenerator|\PHPUnit\Framework\MockObject\MockObject */
 	private $urlGenerator;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 		$this->checker = $this->createMock(Checker::class);

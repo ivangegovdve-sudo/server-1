@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -40,6 +41,7 @@ class ManagerTest extends TestCase {
 	/** @var ArrayCache|\PHPUnit\Framework\MockObject\MockObject */
 	private $arrayCache;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 		$this->config = $this->createMock(IConfig::class);
@@ -86,9 +88,7 @@ class ManagerTest extends TestCase {
 		return $this->manager;
 	}
 
-	/**
-	 * @depends testModuleRegistration
-	 */
+	#[\PHPUnit\Framework\Attributes\Depends('testModuleRegistration')]
 	public function testModuleReRegistration($manager): void {
 		$this->expectException(ModuleAlreadyExistsException::class);
 		$this->expectExceptionMessage('Id "ID0" already used by encryption module "TestDummyModule0"');
@@ -265,7 +265,7 @@ class ManagerTest extends TestCase {
 		$encryptionModule->expects($this->any())
 			->method('getDisplayName')
 			->willReturn('TestDummyModule' . $id);
-		/** @var \OCP\Encryption\IEncryptionModule $encryptionModule */
+		/** @var IEncryptionModule $encryptionModule */
 		$manager->registerEncryptionModule('ID' . $id, 'TestDummyModule' . $id, function () use ($encryptionModule) {
 			return $encryptionModule;
 		});

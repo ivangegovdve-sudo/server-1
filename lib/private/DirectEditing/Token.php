@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2019 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -9,23 +10,23 @@ use OCP\DirectEditing\IToken;
 use OCP\Files\File;
 
 class Token implements IToken {
-	/** @var Manager */
-	private $manager;
-	private $data;
-
-	public function __construct(Manager $manager, $data) {
-		$this->manager = $manager;
-		$this->data = $data;
+	public function __construct(
+		private Manager $manager,
+		private $data,
+	) {
 	}
 
+	#[\Override]
 	public function extend(): void {
 		$this->manager->refreshToken($this->data['token']);
 	}
 
+	#[\Override]
 	public function invalidate(): void {
 		$this->manager->invalidateToken($this->data['token']);
 	}
 
+	#[\Override]
 	public function getFile(): File {
 		if ($this->data['share_id'] !== null) {
 			return $this->manager->getShareForToken($this->data['share_id']);
@@ -37,18 +38,22 @@ class Token implements IToken {
 		return $this->data['token'];
 	}
 
+	#[\Override]
 	public function useTokenScope(): void {
 		$this->manager->invokeTokenScope($this->data['user_id']);
 	}
 
+	#[\Override]
 	public function hasBeenAccessed(): bool {
 		return (bool)$this->data['accessed'];
 	}
 
+	#[\Override]
 	public function getEditor(): string {
 		return $this->data['editor_id'];
 	}
 
+	#[\Override]
 	public function getUser(): string {
 		return $this->data['user_id'];
 	}

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2018-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -62,6 +63,7 @@ class MessageTest extends TestCase {
 		];
 	}
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -71,11 +73,11 @@ class MessageTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider mailAddressProvider
 	 *
 	 * @param string $unconverted
 	 * @param string $expected
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('mailAddressProvider')]
 	public function testConvertAddresses($unconverted, $expected): void {
 		$this->assertEquals($expected, self::invokePrivate($this->message, 'convertAddresses', [$unconverted]));
 	}

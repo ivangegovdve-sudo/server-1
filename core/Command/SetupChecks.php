@@ -22,6 +22,7 @@ class SetupChecks extends Base {
 		parent::__construct();
 	}
 
+	#[\Override]
 	protected function configure(): void {
 		parent::configure();
 
@@ -31,6 +32,7 @@ class SetupChecks extends Base {
 		;
 	}
 
+	#[\Override]
 	protected function execute(InputInterface $input, OutputInterface $output): int {
 		$results = $this->setupCheckManager->runAll();
 		switch ($input->getOption('output')) {
@@ -61,12 +63,12 @@ class SetupChecks extends Base {
 							$description = $this->richTextFormatter->richToParsed($description, $descriptionParameters);
 						}
 						$output->writeln(
-							"\t\t" .
-							($styleTag !== null ? "<{$styleTag}>" : '') .
-							"{$emoji} " .
-							($check->getName() ?? $check::class) .
-							($description !== null ? ': ' . $description : '') .
-							($styleTag !== null ? "</{$styleTag}>" : ''),
+							"\t\t"
+							. ($styleTag !== null ? "<{$styleTag}>" : '')
+							. "{$emoji} "
+							. ($check->getName() ?? $check::class)
+							. ($description !== null ? ': ' . $description : '')
+							. ($styleTag !== null ? "</{$styleTag}>" : ''),
 							$verbosity
 						);
 					}

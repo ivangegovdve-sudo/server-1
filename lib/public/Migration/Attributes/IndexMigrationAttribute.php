@@ -8,14 +8,13 @@ declare(strict_types=1);
  */
 namespace OCP\Migration\Attributes;
 
-use JsonSerializable;
+use OCP\AppFramework\Attribute\Consumable;
 
 /**
  * generic class related to migration attribute about index changes
- *
- * @since 30.0.0
  */
-class IndexMigrationAttribute extends MigrationAttribute implements JsonSerializable {
+#[Consumable(since: '30.0.0')]
+class IndexMigrationAttribute extends MigrationAttribute {
 	/**
 	 * @param string $table name of the database table
 	 * @param IndexType|null $type type of the index
@@ -57,6 +56,7 @@ class IndexMigrationAttribute extends MigrationAttribute implements JsonSerializ
 	 * @return $this
 	 * @since 30.0.0
 	 */
+	#[\Override]
 	public function import(array $data): self {
 		parent::import($data);
 		$this->setType(IndexType::tryFrom($data['type'] ?? ''));
@@ -67,6 +67,7 @@ class IndexMigrationAttribute extends MigrationAttribute implements JsonSerializ
 	 * @return array
 	 * @since 30.0.0
 	 */
+	#[\Override]
 	public function jsonSerialize(): array {
 		return array_merge(
 			parent::jsonSerialize(),

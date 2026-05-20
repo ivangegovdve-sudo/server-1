@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2018-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -14,6 +15,7 @@ use OCP\Server;
 class TestQueuedJobNew extends QueuedJob {
 	public bool $ran = false;
 
+	#[\Override]
 	public function run($argument) {
 		$this->ran = true;
 	}
@@ -22,6 +24,7 @@ class TestQueuedJobNew extends QueuedJob {
 class QueuedJobTest extends \Test\TestCase {
 	private DummyJobList $jobList;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 

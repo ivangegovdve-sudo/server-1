@@ -7,6 +7,7 @@
  */
 namespace OC\Core\Command\Config;
 
+use OC\Config\ConfigManager;
 use OC\Core\Command\Base;
 use OC\SystemConfig;
 use OCP\IAppConfig;
@@ -22,10 +23,12 @@ class ListConfigs extends Base {
 	public function __construct(
 		protected SystemConfig $systemConfig,
 		protected IAppConfig $appConfig,
+		protected ConfigManager $configManager,
 	) {
 		parent::__construct();
 	}
 
+	#[\Override]
 	protected function configure() {
 		parent::configure();
 
@@ -44,12 +47,18 @@ class ListConfigs extends Base {
 				InputOption::VALUE_NONE,
 				'Use this option when you want to include sensitive configs like passwords, salts, ...'
 			)
+			->addOption('migrate', null, InputOption::VALUE_NONE, 'Rename config keys of all enabled apps, based on ConfigLexicon')
 		;
 	}
 
+	#[\Override]
 	protected function execute(InputInterface $input, OutputInterface $output): int {
 		$app = $input->getArgument('app');
 		$noSensitiveValues = !$input->getOption('private');
+
+		if ($input->getOption('migrate')) {
+			$this->configManager->migrateConfigLexiconKeys(($app === 'all') ? null : $app);
+		}
 
 		if (!is_string($app)) {
 			$output->writeln('<error>Invalid app value given</error>');
@@ -118,7 +127,7 @@ class ListConfigs extends Base {
 	 */
 	protected function getAppConfigs(string $app, bool $noSensitiveValues) {
 		if ($noSensitiveValues) {
-			return $this->appConfig->getFilteredValues($app, false);
+			return $this->appConfig->getFilteredValues($app);
 		} else {
 			return $this->appConfig->getValues($app, false);
 		}
@@ -129,6 +138,7 @@ class ListConfigs extends Base {
 	 * @param CompletionContext $context
 	 * @return string[]
 	 */
+	#[\Override]
 	public function completeArgumentValues($argumentName, CompletionContext $context) {
 		if ($argumentName === 'app') {
 			return array_merge(['all', 'system'], \OC_App::getAllApps());

@@ -25,12 +25,13 @@ use OCP\IGroupManager;
 class DisplayNameCache implements IEventListener {
 	private CappedMemoryCache $cache;
 	private ICache $memCache;
-	private IGroupManager $groupManager;
 
-	public function __construct(ICacheFactory $cacheFactory, IGroupManager $groupManager) {
+	public function __construct(
+		ICacheFactory $cacheFactory,
+		private IGroupManager $groupManager,
+	) {
 		$this->cache = new CappedMemoryCache();
 		$this->memCache = $cacheFactory->createDistributed('groupDisplayNameMappingCache');
-		$this->groupManager = $groupManager;
 	}
 
 	public function getDisplayName(string $groupId): ?string {
@@ -60,6 +61,7 @@ class DisplayNameCache implements IEventListener {
 		$this->memCache->clear();
 	}
 
+	#[\Override]
 	public function handle(Event $event): void {
 		if ($event instanceof GroupChangedEvent && $event->getFeature() === 'displayName') {
 			$groupId = $event->getGroup()->getGID();

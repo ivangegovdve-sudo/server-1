@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2018 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -23,6 +24,7 @@ use OCP\IUserSession;
 use OCP\Session\Exceptions\SessionNotAvailableException;
 use OCP\User\Backend\IPasswordConfirmationBackend;
 use Psr\Log\LoggerInterface;
+use ReflectionAttribute;
 use ReflectionMethod;
 
 class PasswordConfirmationMiddleware extends Middleware {
@@ -43,10 +45,9 @@ class PasswordConfirmationMiddleware extends Middleware {
 	/**
 	 * @throws NotConfirmedException
 	 */
+	#[\Override]
 	public function beforeController(Controller $controller, string $methodName) {
-		$reflectionMethod = new ReflectionMethod($controller, $methodName);
-
-		if (!$this->needsPasswordConfirmation($reflectionMethod)) {
+		if (!$this->needsPasswordConfirmation()) {
 			return;
 		}
 
@@ -77,8 +78,12 @@ class PasswordConfirmationMiddleware extends Middleware {
 			return;
 		}
 
+		$reflectionMethod = new ReflectionMethod($controller, $methodName);
 		if ($this->isPasswordConfirmationStrict($reflectionMethod)) {
 			$authHeader = $this->request->getHeader('Authorization');
+			if (!str_starts_with(strtolower($authHeader), 'basic ')) {
+				throw new NotConfirmedException('Required authorization header missing');
+			}
 			[, $password] = explode(':', base64_decode(substr($authHeader, 6)), 2);
 			$loginName = $this->session->get('loginname');
 			$loginResult = $this->userManager->checkPassword($loginName, $password);
@@ -96,21 +101,12 @@ class PasswordConfirmationMiddleware extends Middleware {
 		}
 	}
 
-	private function needsPasswordConfirmation(ReflectionMethod $reflectionMethod): bool {
-		$attributes = $reflectionMethod->getAttributes(PasswordConfirmationRequired::class);
-		if (!empty($attributes)) {
-			return true;
-		}
-
-		if ($this->reflector->hasAnnotation('PasswordConfirmationRequired')) {
-			$this->logger->debug($reflectionMethod->getDeclaringClass()->getName() . '::' . $reflectionMethod->getName() . ' uses the @' . 'PasswordConfirmationRequired' . ' annotation and should use the #[PasswordConfirmationRequired] attribute instead');
-			return true;
-		}
-
-		return false;
+	private function needsPasswordConfirmation(): bool {
+		return $this->reflector->hasAnnotationOrAttribute('PasswordConfirmationRequired', PasswordConfirmationRequired::class);
 	}
 
 	private function isPasswordConfirmationStrict(ReflectionMethod $reflectionMethod): bool {
+		/** @var ReflectionAttribute<PasswordConfirmationRequired>[] $attributes */
 		$attributes = $reflectionMethod->getAttributes(PasswordConfirmationRequired::class);
 		return !empty($attributes) && ($attributes[0]->newInstance()->getStrict());
 	}

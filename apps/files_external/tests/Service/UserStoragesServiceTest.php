@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -7,6 +8,7 @@
 namespace OCA\Files_External\Tests\Service;
 
 use OC\Files\Filesystem;
+use OC\User\User;
 use OCA\Files_External\Lib\StorageConfig;
 use OCA\Files_External\MountConfig;
 use OCA\Files_External\NotFoundException;
@@ -20,13 +22,11 @@ use OCP\Server;
 use PHPUnit\Framework\MockObject\MockObject;
 use Test\Traits\UserTrait;
 
-/**
- * @group DB
- */
+#[\PHPUnit\Framework\Attributes\Group(name: 'DB')]
 class UserStoragesServiceTest extends StoragesServiceTestCase {
 	use UserTrait;
 
-	protected \OC\User\User $user;
+	protected User $user;
 
 	protected string $userId;
 	protected StoragesService $globalStoragesService;
@@ -34,7 +34,7 @@ class UserStoragesServiceTest extends StoragesServiceTestCase {
 	protected function setUp(): void {
 		parent::setUp();
 
-		$this->globalStoragesService = new GlobalStoragesService($this->backendService, $this->dbConfig, $this->mountCache, $this->eventDispatcher);
+		$this->globalStoragesService = new GlobalStoragesService($this->backendService, $this->dbConfig, $this->eventDispatcher, $this->appConfig);
 
 		$this->userId = $this->getUniqueID('user_');
 		$this->createUser($this->userId, $this->userId);
@@ -47,7 +47,7 @@ class UserStoragesServiceTest extends StoragesServiceTestCase {
 			->method('getUser')
 			->willReturn($this->user);
 
-		$this->service = new UserStoragesService($this->backendService, $this->dbConfig, $userSession, $this->mountCache, $this->eventDispatcher);
+		$this->service = new UserStoragesService($this->backendService, $this->dbConfig, $userSession, $this->eventDispatcher, $this->appConfig);
 	}
 
 	private function makeTestStorageData() {
@@ -126,9 +126,7 @@ class UserStoragesServiceTest extends StoragesServiceTestCase {
 		$this->assertEmpty(self::$hookCalls);
 	}
 
-	/**
-	 * @dataProvider deleteStorageDataProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'deleteStorageDataProvider')]
 	public function testDeleteStorage($backendOptions, $rustyStorageId): void {
 		parent::testDeleteStorage($backendOptions, $rustyStorageId);
 

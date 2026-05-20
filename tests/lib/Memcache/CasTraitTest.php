@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -8,18 +9,22 @@
 namespace Test\Memcache;
 
 use OC\Memcache\ArrayCache;
+use OC\Memcache\CasTrait;
 use Test\TestCase;
 
-/**
- * @group Memcache
- */
+#[\PHPUnit\Framework\Attributes\Group('Memcache')]
 class CasTraitTest extends TestCase {
 	/**
-	 * @return \OC\Memcache\CasTrait
+	 * @return CasTrait
 	 */
 	private function getCache() {
 		$sourceCache = new ArrayCache();
-		$mock = $this->getMockForTrait('\OC\Memcache\CasTrait');
+		$mock = $this->getMockBuilder(CasTraitTestClass::class)->onlyMethods([
+			'set',
+			'get',
+			'add',
+			'remove',
+		])->getMock();
 
 		$mock->expects($this->any())
 			->method('set')

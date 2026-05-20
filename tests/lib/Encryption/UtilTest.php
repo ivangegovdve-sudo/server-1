@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -36,6 +37,7 @@ class UtilTest extends TestCase {
 	private $config;
 	private Util $util;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 		$this->view = $this->getMockBuilder(View::class)
@@ -54,9 +56,7 @@ class UtilTest extends TestCase {
 		);
 	}
 
-	/**
-	 * @dataProvider providesHeadersForEncryptionModule
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('providesHeadersForEncryptionModule')]
 	public function testGetEncryptionModuleId($expected, $header): void {
 		$id = $this->util->getEncryptionModuleId($header);
 		$this->assertEquals($expected, $id);
@@ -70,9 +70,7 @@ class UtilTest extends TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider providesHeaders
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('providesHeaders')]
 	public function testCreateHeader($expected, $header, $moduleId): void {
 		$em = $this->createMock(IEncryptionModule::class);
 		$em->expects($this->any())->method('getId')->willReturn($moduleId);
@@ -103,9 +101,7 @@ class UtilTest extends TestCase {
 		$this->util->createHeader($header, $em);
 	}
 
-	/**
-	 * @dataProvider providePathsForTestIsExcluded
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('providePathsForTestIsExcluded')]
 	public function testIsExcluded($path, $keyStorageRoot, $expected): void {
 		$this->config->expects($this->once())
 			->method('getAppValue')
@@ -144,9 +140,7 @@ class UtilTest extends TestCase {
 		return false;
 	}
 
-	/**
-	 * @dataProvider dataTestIsFile
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataTestIsFile')]
 	public function testIsFile($path, $expected): void {
 		$this->assertSame($expected,
 			$this->util->isFile($path)
@@ -166,11 +160,11 @@ class UtilTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider dataTestStripPartialFileExtension
 	 *
 	 * @param string $path
 	 * @param string $expected
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataTestStripPartialFileExtension')]
 	public function testStripPartialFileExtension($path, $expected): void {
 		$this->assertSame($expected,
 			$this->util->stripPartialFileExtension($path));
@@ -185,9 +179,7 @@ class UtilTest extends TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider dataTestParseRawHeader
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataTestParseRawHeader')]
 	public function testParseRawHeader($rawHeader, $expected): void {
 		$result = $this->util->parseRawHeader($rawHeader);
 		$this->assertSameSize($expected, $result);
@@ -213,12 +205,12 @@ class UtilTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider dataTestGetFileKeyDir
 	 *
 	 * @param bool $isSystemWideMountPoint
 	 * @param string $storageRoot
 	 * @param string $expected
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataTestGetFileKeyDir')]
 	public function testGetFileKeyDir($isSystemWideMountPoint, $storageRoot, $expected): void {
 		$path = '/user1/files/foo/bar.txt';
 		$owner = 'user1';

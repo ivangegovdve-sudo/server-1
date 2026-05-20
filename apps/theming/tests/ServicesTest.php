@@ -24,9 +24,9 @@ use Test\TestCase;
 /**
  * Class ServicesTest
  *
- * @group DB
  * @package OCA\Theming\Tests
  */
+#[\PHPUnit\Framework\Attributes\Group(name: 'DB')]
 class ServicesTest extends TestCase {
 	protected App $app;
 
@@ -60,9 +60,7 @@ class ServicesTest extends TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider queryData
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'queryData')]
 	public function testContainerQuery(string $service, ?string $expected = null): void {
 		if ($expected === null) {
 			$expected = $service;

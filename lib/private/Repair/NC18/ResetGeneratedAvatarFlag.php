@@ -14,17 +14,13 @@ use OCP\Migration\IOutput;
 use OCP\Migration\IRepairStep;
 
 class ResetGeneratedAvatarFlag implements IRepairStep {
-	/** @var IConfig */
-	private $config;
-	/** @var IDBConnection */
-	private $connection;
-
-	public function __construct(IConfig $config,
-		IDBConnection $connection) {
-		$this->config = $config;
-		$this->connection = $connection;
+	public function __construct(
+		private readonly IConfig $config,
+		private readonly IDBConnection $connection,
+	) {
 	}
 
+	#[\Override]
 	public function getName(): string {
 		return 'Reset generated avatar flag';
 	}
@@ -34,6 +30,7 @@ class ResetGeneratedAvatarFlag implements IRepairStep {
 		return version_compare($versionFromBeforeUpdate, '18.0.0.5', '<=');
 	}
 
+	#[\Override]
 	public function run(IOutput $output): void {
 		if ($this->shouldRun()) {
 			$query = $this->connection->getQueryBuilder();

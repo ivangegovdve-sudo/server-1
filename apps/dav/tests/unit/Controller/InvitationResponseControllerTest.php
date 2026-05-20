@@ -53,9 +53,7 @@ class InvitationResponseControllerTest extends TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider attendeeProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'attendeeProvider')]
 	public function testAccept(bool $isExternalAttendee): void {
 		$this->buildQueryExpects('TOKEN123', [
 			'id' => 0,
@@ -117,9 +115,7 @@ EOF;
 		$this->assertTrue($called);
 	}
 
-	/**
-	 * @dataProvider attendeeProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'attendeeProvider')]
 	public function testAcceptSequence(bool $isExternalAttendee): void {
 		$this->buildQueryExpects('TOKEN123', [
 			'id' => 0,
@@ -181,9 +177,7 @@ EOF;
 		$this->assertTrue($called);
 	}
 
-	/**
-	 * @dataProvider attendeeProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'attendeeProvider')]
 	public function testAcceptRecurrenceId(bool $isExternalAttendee): void {
 		$this->buildQueryExpects('TOKEN123', [
 			'id' => 0,
@@ -273,9 +267,7 @@ EOF;
 		$this->assertEquals([], $response->getParams());
 	}
 
-	/**
-	 * @dataProvider attendeeProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'attendeeProvider')]
 	public function testDecline(bool $isExternalAttendee): void {
 		$this->buildQueryExpects('TOKEN123', [
 			'id' => 0,
@@ -344,9 +336,7 @@ EOF;
 		$this->assertEquals(['token' => 'TOKEN123'], $response->getParams());
 	}
 
-	/**
-	 * @dataProvider attendeeProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'attendeeProvider')]
 	public function testProcessMoreOptionsResult(bool $isExternalAttendee): void {
 		$this->request->expects($this->once())
 			->method('getParam')
@@ -431,9 +421,8 @@ EOF;
 			]);
 
 		$stmt->expects($this->once())
-			->method('fetch')
-			->with(\PDO::FETCH_ASSOC)
-			->willReturn($return);
+			->method('fetchAssociative')
+			->willReturn($return ?? false);
 		$stmt->expects($this->once())
 			->method('closeCursor');
 
@@ -441,7 +430,7 @@ EOF;
 		$expr->expects($this->once())
 			->method('eq')
 			->with('token', 'namedParameterToken')
-			->willReturn((string)$function);
+			->willReturn($function);
 
 		$this->dbConnection->expects($this->once())
 			->method('getQueryBuilder')

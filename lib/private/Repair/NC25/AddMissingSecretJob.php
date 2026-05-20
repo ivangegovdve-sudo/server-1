@@ -15,18 +15,18 @@ use OCP\Migration\IRepairStep;
 use OCP\Security\ISecureRandom;
 
 class AddMissingSecretJob implements IRepairStep {
-	private IConfig $config;
-	private ISecureRandom $random;
-
-	public function __construct(IConfig $config, ISecureRandom $random) {
-		$this->config = $config;
-		$this->random = $random;
+	public function __construct(
+		private readonly IConfig $config,
+		private readonly ISecureRandom $random,
+	) {
 	}
 
+	#[\Override]
 	public function getName(): string {
 		return 'Add possibly missing system config';
 	}
 
+	#[\Override]
 	public function run(IOutput $output): void {
 		$passwordSalt = $this->config->getSystemValueString('passwordsalt', '');
 		if ($passwordSalt === '') {

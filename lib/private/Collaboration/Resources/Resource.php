@@ -30,6 +30,7 @@ class Resource implements IResource {
 	/**
 	 * @since 16.0.0
 	 */
+	#[\Override]
 	public function getType(): string {
 		return $this->type;
 	}
@@ -37,6 +38,7 @@ class Resource implements IResource {
 	/**
 	 * @since 16.0.0
 	 */
+	#[\Override]
 	public function getId(): string {
 		return $this->id;
 	}
@@ -44,6 +46,7 @@ class Resource implements IResource {
 	/**
 	 * @since 16.0.0
 	 */
+	#[\Override]
 	public function getRichObject(): array {
 		if ($this->data === null) {
 			$this->data = $this->manager->getResourceRichObject($this);
@@ -57,6 +60,7 @@ class Resource implements IResource {
 	 *
 	 * @since 16.0.0
 	 */
+	#[\Override]
 	public function canAccess(?IUser $user): bool {
 		if ($user instanceof IUser) {
 			return $this->canUserAccess($user);
@@ -92,6 +96,7 @@ class Resource implements IResource {
 	 * @return ICollection[]
 	 * @since 16.0.0
 	 */
+	#[\Override]
 	public function getCollections(): array {
 		$collections = [];
 
@@ -102,7 +107,7 @@ class Resource implements IResource {
 			->where($query->expr()->eq('resource_type', $query->createNamedParameter($this->getType())))
 			->andWhere($query->expr()->eq('resource_id', $query->createNamedParameter($this->getId())));
 
-		$result = $query->execute();
+		$result = $query->executeQuery();
 		while ($row = $result->fetch()) {
 			$collections[] = $this->manager->getCollection((int)$row['collection_id']);
 		}

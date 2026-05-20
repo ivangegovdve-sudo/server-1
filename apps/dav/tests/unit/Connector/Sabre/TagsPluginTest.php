@@ -58,9 +58,7 @@ class TagsPluginTest extends \Test\TestCase {
 		$this->plugin->initialize($this->server);
 	}
 
-	/**
-	 * @dataProvider tagsGetPropertiesDataProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'tagsGetPropertiesDataProvider')]
 	public function testGetProperties(array $tags, array $requestedProperties, array $expectedProperties): void {
 		$node = $this->createMock(Node::class);
 		$node->expects($this->any())
@@ -95,9 +93,7 @@ class TagsPluginTest extends \Test\TestCase {
 		$this->assertEquals($expectedProperties, $result);
 	}
 
-	/**
-	 * @dataProvider tagsGetPropertiesDataProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'tagsGetPropertiesDataProvider')]
 	public function testPreloadThenGetProperties(array $tags, array $requestedProperties, array $expectedProperties): void {
 		$node1 = $this->createMock(File::class);
 		$node1->expects($this->any())
@@ -150,6 +146,8 @@ class TagsPluginTest extends \Test\TestCase {
 			$requestedProperties,
 			0
 		);
+
+		$this->server->emit('preloadCollection', [$propFindRoot, $node]);
 
 		$this->plugin->handleGetProperties(
 			$propFindRoot,
@@ -264,12 +262,12 @@ class TagsPluginTest extends \Test\TestCase {
 
 		// then tag as tag1 and tag2
 		$calls = [
-			[123, 'tag1'],
-			[123, 'tag2'],
+			[123, 'tag1', '/dummypath'],
+			[123, 'tag2', '/dummypath'],
 		];
 		$this->tagger->expects($this->exactly(count($calls)))
 			->method('tagAs')
-			->willReturnCallback(function () use (&$calls) {
+			->willReturnCallback(function () use (&$calls): void {
 				$expected = array_shift($calls);
 				$this->assertEquals($expected, func_get_args());
 			});
@@ -317,12 +315,12 @@ class TagsPluginTest extends \Test\TestCase {
 
 		// then tag as tag1 and tag2
 		$calls = [
-			[123, 'tag1'],
-			[123, 'tag2'],
+			[123, 'tag1', '/dummypath'],
+			[123, 'tag2', '/dummypath'],
 		];
 		$this->tagger->expects($this->exactly(count($calls)))
 			->method('tagAs')
-			->willReturnCallback(function () use (&$calls) {
+			->willReturnCallback(function () use (&$calls): void {
 				$expected = array_shift($calls);
 				$this->assertEquals($expected, func_get_args());
 			});

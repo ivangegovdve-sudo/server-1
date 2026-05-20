@@ -20,7 +20,6 @@ class PhpModules implements ISetupCheck {
 		'dom',
 		'fileinfo',
 		'gd',
-		'json',
 		'mbstring',
 		'openssl',
 		'posix',
@@ -32,6 +31,7 @@ class PhpModules implements ISetupCheck {
 		'zlib',
 	];
 	protected const RECOMMENDED_MODULES = [
+		'apcu',
 		'exif',
 		'gmp',
 		'intl',
@@ -45,10 +45,12 @@ class PhpModules implements ISetupCheck {
 	) {
 	}
 
+	#[\Override]
 	public function getName(): string {
 		return $this->l10n->t('PHP modules');
 	}
 
+	#[\Override]
 	public function getCategory(): string {
 		return 'php';
 	}
@@ -63,6 +65,7 @@ class PhpModules implements ISetupCheck {
 		};
 	}
 
+	#[\Override]
 	public function run(): SetupResult {
 		$missingRecommendedModules = $this->getMissingModules(self::RECOMMENDED_MODULES);
 		$missingRequiredModules = $this->getMissingModules(self::REQUIRED_MODULES);

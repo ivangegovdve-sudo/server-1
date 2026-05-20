@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -6,6 +7,7 @@
 namespace OCA\WorkflowEngine\Controller;
 
 use OCP\AppFramework\Controller;
+use OCP\AppFramework\Http\Attribute\FrontpageRoute;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\JSONResponse;
 
@@ -16,6 +18,7 @@ class RequestTimeController extends Controller {
 	 * @return JSONResponse
 	 */
 	#[NoAdminRequired]
+	#[FrontpageRoute(verb: 'GET', url: '/timezones')]
 	public function getTimezones($search = '') {
 		$timezones = \DateTimeZone::listIdentifiers();
 

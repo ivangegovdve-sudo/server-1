@@ -8,28 +8,28 @@ declare(strict_types=1);
 
 namespace OC\Security\Signature;
 
-use NCU\Security\Signature\Enum\SignatoryType;
-use NCU\Security\Signature\Exceptions\IdentityNotFoundException;
-use NCU\Security\Signature\Exceptions\IncomingRequestException;
-use NCU\Security\Signature\Exceptions\InvalidKeyOriginException;
-use NCU\Security\Signature\Exceptions\InvalidSignatureException;
-use NCU\Security\Signature\Exceptions\SignatoryConflictException;
-use NCU\Security\Signature\Exceptions\SignatoryException;
-use NCU\Security\Signature\Exceptions\SignatoryNotFoundException;
-use NCU\Security\Signature\Exceptions\SignatureElementNotFoundException;
-use NCU\Security\Signature\Exceptions\SignatureException;
-use NCU\Security\Signature\Exceptions\SignatureNotFoundException;
-use NCU\Security\Signature\IIncomingSignedRequest;
-use NCU\Security\Signature\IOutgoingSignedRequest;
-use NCU\Security\Signature\ISignatoryManager;
-use NCU\Security\Signature\ISignatureManager;
-use NCU\Security\Signature\Model\Signatory;
 use OC\Security\Signature\Db\SignatoryMapper;
 use OC\Security\Signature\Model\IncomingSignedRequest;
 use OC\Security\Signature\Model\OutgoingSignedRequest;
 use OCP\DB\Exception as DBException;
 use OCP\IAppConfig;
 use OCP\IRequest;
+use OCP\Security\Signature\Enum\SignatoryType;
+use OCP\Security\Signature\Exceptions\IdentityNotFoundException;
+use OCP\Security\Signature\Exceptions\IncomingRequestException;
+use OCP\Security\Signature\Exceptions\InvalidKeyOriginException;
+use OCP\Security\Signature\Exceptions\InvalidSignatureException;
+use OCP\Security\Signature\Exceptions\SignatoryConflictException;
+use OCP\Security\Signature\Exceptions\SignatoryException;
+use OCP\Security\Signature\Exceptions\SignatoryNotFoundException;
+use OCP\Security\Signature\Exceptions\SignatureElementNotFoundException;
+use OCP\Security\Signature\Exceptions\SignatureException;
+use OCP\Security\Signature\Exceptions\SignatureNotFoundException;
+use OCP\Security\Signature\IIncomingSignedRequest;
+use OCP\Security\Signature\IOutgoingSignedRequest;
+use OCP\Security\Signature\ISignatoryManager;
+use OCP\Security\Signature\ISignatureManager;
+use OCP\Security\Signature\Model\Signatory;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -90,6 +90,7 @@ class SignatureManager implements ISignatureManager {
 	 * @throws SignatureException if signature could not be confirmed
 	 * @since 31.0.0
 	 */
+	#[\Override]
 	public function getIncomingSignedRequest(
 		ISignatoryManager $signatoryManager,
 		?string $body = null,
@@ -191,6 +192,7 @@ class SignatureManager implements ISignatureManager {
 	 * @throws SignatoryNotFoundException
 	 * @since 31.0.0
 	 */
+	#[\Override]
 	public function getOutgoingSignedRequest(
 		ISignatoryManager $signatoryManager,
 		string $content,
@@ -222,6 +224,7 @@ class SignatureManager implements ISignatureManager {
 	 * @return array new payload to be sent, including original payload and signature elements in headers
 	 * @since 31.0.0
 	 */
+	#[\Override]
 	public function signOutgoingRequestIClientPayload(
 		ISignatoryManager $signatoryManager,
 		array $payload,
@@ -245,6 +248,7 @@ class SignatureManager implements ISignatureManager {
 	 * @throws SignatoryNotFoundException if entry does not exist in local database
 	 * @since 31.0.0
 	 */
+	#[\Override]
 	public function getSignatory(string $host, string $account = ''): Signatory {
 		return $this->mapper->getByHost($host, $account);
 	}
@@ -261,6 +265,7 @@ class SignatureManager implements ISignatureManager {
 	 * @throws IdentityNotFoundException is identity is not set in app config
 	 * @since 31.0.0
 	 */
+	#[\Override]
 	public function generateKeyIdFromConfig(string $path): string {
 		if (!$this->appConfig->hasKey('core', self::APPCONFIG_IDENTITY, true)) {
 			throw new IdentityNotFoundException(self::APPCONFIG_IDENTITY . ' not set');
@@ -280,6 +285,7 @@ class SignatureManager implements ISignatureManager {
 	 * @throws IdentityNotFoundException if identity cannot be extracted
 	 * @since 31.0.0
 	 */
+	#[\Override]
 	public function extractIdentityFromUri(string $uri): string {
 		return Signatory::extractIdentityFromUri($uri);
 	}

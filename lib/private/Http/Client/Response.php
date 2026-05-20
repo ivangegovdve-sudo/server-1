@@ -11,49 +11,26 @@ namespace OC\Http\Client;
 use OCP\Http\Client\IResponse;
 use Psr\Http\Message\ResponseInterface;
 
-/**
- * Class Response
- *
- * @package OC\Http
- */
 class Response implements IResponse {
-	/** @var ResponseInterface */
-	private $response;
-
-	/**
-	 * @var bool
-	 */
-	private $stream;
-
-	/**
-	 * @param ResponseInterface $response
-	 * @param bool $stream
-	 */
-	public function __construct(ResponseInterface $response, $stream = false) {
-		$this->response = $response;
-		$this->stream = $stream;
+	public function __construct(
+		private ResponseInterface $response,
+		private bool $stream = false,
+	) {
 	}
 
-	/**
-	 * @return string|resource
-	 */
+	#[\Override]
 	public function getBody() {
-		return $this->stream ?
-			$this->response->getBody()->detach():
-			$this->response->getBody()->getContents();
+		return $this->stream
+			? $this->response->getBody()->detach()
+			:$this->response->getBody()->getContents();
 	}
 
-	/**
-	 * @return int
-	 */
+	#[\Override]
 	public function getStatusCode(): int {
 		return $this->response->getStatusCode();
 	}
 
-	/**
-	 * @param string $key
-	 * @return string
-	 */
+	#[\Override]
 	public function getHeader(string $key): string {
 		$headers = $this->response->getHeader($key);
 
@@ -64,9 +41,7 @@ class Response implements IResponse {
 		return $headers[0];
 	}
 
-	/**
-	 * @return array
-	 */
+	#[\Override]
 	public function getHeaders(): array {
 		return $this->response->getHeaders();
 	}

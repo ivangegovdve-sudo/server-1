@@ -11,13 +11,15 @@ declare(strict_types=1);
 namespace Test\Security\CSRF;
 
 use OC\Security\CSRF\CsrfTokenGenerator;
+use OCP\Security\ISecureRandom;
 
 class CsrfTokenGeneratorTest extends \Test\TestCase {
-	/** @var \OCP\Security\ISecureRandom */
+	/** @var ISecureRandom */
 	private $random;
-	/** @var \OC\Security\CSRF\CsrfTokenGenerator */
+	/** @var CsrfTokenGenerator */
 	private $csrfTokenGenerator;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 		$this->random = $this->getMockBuilder('\OCP\Security\ISecureRandom')

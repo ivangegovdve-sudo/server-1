@@ -16,6 +16,7 @@ use OCP\AppFramework\Http\TemplateResponse;
 use OCP\AppFramework\Services\IAppConfig;
 use OCP\AppFramework\Services\IInitialState;
 use OCP\Settings\ISettings;
+use OCP\Util;
 
 class ExampleContentSettings implements ISettings {
 	public function __construct(
@@ -27,6 +28,7 @@ class ExampleContentSettings implements ISettings {
 	) {
 	}
 
+	#[\Override]
 	public function getForm(): TemplateResponse {
 		$calendarEnabled = $this->appManager->isEnabledForUser('calendar');
 		$contactsEnabled = $this->appManager->isEnabledForUser('contacts');
@@ -53,9 +55,12 @@ class ExampleContentSettings implements ISettings {
 			);
 		}
 
-		return new TemplateResponse(Application::APP_ID, 'settings-example-content');
+		Util::addStyle(Application::APP_ID, 'settings-admin-example-content');
+		Util::addScript(Application::APP_ID, 'settings-admin-example-content');
+		return new TemplateResponse(Application::APP_ID, 'settings-admin-example-content');
 	}
 
+	#[\Override]
 	public function getSection(): ?string {
 		if (!$this->appManager->isEnabledForUser('contacts')
 				&& !$this->appManager->isEnabledForUser('calendar')) {
@@ -65,6 +70,7 @@ class ExampleContentSettings implements ISettings {
 		return 'groupware';
 	}
 
+	#[\Override]
 	public function getPriority(): int {
 		return 10;
 	}

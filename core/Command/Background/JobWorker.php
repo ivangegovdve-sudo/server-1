@@ -9,8 +9,8 @@ declare(strict_types=1);
 namespace OC\Core\Command\Background;
 
 use OC\Core\Command\InterruptedException;
-use OC\Files\SetupManager;
 use OCP\BackgroundJob\IJobList;
+use OCP\Files\ISetupManager;
 use OCP\ITempManager;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Input\InputArgument;
@@ -24,10 +24,11 @@ class JobWorker extends JobBase {
 		protected IJobList $jobList,
 		protected LoggerInterface $logger,
 		private ITempManager $tempManager,
-		private SetupManager $setupManager,
+		private ISetupManager $setupManager,
 	) {
 		parent::__construct($jobList, $logger);
 	}
+	#[\Override]
 	protected function configure(): void {
 		parent::configure();
 
@@ -50,7 +51,7 @@ class JobWorker extends JobBase {
 				'i',
 				InputOption::VALUE_OPTIONAL,
 				'Interval in seconds in which the worker should repeat already processed jobs (set to 0 for no repeat)',
-				5
+				1
 			)
 			->addOption(
 				'stop_after',
@@ -61,6 +62,7 @@ class JobWorker extends JobBase {
 		;
 	}
 
+	#[\Override]
 	protected function execute(InputInterface $input, OutputInterface $output): int {
 		$startTime = time();
 		$stopAfterOptionValue = $input->getOption('stop_after');
@@ -114,8 +116,11 @@ class JobWorker extends JobBase {
 				}
 
 				$output->writeln('Waiting for new jobs to be queued', OutputInterface::VERBOSITY_VERBOSE);
+				if ((int)$input->getOption('interval') === 0) {
+					break;
+				}
 				// Re-check interval for new jobs
-				sleep(1);
+				sleep((int)$input->getOption('interval'));
 				continue;
 			}
 
@@ -125,9 +130,7 @@ class JobWorker extends JobBase {
 				$this->printJobInfo($job->getId(), $job, $output);
 			}
 
-			/** @psalm-suppress DeprecatedMethod Calling execute until it is removed, then will switch to start */
-			$job->execute($this->jobList);
-
+			$job->start($this->jobList);
 			$output->writeln('Job ' . $job->getId() . ' has finished', OutputInterface::VERBOSITY_VERBOSE);
 
 			// clean up after unclean jobs

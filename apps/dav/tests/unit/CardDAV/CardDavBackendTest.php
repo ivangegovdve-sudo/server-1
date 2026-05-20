@@ -8,12 +8,14 @@
 namespace OCA\DAV\Tests\unit\CardDAV;
 
 use OC\KnownUser\KnownUserService;
+use OCA\DAV\CalDAV\Federation\FederationSharingService;
 use OCA\DAV\CalDAV\Proxy\ProxyMapper;
 use OCA\DAV\CardDAV\AddressBook;
 use OCA\DAV\CardDAV\CardDavBackend;
 use OCA\DAV\CardDAV\Sharing\Backend;
 use OCA\DAV\CardDAV\Sharing\Service;
 use OCA\DAV\Connector\Sabre\Principal;
+use OCA\DAV\DAV\RemoteUserPrincipalBackend;
 use OCA\DAV\DAV\Sharing\SharingMapper;
 use OCP\Accounts\IAccountManager;
 use OCP\App\IAppManager;
@@ -41,15 +43,18 @@ use function time;
 /**
  * Class CardDavBackendTest
  *
- * @group DB
  *
  * @package OCA\DAV\Tests\unit\CardDAV
  */
+#[\PHPUnit\Framework\Attributes\Group(name: 'DB')]
 class CardDavBackendTest extends TestCase {
 	private Principal&MockObject $principal;
 	private IUserManager&MockObject $userManager;
 	private IGroupManager&MockObject $groupManager;
 	private IEventDispatcher&MockObject $dispatcher;
+	private IConfig&MockObject $config;
+	private RemoteUserPrincipalBackend&MockObject $remoteUserPrincipalBackend;
+	private FederationSharingService&MockObject $federationSharingService;
 	private Backend $sharingBackend;
 	private IDBConnection $db;
 	private CardDavBackend $backend;
@@ -60,42 +65,43 @@ class CardDavBackendTest extends TestCase {
 	public const UNIT_TEST_USER1 = 'principals/users/carddav-unit-test1';
 	public const UNIT_TEST_GROUP = 'principals/groups/carddav-unit-test-group';
 
-	private $vcardTest0 = 'BEGIN:VCARD' . PHP_EOL .
-		'VERSION:3.0' . PHP_EOL .
-		'PRODID:-//Sabre//Sabre VObject 4.1.2//EN' . PHP_EOL .
-		'UID:Test' . PHP_EOL .
-		'FN:Test' . PHP_EOL .
-		'N:Test;;;;' . PHP_EOL .
-		'END:VCARD';
+	private $vcardTest0 = 'BEGIN:VCARD' . PHP_EOL
+		. 'VERSION:3.0' . PHP_EOL
+		. 'PRODID:-//Sabre//Sabre VObject 4.1.2//EN' . PHP_EOL
+		. 'UID:Test' . PHP_EOL
+		. 'FN:Test' . PHP_EOL
+		. 'N:Test;;;;' . PHP_EOL
+		. 'END:VCARD';
 
-	private $vcardTest1 = 'BEGIN:VCARD' . PHP_EOL .
-		'VERSION:3.0' . PHP_EOL .
-		'PRODID:-//Sabre//Sabre VObject 4.1.2//EN' . PHP_EOL .
-		'UID:Test2' . PHP_EOL .
-		'FN:Test2' . PHP_EOL .
-		'N:Test2;;;;' . PHP_EOL .
-		'END:VCARD';
+	private $vcardTest1 = 'BEGIN:VCARD' . PHP_EOL
+		. 'VERSION:3.0' . PHP_EOL
+		. 'PRODID:-//Sabre//Sabre VObject 4.1.2//EN' . PHP_EOL
+		. 'UID:Test2' . PHP_EOL
+		. 'FN:Test2' . PHP_EOL
+		. 'N:Test2;;;;' . PHP_EOL
+		. 'END:VCARD';
 
-	private $vcardTest2 = 'BEGIN:VCARD' . PHP_EOL .
-		'VERSION:3.0' . PHP_EOL .
-		'PRODID:-//Sabre//Sabre VObject 4.1.2//EN' . PHP_EOL .
-		'UID:Test3' . PHP_EOL .
-		'FN:Test3' . PHP_EOL .
-		'N:Test3;;;;' . PHP_EOL .
-		'END:VCARD';
+	private $vcardTest2 = 'BEGIN:VCARD' . PHP_EOL
+		. 'VERSION:3.0' . PHP_EOL
+		. 'PRODID:-//Sabre//Sabre VObject 4.1.2//EN' . PHP_EOL
+		. 'UID:Test3' . PHP_EOL
+		. 'FN:Test3' . PHP_EOL
+		. 'N:Test3;;;;' . PHP_EOL
+		. 'END:VCARD';
 
-	private $vcardTestNoUID = 'BEGIN:VCARD' . PHP_EOL .
-		'VERSION:3.0' . PHP_EOL .
-		'PRODID:-//Sabre//Sabre VObject 4.1.2//EN' . PHP_EOL .
-		'FN:TestNoUID' . PHP_EOL .
-		'N:TestNoUID;;;;' . PHP_EOL .
-		'END:VCARD';
+	private $vcardTestNoUID = 'BEGIN:VCARD' . PHP_EOL
+		. 'VERSION:3.0' . PHP_EOL
+		. 'PRODID:-//Sabre//Sabre VObject 4.1.2//EN' . PHP_EOL
+		. 'FN:TestNoUID' . PHP_EOL
+		. 'N:TestNoUID;;;;' . PHP_EOL
+		. 'END:VCARD';
 
 	protected function setUp(): void {
 		parent::setUp();
 
 		$this->userManager = $this->createMock(IUserManager::class);
 		$this->groupManager = $this->createMock(IGroupManager::class);
+		$this->config = $this->createMock(IConfig::class);
 		$this->principal = $this->getMockBuilder(Principal::class)
 			->setConstructorArgs([
 				$this->userManager,
@@ -106,7 +112,7 @@ class CardDavBackendTest extends TestCase {
 				$this->createMock(IAppManager::class),
 				$this->createMock(ProxyMapper::class),
 				$this->createMock(KnownUserService::class),
-				$this->createMock(IConfig::class),
+				$this->config,
 				$this->createMock(IFactory::class)
 			])
 			->onlyMethods(['getPrincipalByPath', 'getGroupMembership', 'findByUri'])
@@ -120,13 +126,17 @@ class CardDavBackendTest extends TestCase {
 			->withAnyParameters()
 			->willReturn([self::UNIT_TEST_GROUP]);
 		$this->dispatcher = $this->createMock(IEventDispatcher::class);
+		$this->remoteUserPrincipalBackend = $this->createMock(RemoteUserPrincipalBackend::class);
+		$this->federationSharingService = $this->createMock(FederationSharingService::class);
 
 		$this->db = Server::get(IDBConnection::class);
 		$this->sharingBackend = new Backend($this->userManager,
 			$this->groupManager,
 			$this->principal,
+			$this->remoteUserPrincipalBackend,
 			$this->createMock(ICacheFactory::class),
 			new Service(new SharingMapper($this->db)),
+			$this->federationSharingService,
 			$this->createMock(LoggerInterface::class)
 		);
 
@@ -135,6 +145,7 @@ class CardDavBackendTest extends TestCase {
 			$this->userManager,
 			$this->dispatcher,
 			$this->sharingBackend,
+			$this->config,
 		);
 		// start every test with a empty cards_properties and cards table
 		$query = $this->db->getQueryBuilder();
@@ -231,7 +242,7 @@ class CardDavBackendTest extends TestCase {
 	public function testCardOperations(): void {
 		/** @var CardDavBackend&MockObject $backend */
 		$backend = $this->getMockBuilder(CardDavBackend::class)
-			->setConstructorArgs([$this->db, $this->principal, $this->userManager, $this->dispatcher, $this->sharingBackend])
+			->setConstructorArgs([$this->db, $this->principal, $this->userManager, $this->dispatcher, $this->sharingBackend,$this->config])
 			->onlyMethods(['updateProperties', 'purgeProperties'])
 			->getMock();
 
@@ -249,7 +260,7 @@ class CardDavBackendTest extends TestCase {
 		];
 		$backend->expects($this->exactly(count($calls)))
 			->method('updateProperties')
-			->willReturnCallback(function () use (&$calls) {
+			->willReturnCallback(function () use (&$calls): void {
 				$expected = array_shift($calls);
 				$this->assertEquals($expected, func_get_args());
 			});
@@ -291,7 +302,7 @@ class CardDavBackendTest extends TestCase {
 
 	public function testMultiCard(): void {
 		$this->backend = $this->getMockBuilder(CardDavBackend::class)
-			->setConstructorArgs([$this->db, $this->principal, $this->userManager, $this->dispatcher, $this->sharingBackend])
+			->setConstructorArgs([$this->db, $this->principal, $this->userManager, $this->dispatcher, $this->sharingBackend,$this->config])
 			->onlyMethods(['updateProperties'])
 			->getMock();
 
@@ -345,7 +356,7 @@ class CardDavBackendTest extends TestCase {
 
 	public function testMultipleUIDOnDifferentAddressbooks(): void {
 		$this->backend = $this->getMockBuilder(CardDavBackend::class)
-			->setConstructorArgs([$this->db, $this->principal, $this->userManager, $this->dispatcher, $this->sharingBackend])
+			->setConstructorArgs([$this->db, $this->principal, $this->userManager, $this->dispatcher, $this->sharingBackend,$this->config])
 			->onlyMethods(['updateProperties'])
 			->getMock();
 
@@ -368,7 +379,7 @@ class CardDavBackendTest extends TestCase {
 
 	public function testMultipleUIDDenied(): void {
 		$this->backend = $this->getMockBuilder(CardDavBackend::class)
-			->setConstructorArgs([$this->db, $this->principal, $this->userManager, $this->dispatcher, $this->sharingBackend])
+			->setConstructorArgs([$this->db, $this->principal, $this->userManager, $this->dispatcher, $this->sharingBackend, $this->config])
 			->onlyMethods(['updateProperties'])
 			->getMock();
 
@@ -390,7 +401,7 @@ class CardDavBackendTest extends TestCase {
 
 	public function testNoValidUID(): void {
 		$this->backend = $this->getMockBuilder(CardDavBackend::class)
-			->setConstructorArgs([$this->db, $this->principal, $this->userManager, $this->dispatcher, $this->sharingBackend])
+			->setConstructorArgs([$this->db, $this->principal, $this->userManager, $this->dispatcher, $this->sharingBackend, $this->config])
 			->onlyMethods(['updateProperties'])
 			->getMock();
 
@@ -408,7 +419,7 @@ class CardDavBackendTest extends TestCase {
 
 	public function testDeleteWithoutCard(): void {
 		$this->backend = $this->getMockBuilder(CardDavBackend::class)
-			->setConstructorArgs([$this->db, $this->principal, $this->userManager, $this->dispatcher, $this->sharingBackend])
+			->setConstructorArgs([$this->db, $this->principal, $this->userManager, $this->dispatcher, $this->sharingBackend, $this->config])
 			->onlyMethods([
 				'getCardId',
 				'addChange',
@@ -437,7 +448,7 @@ class CardDavBackendTest extends TestCase {
 		];
 		$this->backend->expects($this->exactly(count($calls)))
 			->method('addChange')
-			->willReturnCallback(function () use (&$calls) {
+			->willReturnCallback(function () use (&$calls): void {
 				$expected = array_shift($calls);
 				$this->assertEquals($expected, func_get_args());
 			});
@@ -453,7 +464,7 @@ class CardDavBackendTest extends TestCase {
 
 	public function testSyncSupport(): void {
 		$this->backend = $this->getMockBuilder(CardDavBackend::class)
-			->setConstructorArgs([$this->db, $this->principal, $this->userManager, $this->dispatcher, $this->sharingBackend])
+			->setConstructorArgs([$this->db, $this->principal, $this->userManager, $this->dispatcher, $this->sharingBackend, $this->config])
 			->onlyMethods(['updateProperties'])
 			->getMock();
 
@@ -522,7 +533,7 @@ class CardDavBackendTest extends TestCase {
 		$cardId = 2;
 
 		$backend = $this->getMockBuilder(CardDavBackend::class)
-			->setConstructorArgs([$this->db, $this->principal, $this->userManager, $this->dispatcher, $this->sharingBackend])
+			->setConstructorArgs([$this->db, $this->principal, $this->userManager, $this->dispatcher, $this->sharingBackend, $this->config])
 			->onlyMethods(['getCardId'])->getMock();
 
 		$backend->expects($this->any())->method('getCardId')->willReturn($cardId);
@@ -538,8 +549,8 @@ class CardDavBackendTest extends TestCase {
 			->from('cards_properties')
 			->orderBy('name');
 
-		$qResult = $query->execute();
-		$result = $qResult->fetchAll();
+		$qResult = $query->executeQuery();
+		$result = $qResult->fetchAllAssociative();
 		$qResult->closeCursor();
 
 		$this->assertSame(2, count($result));
@@ -563,8 +574,8 @@ class CardDavBackendTest extends TestCase {
 		$query->select('*')
 			->from('cards_properties');
 
-		$qResult = $query->execute();
-		$result = $qResult->fetchAll();
+		$qResult = $query->executeQuery();
+		$result = $qResult->fetchAllAssociative();
 		$qResult->closeCursor();
 
 		$this->assertSame(1, count($result));
@@ -587,7 +598,7 @@ class CardDavBackendTest extends TestCase {
 					'preferred' => $query->createNamedParameter(0)
 				]
 			);
-		$query->execute();
+		$query->executeStatement();
 
 		$query = $this->db->getQueryBuilder();
 		$query->insert('cards_properties')
@@ -600,7 +611,7 @@ class CardDavBackendTest extends TestCase {
 					'preferred' => $query->createNamedParameter(0)
 				]
 			);
-		$query->execute();
+		$query->executeStatement();
 
 		$this->invokePrivate($this->backend, 'purgeProperties', [1, 1]);
 
@@ -608,8 +619,8 @@ class CardDavBackendTest extends TestCase {
 		$query->select('*')
 			->from('cards_properties');
 
-		$qResult = $query->execute();
-		$result = $qResult->fetchAll();
+		$qResult = $query->executeQuery();
+		$result = $qResult->fetchAllAssociative();
 		$qResult->closeCursor();
 
 		$this->assertSame(1, count($result));
@@ -631,7 +642,7 @@ class CardDavBackendTest extends TestCase {
 					'size' => $query->createNamedParameter(120)
 				]
 			);
-		$query->execute();
+		$query->executeStatement();
 		$id = $query->getLastInsertId();
 
 		$this->assertSame($id,
@@ -645,9 +656,7 @@ class CardDavBackendTest extends TestCase {
 		$this->invokePrivate($this->backend, 'getCardId', [1, 'uri']);
 	}
 
-	/**
-	 * @dataProvider dataTestSearch
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataTestSearch')]
 	public function testSearch(string $pattern, array $properties, array $options, array $expected): void {
 		/** @var VCard $vCards */
 		$vCards = [];
@@ -677,7 +686,7 @@ class CardDavBackendTest extends TestCase {
 						'size' => $query->createNamedParameter(120),
 					]
 				);
-			$query->execute();
+			$query->executeStatement();
 			$vCardIds[] = $query->getLastInsertId();
 		}
 
@@ -692,7 +701,7 @@ class CardDavBackendTest extends TestCase {
 					'preferred' => $query->createNamedParameter(0)
 				]
 			);
-		$query->execute();
+		$query->executeStatement();
 		$query = $this->db->getQueryBuilder();
 		$query->insert($this->dbCardsPropertiesTable)
 			->values(
@@ -704,7 +713,7 @@ class CardDavBackendTest extends TestCase {
 					'preferred' => $query->createNamedParameter(0)
 				]
 			);
-		$query->execute();
+		$query->executeStatement();
 		$query = $this->db->getQueryBuilder();
 		$query->insert($this->dbCardsPropertiesTable)
 			->values(
@@ -716,7 +725,7 @@ class CardDavBackendTest extends TestCase {
 					'preferred' => $query->createNamedParameter(0)
 				]
 			);
-		$query->execute();
+		$query->executeStatement();
 		$query = $this->db->getQueryBuilder();
 		$query->insert($this->dbCardsPropertiesTable)
 			->values(
@@ -728,7 +737,7 @@ class CardDavBackendTest extends TestCase {
 					'preferred' => $query->createNamedParameter(0)
 				]
 			);
-		$query->execute();
+		$query->executeStatement();
 		$query = $this->db->getQueryBuilder();
 		$query->insert($this->dbCardsPropertiesTable)
 			->values(
@@ -740,7 +749,7 @@ class CardDavBackendTest extends TestCase {
 					'preferred' => $query->createNamedParameter(0)
 				]
 			);
-		$query->execute();
+		$query->executeStatement();
 
 		$result = $this->backend->search(0, $pattern, $properties, $options);
 
@@ -786,7 +795,7 @@ class CardDavBackendTest extends TestCase {
 					'size' => $query->createNamedParameter(120),
 				]
 			);
-		$query->execute();
+		$query->executeStatement();
 
 		$id = $query->getLastInsertId();
 
@@ -814,7 +823,7 @@ class CardDavBackendTest extends TestCase {
 						'size' => $query->createNamedParameter(120),
 					]
 				);
-			$query->execute();
+			$query->executeStatement();
 		}
 
 		$result = $this->backend->getContact(0, 'uri0');
@@ -847,7 +856,7 @@ class CardDavBackendTest extends TestCase {
 					'preferred' => $query->createNamedParameter(0)
 				]
 			)
-			->execute();
+			->executeStatement();
 
 		$result = $this->backend->collectCardProperties(666, 'FN');
 		$this->assertEquals(['John Doe'], $result);

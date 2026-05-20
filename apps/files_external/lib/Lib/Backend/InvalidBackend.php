@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2017-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud GmbH.
@@ -43,6 +44,7 @@ class InvalidBackend extends Backend {
 	/**
 	 * @return void
 	 */
+	#[\Override]
 	public function manipulateStorageConfig(StorageConfig &$storage, ?IUser $user = null) {
 		$storage->setBackendOption('exception', new \Exception('Unknown storage backend "' . $this->invalidId . '"', StorageNotAvailableException::STATUS_ERROR));
 	}

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -7,6 +8,7 @@
 
 namespace Test;
 
+use OC\App\AppManager;
 use OC\App\AppStore\Fetcher\AppFetcher;
 use OC\Archive\ZIP;
 use OC\Installer;
@@ -15,29 +17,29 @@ use OCP\Http\Client\IClient;
 use OCP\Http\Client\IClientService;
 use OCP\IConfig;
 use OCP\ITempManager;
+use OCP\L10N\IFactory;
 use OCP\Server;
+use PHPUnit\Framework\MockObject\MockObject;
 use Psr\Log\LoggerInterface;
 
 /**
  * Class InstallerTest
  *
  * @package Test
- * @group DB
  */
+#[\PHPUnit\Framework\Attributes\Group('DB')]
 class InstallerTest extends TestCase {
 	private static $appid = 'testapp';
 	private $appstore;
-	/** @var AppFetcher|\PHPUnit\Framework\MockObject\MockObject */
-	private $appFetcher;
-	/** @var IClientService|\PHPUnit\Framework\MockObject\MockObject */
-	private $clientService;
-	/** @var ITempManager|\PHPUnit\Framework\MockObject\MockObject */
-	private $tempManager;
-	/** @var LoggerInterface|\PHPUnit\Framework\MockObject\MockObject */
-	private $logger;
-	/** @var IConfig|\PHPUnit\Framework\MockObject\MockObject */
-	private $config;
+	private AppFetcher&MockObject $appFetcher;
+	private IClientService&MockObject $clientService;
+	private ITempManager&MockObject $tempManager;
+	private LoggerInterface&MockObject $logger;
+	private IConfig&MockObject $config;
+	private AppManager&MockObject $appManager;
+	private IFactory&MockObject $l10nFactory;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -46,18 +48,13 @@ class InstallerTest extends TestCase {
 		$this->tempManager = $this->createMock(ITempManager::class);
 		$this->logger = $this->createMock(LoggerInterface::class);
 		$this->config = $this->createMock(IConfig::class);
+		$this->appManager = $this->createMock(AppManager::class);
+		$this->l10nFactory = $this->createMock(IFactory::class);
 
 		$config = Server::get(IConfig::class);
 		$this->appstore = $config->setSystemValue('appstoreenabled', true);
 		$config->setSystemValue('appstoreenabled', true);
-		$installer = new Installer(
-			Server::get(AppFetcher::class),
-			Server::get(IClientService::class),
-			Server::get(ITempManager::class),
-			Server::get(LoggerInterface::class),
-			$config,
-			false
-		);
+		$installer = Server::get(Installer::class);
 		$installer->removeApp(self::$appid);
 	}
 
@@ -68,19 +65,15 @@ class InstallerTest extends TestCase {
 			$this->tempManager,
 			$this->logger,
 			$this->config,
+			$this->appManager,
+			$this->l10nFactory,
 			false
 		);
 	}
 
+	#[\Override]
 	protected function tearDown(): void {
-		$installer = new Installer(
-			Server::get(AppFetcher::class),
-			Server::get(IClientService::class),
-			Server::get(ITempManager::class),
-			Server::get(LoggerInterface::class),
-			Server::get(IConfig::class),
-			false
-		);
+		$installer = Server::get(Installer::class);
 		$installer->removeApp(self::$appid);
 		Server::get(IConfig::class)->setSystemValue('appstoreenabled', $this->appstore);
 
@@ -91,20 +84,15 @@ class InstallerTest extends TestCase {
 		// Read the current version of the app to check for bug #2572
 		Server::get(IAppManager::class)->getAppVersion('testapp', true);
 
+		// Build installer
+		$installer = Server::get(Installer::class);
+
 		// Extract app
 		$pathOfTestApp = __DIR__ . '/../data/testapp.zip';
 		$tar = new ZIP($pathOfTestApp);
-		$tar->extract(\OC_App::getInstallPath());
+		$tar->extract($installer->getInstallPath());
 
 		// Install app
-		$installer = new Installer(
-			Server::get(AppFetcher::class),
-			Server::get(IClientService::class),
-			Server::get(ITempManager::class),
-			Server::get(LoggerInterface::class),
-			Server::get(IConfig::class),
-			false
-		);
 		$this->assertNull(Server::get(IConfig::class)->getAppValue('testapp', 'enabled', null), 'Check that the app is not listed before installation');
 		$this->assertSame('testapp', $installer->installApp(self::$appid));
 		$this->assertSame('no', Server::get(IConfig::class)->getAppValue('testapp', 'enabled', null), 'Check that the app is listed after installation');
@@ -146,15 +134,19 @@ class InstallerTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider updateArrayProvider
 	 * @param array $appArray
 	 * @param string|bool $updateAvailable
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('updateArrayProvider')]
 	public function testIsUpdateAvailable(array $appArray, $updateAvailable): void {
 		$this->appFetcher
 			->expects($this->once())
 			->method('get')
 			->willReturn($appArray);
+		$this->appManager
+			->expects($this->exactly(2))
+			->method('getAppVersion')
+			->willReturn('1.0');
 
 		$installer = $this->getInstaller();
 		$this->assertSame($updateAvailable, $installer->isUpdateAvailable('files'));
@@ -696,6 +688,11 @@ JXhrdaWDZ8fzpUjugrtC3qslsqL0dzgU37anS3HwrT8=',
 			->willReturn($client);
 		$this->assertTrue(file_exists(__DIR__ . '/../../apps/testapp/appinfo/info.xml'));
 		$this->assertEquals('0.9', \OC_App::getAppVersionByPath(__DIR__ . '/../../apps/testapp/'));
+
+		$this->appManager
+			->expects($this->once())
+			->method('getAppVersion')
+			->willReturn('0.9');
 
 		$installer = $this->getInstaller();
 		$installer->downloadApp('testapp');

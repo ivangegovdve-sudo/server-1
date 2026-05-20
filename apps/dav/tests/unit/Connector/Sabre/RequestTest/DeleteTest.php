@@ -9,14 +9,15 @@ declare(strict_types=1);
 namespace OCA\DAV\Tests\unit\Connector\Sabre\RequestTest;
 
 use OCP\AppFramework\Http;
+use OCP\Files\FileInfo;
 
 /**
  * Class DeleteTest
  *
- * @group DB
  *
  * @package OCA\DAV\Tests\unit\Connector\Sabre\RequestTest
  */
+#[\PHPUnit\Framework\Attributes\Group(name: 'DB')]
 class DeleteTest extends RequestTestCase {
 	public function testBasicUpload(): void {
 		$user = self::getUniqueID();
@@ -30,7 +31,7 @@ class DeleteTest extends RequestTestCase {
 		$mount->getStorage()->unlink($mount->getInternalPath($internalPath));
 
 		// cache entry still exists
-		$this->assertInstanceOf(\OCP\Files\FileInfo::class, $view->getFileInfo('foo.txt'));
+		$this->assertInstanceOf(FileInfo::class, $view->getFileInfo('foo.txt'));
 
 		$response = $this->request($view, $user, 'pass', 'DELETE', '/foo.txt');
 

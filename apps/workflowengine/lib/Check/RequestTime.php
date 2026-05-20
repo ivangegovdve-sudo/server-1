@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -30,6 +31,7 @@ class RequestTime implements ICheck {
 	 * @param string $value
 	 * @return bool
 	 */
+	#[\Override]
 	public function executeCheck($operator, $value) {
 		$valueHash = md5($value);
 
@@ -72,6 +74,7 @@ class RequestTime implements ICheck {
 	 * @param string $value
 	 * @throws \UnexpectedValueException
 	 */
+	#[\Override]
 	public function validateCheck($operator, $value) {
 		if (!in_array($operator, ['in', '!in'])) {
 			throw new \UnexpectedValueException($this->l->t('The given operator is invalid'), 1);
@@ -95,6 +98,7 @@ class RequestTime implements ICheck {
 		}
 	}
 
+	#[\Override]
 	public function isAvailableForScope(int $scope): bool {
 		return true;
 	}
@@ -107,6 +111,7 @@ class RequestTime implements ICheck {
 	 *
 	 * @since 18.0.0
 	 */
+	#[\Override]
 	public function supportedEntities(): array {
 		return [];
 	}

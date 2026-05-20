@@ -33,8 +33,6 @@ class AccountMigrator implements IMigrator, ISizeEstimationMigrator {
 
 	use TAccountsHelper;
 
-	private ProfileManager $profileManager;
-
 	private const PATH_ROOT = Application::APP_ID . '/';
 
 	private const PATH_ACCOUNT_FILE = AccountMigrator::PATH_ROOT . 'account.json';
@@ -46,16 +44,16 @@ class AccountMigrator implements IMigrator, ISizeEstimationMigrator {
 	public function __construct(
 		private IAccountManager $accountManager,
 		private IAvatarManager $avatarManager,
-		ProfileManager $profileManager,
+		private ProfileManager $profileManager,
 		private ProfileConfigMapper $configMapper,
 		private IL10N $l10n,
 	) {
-		$this->profileManager = $profileManager;
 	}
 
 	/**
 	 * {@inheritDoc}
 	 */
+	#[\Override]
 	public function getEstimatedExportSize(IUser $user): int|float {
 		$size = 100; // 100KiB for account JSON
 
@@ -75,6 +73,7 @@ class AccountMigrator implements IMigrator, ISizeEstimationMigrator {
 	/**
 	 * {@inheritDoc}
 	 */
+	#[\Override]
 	public function export(IUser $user, IExportDestination $exportDestination, OutputInterface $output): void {
 		$output->writeln('Exporting account information in ' . AccountMigrator::PATH_ACCOUNT_FILE . '…');
 
@@ -110,6 +109,7 @@ class AccountMigrator implements IMigrator, ISizeEstimationMigrator {
 	/**
 	 * {@inheritDoc}
 	 */
+	#[\Override]
 	public function import(IUser $user, IImportSource $importSource, OutputInterface $output): void {
 		if ($importSource->getMigratorVersion($this->getId()) === null) {
 			$output->writeln('No version for ' . static::class . ', skipping import…');
@@ -175,6 +175,7 @@ class AccountMigrator implements IMigrator, ISizeEstimationMigrator {
 	/**
 	 * {@inheritDoc}
 	 */
+	#[\Override]
 	public function getId(): string {
 		return 'account';
 	}
@@ -182,6 +183,7 @@ class AccountMigrator implements IMigrator, ISizeEstimationMigrator {
 	/**
 	 * {@inheritDoc}
 	 */
+	#[\Override]
 	public function getDisplayName(): string {
 		return $this->l10n->t('Profile information');
 	}
@@ -189,6 +191,7 @@ class AccountMigrator implements IMigrator, ISizeEstimationMigrator {
 	/**
 	 * {@inheritDoc}
 	 */
+	#[\Override]
 	public function getDescription(): string {
 		return $this->l10n->t('Profile picture, full name, email, phone number, address, website, Twitter, organisation, role, headline, biography, and whether your profile is enabled');
 	}

@@ -26,6 +26,7 @@ class DeleteOrphanedFiles extends Command {
 		parent::__construct();
 	}
 
+	#[\Override]
 	protected function configure(): void {
 		$this
 			->setName('files:cleanup')
@@ -34,6 +35,7 @@ class DeleteOrphanedFiles extends Command {
 			->addOption('skip-filecache-extended', null, InputOption::VALUE_NONE, 'don\'t remove orphaned entries from filecache_extended');
 	}
 
+	#[\Override]
 	public function execute(InputInterface $input, OutputInterface $output): int {
 		$fileIdsByStorage = [];
 
@@ -54,7 +56,7 @@ class DeleteOrphanedFiles extends Command {
 
 		$deletedMounts = $this->cleanupOrphanedMounts();
 		$output->writeln("$deletedMounts orphaned mount entries deleted");
-		
+
 		return self::SUCCESS;
 	}
 
@@ -64,7 +66,7 @@ class DeleteOrphanedFiles extends Command {
 			->from('filecache')
 			->groupBy('storage')
 			->runAcrossAllShards();
-		return $query->executeQuery()->fetchAll(\PDO::FETCH_COLUMN);
+		return $query->executeQuery()->fetchFirstColumn();
 	}
 
 	private function getExistingStorages(): array {
@@ -72,7 +74,7 @@ class DeleteOrphanedFiles extends Command {
 		$query->select('numeric_id')
 			->from('storages')
 			->groupBy('numeric_id');
-		return $query->executeQuery()->fetchAll(\PDO::FETCH_COLUMN);
+		return $query->executeQuery()->fetchFirstColumn();
 	}
 
 	/**
@@ -89,7 +91,7 @@ class DeleteOrphanedFiles extends Command {
 		$storageIdChunks = array_chunk($storageIds, self::CHUNK_SIZE);
 		foreach ($storageIdChunks as $storageIdChunk) {
 			$query->setParameter('storage_ids', $storageIdChunk, IQueryBuilder::PARAM_INT_ARRAY);
-			$chunk = $query->executeQuery()->fetchAll();
+			$chunk = $query->executeQuery()->fetchAllAssociative();
 			foreach ($chunk as $row) {
 				$result[$row['storage']][] = $row['fileid'];
 			}
@@ -112,7 +114,7 @@ class DeleteOrphanedFiles extends Command {
 
 		return $deletedEntries;
 	}
-	
+
 	/**
 	 * @param array<int, int[]> $fileIdsByStorage
 	 * @return int
@@ -155,7 +157,7 @@ class DeleteOrphanedFiles extends Command {
 		while ($deletedInLastChunk === self::CHUNK_SIZE) {
 			$deletedInLastChunk = 0;
 			$result = $query->executeQuery();
-			while ($row = $result->fetch()) {
+			while ($row = $result->fetchAssociative()) {
 				$deletedInLastChunk++;
 				$deletedEntries += $deleteQuery->setParameter('storageid', (int)$row['storage_id'])
 					->executeStatement();

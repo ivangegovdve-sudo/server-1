@@ -29,7 +29,6 @@ use OCP\IPreview;
 use OCP\IRequest;
 use OCP\IUser;
 use OCP\IUserSession;
-use OCP\Share\IAttributes;
 use OCP\Share\IManager;
 use OCP\Share\IShare;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -45,11 +44,11 @@ class ApiControllerTest extends TestCase {
 	private string $appName = 'files';
 	private IUser $user;
 	private IRequest $request;
-	private TagService $tagService;
+	private TagService&MockObject $tagService;
 	private IPreview&MockObject $preview;
 	private ApiController $apiController;
 	private IManager $shareManager;
-	private IConfig $config;
+	private IConfig&MockObject $config;
 	private Folder&MockObject $userFolder;
 	private UserConfig&MockObject $userConfig;
 	private ViewConfig&MockObject $viewConfig;
@@ -78,6 +77,9 @@ class ApiControllerTest extends TestCase {
 		$this->viewConfig = $this->createMock(ViewConfig::class);
 		$this->l10n = $this->createMock(IL10N::class);
 		$this->rootFolder = $this->createMock(IRootFolder::class);
+		$this->rootFolder->expects($this->any())
+			->method('getUserFolder')
+			->willReturn($this->userFolder);
 		$this->logger = $this->createMock(LoggerInterface::class);
 
 		$this->apiController = new ApiController(
@@ -88,7 +90,6 @@ class ApiControllerTest extends TestCase {
 			$this->preview,
 			$this->shareManager,
 			$this->config,
-			$this->userFolder,
 			$this->userConfig,
 			$this->viewConfig,
 			$this->l10n,
@@ -120,7 +121,7 @@ class ApiControllerTest extends TestCase {
 		$this->tagService->expects($this->once())
 			->method('updateFileTags')
 			->with('/path.txt', ['Tag1', 'Tag2'])
-			->will($this->throwException(new NotFoundException('My error message')));
+			->willThrowException(new NotFoundException('My error message'));
 
 		$expected = new DataResponse(['message' => 'My error message'], Http::STATUS_NOT_FOUND);
 		$this->assertEquals($expected, $this->apiController->updateFileTags('/path.txt', ['Tag1', 'Tag2']));
@@ -130,7 +131,7 @@ class ApiControllerTest extends TestCase {
 		$this->tagService->expects($this->once())
 			->method('updateFileTags')
 			->with('/path.txt', ['Tag1', 'Tag2'])
-			->will($this->throwException(new StorageNotAvailableException('My error message')));
+			->willThrowException(new StorageNotAvailableException('My error message'));
 
 		$expected = new DataResponse(['message' => 'My error message'], Http::STATUS_SERVICE_UNAVAILABLE);
 		$this->assertEquals($expected, $this->apiController->updateFileTags('/path.txt', ['Tag1', 'Tag2']));
@@ -140,7 +141,7 @@ class ApiControllerTest extends TestCase {
 		$this->tagService->expects($this->once())
 			->method('updateFileTags')
 			->with('/path.txt', ['Tag1', 'Tag2'])
-			->will($this->throwException(new \Exception('My error message')));
+			->willThrowException(new \Exception('My error message'));
 
 		$expected = new DataResponse(['message' => 'My error message'], Http::STATUS_NOT_FOUND);
 		$this->assertEquals($expected, $this->apiController->updateFileTags('/path.txt', ['Tag1', 'Tag2']));
@@ -183,16 +184,10 @@ class ApiControllerTest extends TestCase {
 	}
 
 	public function testGetThumbnailSharedNoDownload(): void {
-		$attributes = $this->createMock(IAttributes::class);
-		$attributes->expects(self::once())
-			->method('getAttribute')
-			->with('permissions', 'download')
-			->willReturn(false);
-
 		$share = $this->createMock(IShare::class);
 		$share->expects(self::once())
-			->method('getAttributes')
-			->willReturn($attributes);
+			->method('canSeeContent')
+			->willReturn(false);
 
 		$storage = $this->createMock(ISharedStorage::class);
 		$storage->expects(self::once())
@@ -221,8 +216,8 @@ class ApiControllerTest extends TestCase {
 	public function testGetThumbnailShared(): void {
 		$share = $this->createMock(IShare::class);
 		$share->expects(self::once())
-			->method('getAttributes')
-			->willReturn(null);
+			->method('canSeeContent')
+			->willReturn(true);
 
 		$storage = $this->createMock(ISharedStorage::class);
 		$storage->expects(self::once())

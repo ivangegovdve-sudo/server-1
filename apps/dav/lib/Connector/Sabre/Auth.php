@@ -55,8 +55,11 @@ class Auth extends AbstractBasic {
 	 * @see https://github.com/owncloud/core/issues/13245
 	 */
 	public function isDavAuthenticated(string $username): bool {
-		return !is_null($this->session->get(self::DAV_AUTHENTICATED)) &&
-		$this->session->get(self::DAV_AUTHENTICATED) === $username;
+		if (is_null($this->session->get(self::DAV_AUTHENTICATED))) {
+			return false;
+		}
+
+		return $this->session->get(self::DAV_AUTHENTICATED) === $username;
 	}
 
 	/**
@@ -70,9 +73,10 @@ class Auth extends AbstractBasic {
 	 * @return bool
 	 * @throws PasswordLoginForbidden
 	 */
+	#[\Override]
 	protected function validateUserPass($username, $password) {
-		if ($this->userSession->isLoggedIn() &&
-			$this->isDavAuthenticated($this->userSession->getUser()->getUID())
+		if ($this->userSession->isLoggedIn()
+			&& $this->isDavAuthenticated($this->userSession->getUser()->getUID())
 		) {
 			$this->session->close();
 			return true;
@@ -101,6 +105,7 @@ class Auth extends AbstractBasic {
 	 * @throws NotAuthenticated
 	 * @throws ServiceUnavailable
 	 */
+	#[\Override]
 	public function check(RequestInterface $request, ResponseInterface $response) {
 		try {
 			return $this->auth($request, $response);
@@ -118,7 +123,7 @@ class Auth extends AbstractBasic {
 	 * Checks whether a CSRF check is required on the request
 	 */
 	private function requiresCSRFCheck(): bool {
-		
+
 		$methodsWithoutCsrf = ['GET', 'HEAD', 'OPTIONS'];
 		if (in_array($this->request->getMethod(), $methodsWithoutCsrf)) {
 			return false;
@@ -144,8 +149,8 @@ class Auth extends AbstractBasic {
 		}
 
 		// If logged-in AND DAV authenticated no check is required
-		if ($this->userSession->isLoggedIn() &&
-			$this->isDavAuthenticated($this->userSession->getUser()->getUID())) {
+		if ($this->userSession->isLoggedIn()
+			&& $this->isDavAuthenticated($this->userSession->getUser()->getUID())) {
 			return false;
 		}
 
@@ -159,8 +164,8 @@ class Auth extends AbstractBasic {
 	private function auth(RequestInterface $request, ResponseInterface $response): array {
 		$forcedLogout = false;
 
-		if (!$this->request->passesCSRFCheck() &&
-			$this->requiresCSRFCheck()) {
+		if (!$this->request->passesCSRFCheck()
+			&& $this->requiresCSRFCheck()) {
 			// In case of a fail with POST we need to recheck the credentials
 			if ($this->request->getMethod() === 'POST') {
 				$forcedLogout = true;
@@ -178,10 +183,10 @@ class Auth extends AbstractBasic {
 			}
 			if (
 				//Fix for broken webdav clients
-				($this->userSession->isLoggedIn() && is_null($this->session->get(self::DAV_AUTHENTICATED))) ||
+				($this->userSession->isLoggedIn() && is_null($this->session->get(self::DAV_AUTHENTICATED)))
 				//Well behaved clients that only send the cookie are allowed
-				($this->userSession->isLoggedIn() && $this->session->get(self::DAV_AUTHENTICATED) === $this->userSession->getUser()->getUID() && empty($request->getHeader('Authorization'))) ||
-				\OC_User::handleApacheAuth()
+				|| ($this->userSession->isLoggedIn() && $this->session->get(self::DAV_AUTHENTICATED) === $this->userSession->getUser()->getUID() && empty($request->getHeader('Authorization')))
+				|| \OC_User::handleApacheAuth()
 			) {
 				$user = $this->userSession->getUser()->getUID();
 				$this->currentUser = $user;

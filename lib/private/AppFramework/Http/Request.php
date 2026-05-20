@@ -14,6 +14,8 @@ use OC\Security\TrustedDomainHelper;
 use OCP\IConfig;
 use OCP\IRequest;
 use OCP\IRequestId;
+use OCP\Server;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\IpUtils;
 
 /**
@@ -43,9 +45,7 @@ class Request implements \ArrayAccess, \Countable, IRequest {
 	public const USER_AGENT_ANDROID_MOBILE_CHROME = '#Android.*Chrome/[.0-9]*#';
 	public const USER_AGENT_FREEBOX = '#^Mozilla/5\.0$#';
 	public const REGEX_LOCALHOST = '/^(127\.0\.0\.1|localhost|\[::1\])$/';
-
-	protected string $inputStream;
-	protected $content;
+	private bool $isPutStreamContentAlreadySent = false;
 	protected array $items = [];
 	protected array $allowedKeys = [
 		'get',
@@ -59,11 +59,9 @@ class Request implements \ArrayAccess, \Countable, IRequest {
 		'method',
 		'requesttoken',
 	];
-	protected IRequestId $requestId;
-	protected IConfig $config;
-	protected ?CsrfTokenManager $csrfTokenManager;
 
 	protected bool $contentDecoded = false;
+	private ?\JsonException $decodingException = null;
 
 	/**
 	 * @param array $vars An associative array with the following optional values:
@@ -79,19 +77,17 @@ class Request implements \ArrayAccess, \Countable, IRequest {
 	 * @param IRequestId $requestId
 	 * @param IConfig $config
 	 * @param CsrfTokenManager|null $csrfTokenManager
-	 * @param string $stream
+	 * @param string $inputStream
 	 * @see https://www.php.net/manual/en/reserved.variables.php
 	 */
-	public function __construct(array $vars,
-		IRequestId $requestId,
-		IConfig $config,
-		?CsrfTokenManager $csrfTokenManager = null,
-		string $stream = 'php://input') {
-		$this->inputStream = $stream;
+	public function __construct(
+		array $vars,
+		protected IRequestId $requestId,
+		protected IConfig $config,
+		protected ?CsrfTokenManager $csrfTokenManager = null,
+		protected string $inputStream = 'php://input',
+	) {
 		$this->items['params'] = [];
-		$this->requestId = $requestId;
-		$this->config = $config;
-		$this->csrfTokenManager = $csrfTokenManager;
 
 		if (!array_key_exists('method', $vars)) {
 			$vars['method'] = 'GET';
@@ -123,6 +119,7 @@ class Request implements \ArrayAccess, \Countable, IRequest {
 	 * Countable method
 	 * @return int
 	 */
+	#[\Override]
 	public function count(): int {
 		return \count($this->items['parameters']);
 	}
@@ -147,6 +144,7 @@ class Request implements \ArrayAccess, \Countable, IRequest {
 	 * @param string $offset The key to lookup
 	 * @return boolean
 	 */
+	#[\Override]
 	public function offsetExists($offset): bool {
 		return isset($this->items['parameters'][$offset]);
 	}
@@ -156,6 +154,7 @@ class Request implements \ArrayAccess, \Countable, IRequest {
 	 * @param string $offset
 	 * @return mixed
 	 */
+	#[\Override]
 	#[\ReturnTypeWillChange]
 	public function offsetGet($offset) {
 		return $this->items['parameters'][$offset] ?? null;
@@ -166,6 +165,7 @@ class Request implements \ArrayAccess, \Countable, IRequest {
 	 * @param string $offset
 	 * @param mixed $value
 	 */
+	#[\Override]
 	public function offsetSet($offset, $value): void {
 		throw new \RuntimeException('You cannot change the contents of the request object');
 	}
@@ -174,6 +174,7 @@ class Request implements \ArrayAccess, \Countable, IRequest {
 	 * @see offsetExists
 	 * @param string $offset
 	 */
+	#[\Override]
 	public function offsetUnset($offset): void {
 		throw new \RuntimeException('You cannot change the contents of the request object');
 	}
@@ -258,6 +259,7 @@ class Request implements \ArrayAccess, \Countable, IRequest {
 	 * @param string $name
 	 * @return string
 	 */
+	#[\Override]
 	public function getHeader(string $name): string {
 		$name = strtoupper(str_replace('-', '_', $name));
 		if (isset($this->server['HTTP_' . $name])) {
@@ -292,6 +294,7 @@ class Request implements \ArrayAccess, \Countable, IRequest {
 	 * @param mixed $default If the key is not found, this value will be returned
 	 * @return mixed the content of the array
 	 */
+	#[\Override]
 	public function getParam(string $key, $default = null) {
 		return isset($this->parameters[$key])
 			? $this->parameters[$key]
@@ -303,6 +306,7 @@ class Request implements \ArrayAccess, \Countable, IRequest {
 	 * (as GET or POST) or through the URL by the route
 	 * @return array the array with all parameters
 	 */
+	#[\Override]
 	public function getParams(): array {
 		return is_array($this->parameters) ? $this->parameters : [];
 	}
@@ -311,6 +315,7 @@ class Request implements \ArrayAccess, \Countable, IRequest {
 	 * Returns the method of the request
 	 * @return string the method of the request (POST, GET, etc)
 	 */
+	#[\Override]
 	public function getMethod(): string {
 		return $this->method;
 	}
@@ -320,6 +325,7 @@ class Request implements \ArrayAccess, \Countable, IRequest {
 	 * @param string $key the key that will be taken from the $_FILES array
 	 * @return array the file in the $_FILES element
 	 */
+	#[\Override]
 	public function getUploadedFile(string $key) {
 		return isset($this->files[$key]) ? $this->files[$key] : null;
 	}
@@ -329,6 +335,7 @@ class Request implements \ArrayAccess, \Countable, IRequest {
 	 * @param string $key the key that will be taken from the $_ENV array
 	 * @return array the value in the $_ENV element
 	 */
+	#[\Override]
 	public function getEnv(string $key) {
 		return isset($this->env[$key]) ? $this->env[$key] : null;
 	}
@@ -338,6 +345,7 @@ class Request implements \ArrayAccess, \Countable, IRequest {
 	 * @param string $key the key that will be taken from the $_COOKIE array
 	 * @return string the value in the $_COOKIE element
 	 */
+	#[\Override]
 	public function getCookie(string $key) {
 		return isset($this->cookies[$key]) ? $this->cookies[$key] : null;
 	}
@@ -356,13 +364,13 @@ class Request implements \ArrayAccess, \Countable, IRequest {
 	protected function getContent() {
 		// If the content can't be parsed into an array then return a stream resource.
 		if ($this->isPutStreamContent()) {
-			if ($this->content === false) {
+			if ($this->isPutStreamContentAlreadySent) {
 				throw new \LogicException(
 					'"put" can only be accessed once if not '
 					. 'application/x-www-form-urlencoded or application/json.'
 				);
 			}
-			$this->content = false;
+			$this->isPutStreamContentAlreadySent = true;
 			return fopen($this->inputStream, 'rb');
 		} else {
 			$this->decodeContent();
@@ -389,7 +397,14 @@ class Request implements \ArrayAccess, \Countable, IRequest {
 
 		// 'application/json' and other JSON-related content types must be decoded manually.
 		if (preg_match(self::JSON_CONTENT_TYPE_REGEX, $this->getHeader('Content-Type')) === 1) {
-			$params = json_decode(file_get_contents($this->inputStream), true);
+			$content = file_get_contents($this->inputStream);
+			if ($content !== '') {
+				try {
+					$params = json_decode($content, true, flags:JSON_THROW_ON_ERROR);
+				} catch (\JsonException $e) {
+					$this->decodingException = $e;
+				}
+			}
 			if (\is_array($params) && \count($params) > 0) {
 				$this->items['params'] = $params;
 				if ($this->method === 'POST') {
@@ -413,11 +428,19 @@ class Request implements \ArrayAccess, \Countable, IRequest {
 		$this->contentDecoded = true;
 	}
 
+	#[\Override]
+	public function throwDecodingExceptionIfAny(): void {
+		if ($this->decodingException !== null) {
+			throw $this->decodingException;
+		}
+	}
+
 
 	/**
 	 * Checks if the CSRF check was correct
 	 * @return bool true if CSRF check passed
 	 */
+	#[\Override]
 	public function passesCSRFCheck(): bool {
 		if ($this->csrfTokenManager === null) {
 			return false;
@@ -494,6 +517,7 @@ class Request implements \ArrayAccess, \Countable, IRequest {
 	 * @return bool
 	 * @since 9.1.0
 	 */
+	#[\Override]
 	public function passesStrictCookieCheck(): bool {
 		if (!$this->cookieCheckRequired()) {
 			return true;
@@ -514,6 +538,7 @@ class Request implements \ArrayAccess, \Countable, IRequest {
 	 * @return bool
 	 * @since 9.1.0
 	 */
+	#[\Override]
 	public function passesLaxCookieCheck(): bool {
 		if (!$this->cookieCheckRequired()) {
 			return true;
@@ -532,6 +557,7 @@ class Request implements \ArrayAccess, \Countable, IRequest {
 	 * If `mod_unique_id` is installed this value will be taken.
 	 * @return string
 	 */
+	#[\Override]
 	public function getId(): string {
 		return $this->requestId->getId();
 	}
@@ -559,6 +585,7 @@ class Request implements \ArrayAccess, \Countable, IRequest {
 	 * Do always use this instead of $_SERVER['REMOTE_ADDR']
 	 * @return string IP address
 	 */
+	#[\Override]
 	public function getRemoteAddress(): string {
 		$remoteAddress = isset($this->server['REMOTE_ADDR']) ? $this->server['REMOTE_ADDR'] : '';
 		$trustedProxies = $this->config->getSystemValue('trusted_proxies', []);
@@ -613,36 +640,47 @@ class Request implements \ArrayAccess, \Countable, IRequest {
 
 	/**
 	 * Returns the server protocol. It respects one or more reverse proxies servers
-	 * and load balancers
+	 * and load balancers. Precedence:
+	 *   1. `overwriteprotocol` config value
+	 *   2. `X-Forwarded-Proto` header value
+	 *   3. $_SERVER['HTTPS'] value
+	 * If an invalid protocol is provided, defaults to http, continues, but logs as an error.
+	 *
 	 * @return string Server protocol (http or https)
 	 */
+	#[\Override]
 	public function getServerProtocol(): string {
-		if ($this->config->getSystemValueString('overwriteprotocol') !== ''
-			&& $this->isOverwriteCondition()) {
-			return $this->config->getSystemValueString('overwriteprotocol');
-		}
+		$proto = 'http';
 
-		if ($this->fromTrustedProxy() && isset($this->server['HTTP_X_FORWARDED_PROTO'])) {
+		if ($this->config->getSystemValueString('overwriteprotocol') !== ''
+			&& $this->isOverwriteCondition()
+		) {
+			$proto = strtolower($this->config->getSystemValueString('overwriteprotocol'));
+		} elseif ($this->fromTrustedProxy()
+			&& isset($this->server['HTTP_X_FORWARDED_PROTO'])
+		) {
 			if (str_contains($this->server['HTTP_X_FORWARDED_PROTO'], ',')) {
 				$parts = explode(',', $this->server['HTTP_X_FORWARDED_PROTO']);
 				$proto = strtolower(trim($parts[0]));
 			} else {
 				$proto = strtolower($this->server['HTTP_X_FORWARDED_PROTO']);
 			}
-
-			// Verify that the protocol is always HTTP or HTTPS
-			// default to http if an invalid value is provided
-			return $proto === 'https' ? 'https' : 'http';
-		}
-
-		if (isset($this->server['HTTPS'])
-			&& $this->server['HTTPS'] !== null
+		} elseif (!empty($this->server['HTTPS'])
 			&& $this->server['HTTPS'] !== 'off'
-			&& $this->server['HTTPS'] !== '') {
-			return 'https';
+		) {
+			$proto = 'https';
 		}
 
-		return 'http';
+		if ($proto !== 'https' && $proto !== 'http') {
+			// log unrecognized value so admin has a chance to fix it
+			Server::get(LoggerInterface::class)->critical(
+				'Server protocol is malformed [falling back to http] (check overwriteprotocol and/or X-Forwarded-Proto to remedy): ' . $proto,
+				['app' => 'core']
+			);
+		}
+
+		// default to http if provided an invalid value
+		return $proto === 'https' ? 'https' : 'http';
 	}
 
 	/**
@@ -650,8 +688,9 @@ class Request implements \ArrayAccess, \Countable, IRequest {
 	 *
 	 * @return string HTTP protocol. HTTP/2, HTTP/1.1 or HTTP/1.0.
 	 */
+	#[\Override]
 	public function getHttpProtocol(): string {
-		$claimedProtocol = $this->server['SERVER_PROTOCOL'];
+		$claimedProtocol = $this->server['SERVER_PROTOCOL'] ?? '';
 
 		if (\is_string($claimedProtocol)) {
 			$claimedProtocol = strtoupper($claimedProtocol);
@@ -675,6 +714,7 @@ class Request implements \ArrayAccess, \Countable, IRequest {
 	 * reverse proxies
 	 * @return string
 	 */
+	#[\Override]
 	public function getRequestUri(): string {
 		$uri = isset($this->server['REQUEST_URI']) ? $this->server['REQUEST_URI'] : '';
 		if ($this->config->getSystemValueString('overwritewebroot') !== '' && $this->isOverwriteCondition()) {
@@ -688,6 +728,7 @@ class Request implements \ArrayAccess, \Countable, IRequest {
 	 * @throws \Exception
 	 * @return string Path info
 	 */
+	#[\Override]
 	public function getRawPathInfo(): string {
 		$requestUri = isset($this->server['REQUEST_URI']) ? $this->server['REQUEST_URI'] : '';
 		// remove too many slashes - can be caused by reverse proxy configuration
@@ -698,7 +739,7 @@ class Request implements \ArrayAccess, \Countable, IRequest {
 			$requestUri = substr($requestUri, 0, $pos);
 		}
 
-		$scriptName = $this->server['SCRIPT_NAME'];
+		$scriptName = $this->server['SCRIPT_NAME'] ?? '';
 		$pathInfo = $requestUri;
 
 		// strip off the script name's dir and file name
@@ -729,11 +770,12 @@ class Request implements \ArrayAccess, \Countable, IRequest {
 	}
 
 	/**
-	 * Get PathInfo from request
+	 * Get PathInfo from request (rawurldecoded)
 	 * @throws \Exception
 	 * @return string|false Path info or false when not found
 	 */
-	public function getPathInfo() {
+	#[\Override]
+	public function getPathInfo(): string|false {
 		$pathInfo = $this->getRawPathInfo();
 		return \Sabre\HTTP\decodePath($pathInfo);
 	}
@@ -743,8 +785,9 @@ class Request implements \ArrayAccess, \Countable, IRequest {
 	 * reverse proxies
 	 * @return string the script name
 	 */
+	#[\Override]
 	public function getScriptName(): string {
-		$name = $this->server['SCRIPT_NAME'];
+		$name = $this->server['SCRIPT_NAME'] ?? '';
 		$overwriteWebRoot = $this->config->getSystemValueString('overwritewebroot');
 		if ($overwriteWebRoot !== '' && $this->isOverwriteCondition()) {
 			// FIXME: This code is untestable due to __DIR__, also that hardcoded path is really dangerous
@@ -760,6 +803,7 @@ class Request implements \ArrayAccess, \Countable, IRequest {
 	 * @param array $agent array of agent names
 	 * @return bool true if at least one of the given agent matches, false otherwise
 	 */
+	#[\Override]
 	public function isUserAgent(array $agent): bool {
 		if (!isset($this->server['HTTP_USER_AGENT'])) {
 			return false;
@@ -777,6 +821,7 @@ class Request implements \ArrayAccess, \Countable, IRequest {
 	 * whether it is a trusted domain
 	 * @return string Server host
 	 */
+	#[\Override]
 	public function getInsecureServerHost(): string {
 		if ($this->fromTrustedProxy() && $this->getOverwriteHost() !== null) {
 			return $this->getOverwriteHost();
@@ -807,6 +852,7 @@ class Request implements \ArrayAccess, \Countable, IRequest {
 	 * trusted domain if the host isn't in the trusted list
 	 * @return string Server host
 	 */
+	#[\Override]
 	public function getServerHost(): string {
 		// overwritehost is always trusted
 		$host = $this->getOverwriteHost();
@@ -851,5 +897,25 @@ class Request implements \ArrayAccess, \Countable, IRequest {
 		$trustedProxies = $this->config->getSystemValue('trusted_proxies', []);
 
 		return \is_array($trustedProxies) && $this->isTrustedProxy($trustedProxies, $remoteAddress);
+	}
+
+	#[\Override]
+	public function getFormat(): ?string {
+		$format = $this->getParam('format');
+		if ($format !== null) {
+			return $format;
+		}
+
+		$prefix = 'application/';
+		$headers = explode(',', $this->getHeader('Accept'));
+		foreach ($headers as $header) {
+			$header = strtolower(trim($header));
+
+			if (str_starts_with($header, $prefix)) {
+				return substr($header, strlen($prefix));
+			}
+		}
+
+		return null;
 	}
 }

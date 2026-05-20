@@ -20,6 +20,7 @@ use OCP\IConfig;
 use OCP\IRequest;
 use OCP\Server;
 use OCP\ServerVersion;
+use OCP\Util;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Application as SymfonyApplication;
@@ -74,15 +75,15 @@ class Application {
 
 		if ($this->memoryInfo->isMemoryLimitSufficient() === false) {
 			$output->getErrorOutput()->writeln(
-				'<comment>The current PHP memory limit ' .
-				'is below the recommended value of 512MB.</comment>'
+				'<comment>The current PHP memory limit '
+				. 'is below the recommended value of 512MB.</comment>'
 			);
 		}
 
 		try {
 			require_once __DIR__ . '/../../../core/register_command.php';
 			if ($this->config->getSystemValueBool('installed', false)) {
-				if (\OCP\Util::needUpgrade()) {
+				if (Util::needUpgrade()) {
 					throw new NeedsUpdateException();
 				} elseif ($this->config->getSystemValueBool('maintenance')) {
 					$this->writeMaintenanceModeInfo($input, $output);

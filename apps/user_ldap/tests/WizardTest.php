@@ -18,10 +18,10 @@ use Test\TestCase;
 /**
  * Class Test_Wizard
  *
- * @group DB
  *
  * @package OCA\User_LDAP\Tests
  */
+#[\PHPUnit\Framework\Attributes\Group(name: 'DB')]
 class WizardTest extends TestCase {
 	protected function setUp(): void {
 		parent::setUp();

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2017 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -15,10 +16,12 @@ class SqliteExpressionBuilder extends ExpressionBuilder {
 	/**
 	 * @inheritdoc
 	 */
+	#[\Override]
 	public function like($x, $y, $type = null): string {
 		return parent::like($x, $y, $type) . " ESCAPE '\\'";
 	}
 
+	#[\Override]
 	public function iLike($x, $y, $type = null): string {
 		return $this->like($this->functionBuilder->lower($x), $this->functionBuilder->lower($y), $type);
 	}
@@ -28,6 +31,7 @@ class SqliteExpressionBuilder extends ExpressionBuilder {
 	 * @param mixed|null $type
 	 * @return array|IQueryFunction|string
 	 */
+	#[\Override]
 	protected function prepareColumn($column, $type) {
 		if ($type !== null
 			&& !is_array($column)
@@ -47,6 +51,7 @@ class SqliteExpressionBuilder extends ExpressionBuilder {
 	 * @param mixed $type One of IQueryBuilder::PARAM_*
 	 * @return IQueryFunction
 	 */
+	#[\Override]
 	public function castColumn($column, $type): IQueryFunction {
 		switch ($type) {
 			case IQueryBuilder::PARAM_DATE_MUTABLE:

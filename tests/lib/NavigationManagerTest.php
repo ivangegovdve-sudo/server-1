@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -10,6 +11,7 @@ namespace Test;
 use OC\App\AppManager;
 use OC\Group\Manager;
 use OC\NavigationManager;
+use OC\Security\CSRF\CsrfTokenManager;
 use OC\SubAdmin;
 use OCP\EventDispatcher\IEventDispatcher;
 use OCP\IConfig;
@@ -20,7 +22,7 @@ use OCP\IUser;
 use OCP\IUserSession;
 use OCP\L10N\IFactory;
 use OCP\Navigation\Events\LoadAdditionalEntriesEvent;
-use OCP\Util;
+use OCP\Server;
 use PHPUnit\Framework\MockObject\MockObject;
 use Psr\Log\LoggerInterface;
 
@@ -40,10 +42,11 @@ class NavigationManagerTest extends TestCase {
 
 	protected IEVentDispatcher|MockObject $dispatcher;
 
-	/** @var \OC\NavigationManager */
+	/** @var NavigationManager */
 	protected $navigationManager;
 	protected LoggerInterface $logger;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -121,11 +124,11 @@ class NavigationManagerTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider addArrayData
 	 *
 	 * @param array $entry
 	 * @param array $expectedEntry
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('addArrayData')]
 	public function testAddArray(array $entry, array $expectedEntry): void {
 		$this->assertEmpty($this->navigationManager->getAll('all'), 'Expected no navigation entry exists');
 		$this->navigationManager->add($entry);
@@ -139,11 +142,11 @@ class NavigationManagerTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider addArrayData
 	 *
 	 * @param array $entry
 	 * @param array $expectedEntry
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('addArrayData')]
 	public function testAddClosure(array $entry, array $expectedEntry): void {
 		global $testAddClosureNumberOfCalls;
 		$testAddClosureNumberOfCalls = 0;
@@ -214,9 +217,7 @@ class NavigationManagerTest extends TestCase {
 		$this->assertEquals(0, $testAddClosureNumberOfCalls, 'Expected that the closure is not called by getAll()');
 	}
 
-	/**
-	 * @dataProvider providesNavigationConfig
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('providesNavigationConfig')]
 	public function testWithAppManager($expected, $navigation, $isAdmin = false): void {
 		$l = $this->createMock(IL10N::class);
 		$l->expects($this->any())->method('t')->willReturnCallback(function ($text, $parameters = []) {
@@ -279,7 +280,7 @@ class NavigationManagerTest extends TestCase {
 				'id' => 'core_apps',
 				'order' => 5,
 				'href' => '/apps/test/',
-				'icon' => '/apps/settings/img/apps.svg',
+				'icon' => '/apps/appstore/img/app.svg',
 				'name' => 'Apps',
 				'active' => false,
 				'type' => 'settings',
@@ -324,7 +325,7 @@ class NavigationManagerTest extends TestCase {
 			'logout' => [
 				'id' => 'logout',
 				'order' => 99999,
-				'href' => 'https://example.com/logout?requesttoken=' . urlencode(Util::callRegister()),
+				'href' => 'https://example.com/logout?requesttoken=' . urlencode(Server::get(CsrfTokenManager::class)->getToken()->getEncryptedValue()),
 				'icon' => '/apps/core/img/actions/logout.svg',
 				'name' => 'Log out',
 				'active' => false,
@@ -730,9 +731,7 @@ class NavigationManagerTest extends TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider provideDefaultEntries
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('provideDefaultEntries')]
 	public function testGetDefaultEntryIdForUser(string $defaultApps, string $userDefaultApps, string $userApporder, bool $withFallbacks, string $expectedApp): void {
 		$this->navigationManager->add([
 			'id' => 'files',

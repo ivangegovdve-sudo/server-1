@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2017 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -20,10 +21,12 @@ class ShareRecipientSorter implements ISorter {
 	) {
 	}
 
+	#[\Override]
 	public function getId(): string {
 		return 'share-recipients';
 	}
 
+	#[\Override]
 	public function sort(array &$sortArray, array $context) {
 		// let's be tolerant. Comments  uses "files" by default, other usages are often singular
 		if ($context['itemType'] !== 'files' && $context['itemType'] !== 'file') {

@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2017 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -17,6 +20,7 @@ class PropFilter implements XmlDeserializable {
 	 * @throws BadRequest
 	 * @return string
 	 */
+	#[\Override]
 	public static function xmlDeserialize(Reader $reader) {
 		$att = $reader->parseAttributes();
 		$componentName = $att['name'];

@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2018-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -20,7 +23,7 @@ class FTP extends Backend {
 			->setIdentifier('ftp')
 			->addIdentifierAlias('\OC\Files\Storage\FTP') // legacy compat
 			->setStorageClass('\OCA\Files_External\Lib\Storage\FTP')
-			->setText($l->t('FTP'))
+			->setText($l->t('FTP / FTPS'))
 			->addParameters([
 				new DefinitionParameter('host', $l->t('Host')),
 				(new DefinitionParameter('port', $l->t('Port')))

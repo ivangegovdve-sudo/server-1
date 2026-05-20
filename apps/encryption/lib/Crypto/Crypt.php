@@ -342,9 +342,8 @@ class Crypt {
 	 * @param string $privateKey
 	 * @param string $password
 	 * @param string $uid for regular users, empty for system keys
-	 * @return false|string
 	 */
-	public function decryptPrivateKey($privateKey, $password = '', $uid = '') {
+	public function decryptPrivateKey($privateKey, $password = '', $uid = '') : string|false {
 		$header = $this->parseHeader($privateKey);
 
 		if (isset($header['cipher'])) {
@@ -546,7 +545,7 @@ class Crypt {
 			$options,
 			$iv);
 
-		if ($plainContent) {
+		if ($plainContent !== false) {
 			return $plainContent;
 		} else {
 			throw new DecryptionFailedException('Encryption library: Decryption (symmetric) of content failed: ' . openssl_error_string());

@@ -1,16 +1,18 @@
-/**
+/*!
  * SPDX-FileCopyrightText: 2023 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
-import { File, Folder, Permission, View, FileAction } from '@nextcloud/files'
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+
+import type { IView } from '@nextcloud/files'
 
 import axios from '@nextcloud/axios'
 import * as capabilities from '@nextcloud/capabilities'
 import * as eventBus from '@nextcloud/event-bus'
-
-import { action } from './deleteAction'
-import logger from '../logger'
+import { File, Folder, Permission } from '@nextcloud/files'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { logger } from '../utils/logger.ts'
+import { action } from './deleteAction.ts'
+import { shouldAskForConfirmation } from './deleteUtils.ts'
 
 vi.mock('@nextcloud/auth')
 vi.mock('@nextcloud/axios')
@@ -19,12 +21,12 @@ vi.mock('@nextcloud/capabilities')
 const view = {
 	id: 'files',
 	name: 'Files',
-} as View
+} as IView
 
 const trashbinView = {
 	id: 'trashbin',
 	name: 'Trashbin',
-} as View
+} as IView
 
 describe('Delete action conditions tests', () => {
 	beforeEach(() => {
@@ -37,6 +39,7 @@ describe('Delete action conditions tests', () => {
 		owner: 'test',
 		mime: 'text/plain',
 		permissions: Permission.ALL,
+		root: '/files/test',
 	})
 
 	const file2 = new File({
@@ -49,6 +52,7 @@ describe('Delete action conditions tests', () => {
 			'is-mount-root': true,
 			'mount-type': 'shared',
 		},
+		root: '/files/admin',
 	})
 
 	const folder = new Folder({
@@ -57,6 +61,7 @@ describe('Delete action conditions tests', () => {
 		owner: 'admin',
 		mime: 'text/plain',
 		permissions: Permission.ALL,
+		root: '/files/admin',
 	})
 
 	const folder2 = new Folder({
@@ -69,6 +74,7 @@ describe('Delete action conditions tests', () => {
 			'is-mount-root': true,
 			'mount-type': 'shared',
 		},
+		root: '/files/admin',
 	})
 
 	const folder3 = new Folder({
@@ -81,23 +87,43 @@ describe('Delete action conditions tests', () => {
 			'is-mount-root': true,
 			'mount-type': 'external',
 		},
+		root: '/files/admin',
 	})
 
 	test('Default values', () => {
-		expect(action).toBeInstanceOf(FileAction)
 		expect(action.id).toBe('delete')
-		expect(action.displayName([file], view)).toBe('Delete file')
-		expect(action.iconSvgInline([], view)).toMatch(/<svg.+<\/svg>/)
+		expect(action.displayName({
+			nodes: [file],
+			view,
+			folder: {} as Folder,
+			contents: [],
+		})).toBe('Delete file')
+		expect(action.iconSvgInline({
+			nodes: [file],
+			view,
+			folder: {} as Folder,
+			contents: [],
+		})).toMatch(/<svg.+<\/svg>/)
 		expect(action.default).toBeUndefined()
 		expect(action.order).toBe(100)
 	})
 
 	test('Default folder displayName', () => {
-		expect(action.displayName([folder], view)).toBe('Delete folder')
+		expect(action.displayName({
+			nodes: [folder],
+			view,
+			folder: {} as Folder,
+			contents: [],
+		})).toBe('Delete folder')
 	})
 
 	test('Default trashbin view displayName', () => {
-		expect(action.displayName([file], trashbinView)).toBe('Delete permanently')
+		expect(action.displayName({
+			nodes: [file],
+			view: trashbinView,
+			folder: {} as Folder,
+			contents: [],
+		})).toBe('Delete permanently')
 	})
 
 	test('Trashbin disabled displayName', () => {
@@ -106,23 +132,58 @@ describe('Delete action conditions tests', () => {
 				files: {},
 			}
 		})
-		expect(action.displayName([file], view)).toBe('Delete permanently')
+		expect(action.displayName({
+			nodes: [file],
+			view,
+			folder: {} as Folder,
+			contents: [],
+		})).toBe('Delete permanently')
 		expect(capabilities.getCapabilities).toBeCalledTimes(1)
 	})
 
 	test('Shared root node displayName', () => {
-		expect(action.displayName([file2], view)).toBe('Leave this share')
-		expect(action.displayName([folder2], view)).toBe('Leave this share')
-		expect(action.displayName([file2, folder2], view)).toBe('Leave these shares')
+		expect(action.displayName({
+			nodes: [file2],
+			view,
+			folder: {} as Folder,
+			contents: [],
+		})).toBe('Leave this share')
+		expect(action.displayName({
+			nodes: [folder2],
+			view,
+			folder: {} as Folder,
+			contents: [],
+		})).toBe('Leave this share')
+		expect(action.displayName({
+			nodes: [file2, folder2],
+			view,
+			folder: {} as Folder,
+			contents: [],
+		})).toBe('Leave these shares')
 	})
 
 	test('External storage root node displayName', () => {
-		expect(action.displayName([folder3], view)).toBe('Disconnect storage')
-		expect(action.displayName([folder3, folder3], view)).toBe('Disconnect storages')
+		expect(action.displayName({
+			nodes: [folder3],
+			view,
+			folder: {} as Folder,
+			contents: [],
+		})).toBe('Disconnect storage')
+		expect(action.displayName({
+			nodes: [folder3, folder3],
+			view,
+			folder: {} as Folder,
+			contents: [],
+		})).toBe('Disconnect storages')
 	})
 
 	test('Shared and owned nodes displayName', () => {
-		expect(action.displayName([file, file2], view)).toBe('Delete and unshare')
+		expect(action.displayName({
+			nodes: [file, file2],
+			view,
+			folder: {} as Folder,
+			contents: [],
+		})).toBe('Delete and unshare')
 	})
 })
 
@@ -150,10 +211,16 @@ describe('Delete action enabled tests', () => {
 			owner: 'test',
 			mime: 'text/plain',
 			permissions: Permission.ALL,
+			root: '/files/test',
 		})
 
 		expect(action.enabled).toBeDefined()
-		expect(action.enabled!([file], view)).toBe(true)
+		expect(action.enabled!({
+			nodes: [file],
+			view,
+			folder: {} as Folder,
+			contents: [],
+		})).toBe(true)
 	})
 
 	test('Disabled without DELETE permissions', () => {
@@ -163,15 +230,26 @@ describe('Delete action enabled tests', () => {
 			owner: 'test',
 			mime: 'text/plain',
 			permissions: Permission.READ,
+			root: '/files/test',
 		})
 
 		expect(action.enabled).toBeDefined()
-		expect(action.enabled!([file], view)).toBe(false)
+		expect(action.enabled!({
+			nodes: [file],
+			view,
+			folder: {} as Folder,
+			contents: [],
+		})).toBe(false)
 	})
 
 	test('Disabled without nodes', () => {
 		expect(action.enabled).toBeDefined()
-		expect(action.enabled!([], view)).toBe(false)
+		expect(action.enabled!({
+			nodes: [],
+			view,
+			folder: {} as Folder,
+			contents: [],
+		})).toBe(false)
 	})
 
 	test('Disabled if not all nodes can be deleted', () => {
@@ -180,18 +258,35 @@ describe('Delete action enabled tests', () => {
 			source: 'https://cloud.domain.com/remote.php/dav/files/test/Foo/',
 			owner: 'test',
 			permissions: Permission.DELETE,
+			root: '/files/test',
 		})
 		const folder2 = new Folder({
 			id: 2,
 			source: 'https://cloud.domain.com/remote.php/dav/files/test/Bar/',
 			owner: 'test',
 			permissions: Permission.READ,
+			root: '/files/test',
 		})
 
 		expect(action.enabled).toBeDefined()
-		expect(action.enabled!([folder1], view)).toBe(true)
-		expect(action.enabled!([folder2], view)).toBe(false)
-		expect(action.enabled!([folder1, folder2], view)).toBe(false)
+		expect(action.enabled!({
+			nodes: [folder1],
+			view,
+			folder: {} as Folder,
+			contents: [],
+		})).toBe(true)
+		expect(action.enabled!({
+			nodes: [folder2],
+			view,
+			folder: {} as Folder,
+			contents: [],
+		})).toBe(false)
+		expect(action.enabled!({
+			nodes: [folder1, folder2],
+			view,
+			folder: {} as Folder,
+			contents: [],
+		})).toBe(false)
 	})
 
 	test('Disabled if not allowed', () => {
@@ -200,7 +295,12 @@ describe('Delete action enabled tests', () => {
 		})))
 
 		expect(action.enabled).toBeDefined()
-		expect(action.enabled!([], view)).toBe(false)
+		expect(action.enabled!({
+			nodes: [],
+			view,
+			folder: {} as Folder,
+			contents: [],
+		})).toBe(false)
 	})
 })
 
@@ -217,10 +317,16 @@ describe('Delete action execute tests', () => {
 			source: 'https://cloud.domain.com/remote.php/dav/files/test/foobar.txt',
 			owner: 'test',
 			mime: 'text/plain',
-			permissions: Permission.READ | Permission.UPDATE | Permission.DELETE,
+			permissions: Permission.READ | Permission.UPDATE | Permission.WRITE | Permission.DELETE,
+			root: '/files/test',
 		})
 
-		const exec = await action.exec(file, view, '/')
+		const exec = await action.exec({
+			nodes: [file],
+			view,
+			folder: {} as Folder,
+			contents: [],
+		})
 
 		expect(exec).toBe(true)
 		expect(axios.delete).toBeCalledTimes(1)
@@ -235,7 +341,6 @@ describe('Delete action execute tests', () => {
 		vi.spyOn(eventBus, 'emit')
 
 		const confirmMock = vi.fn()
-		// @ts-expect-error We only mock what needed
 		window.OC = { dialogs: { confirmDestructive: confirmMock } }
 
 		const file1 = new File({
@@ -243,7 +348,8 @@ describe('Delete action execute tests', () => {
 			source: 'https://cloud.domain.com/remote.php/dav/files/test/foo.txt',
 			owner: 'test',
 			mime: 'text/plain',
-			permissions: Permission.READ | Permission.UPDATE | Permission.DELETE,
+			permissions: Permission.READ | Permission.UPDATE | Permission.WRITE | Permission.DELETE,
+			root: '/files/test',
 		})
 
 		const file2 = new File({
@@ -251,10 +357,16 @@ describe('Delete action execute tests', () => {
 			source: 'https://cloud.domain.com/remote.php/dav/files/test/bar.txt',
 			owner: 'test',
 			mime: 'text/plain',
-			permissions: Permission.READ | Permission.UPDATE | Permission.DELETE,
+			permissions: Permission.READ | Permission.UPDATE | Permission.WRITE | Permission.DELETE,
+			root: '/files/test',
 		})
 
-		const exec = await action.execBatch!([file1, file2], view, '/')
+		const exec = await action.execBatch!({
+			nodes: [file1, file2],
+			view,
+			folder: {} as Folder,
+			contents: [],
+		})
 
 		// Not enough nodes to trigger a confirmation dialog
 		expect(confirmMock).toBeCalledTimes(0)
@@ -275,7 +387,6 @@ describe('Delete action execute tests', () => {
 
 		// Emulate the confirmation dialog to always confirm
 		const confirmMock = vi.fn().mockImplementation((a, b, c, resolve) => resolve(true))
-		// @ts-expect-error We only mock what needed
 		window.OC = { dialogs: { confirmDestructive: confirmMock } }
 
 		const file1 = new File({
@@ -283,7 +394,8 @@ describe('Delete action execute tests', () => {
 			source: 'https://cloud.domain.com/remote.php/dav/files/test/foo.txt',
 			owner: 'test',
 			mime: 'text/plain',
-			permissions: Permission.READ | Permission.UPDATE | Permission.DELETE,
+			permissions: Permission.READ | Permission.UPDATE | Permission.WRITE | Permission.DELETE,
+			root: '/files/test',
 		})
 
 		const file2 = new File({
@@ -291,7 +403,8 @@ describe('Delete action execute tests', () => {
 			source: 'https://cloud.domain.com/remote.php/dav/files/test/bar.txt',
 			owner: 'test',
 			mime: 'text/plain',
-			permissions: Permission.READ | Permission.UPDATE | Permission.DELETE,
+			permissions: Permission.READ | Permission.UPDATE | Permission.WRITE | Permission.DELETE,
+			root: '/files/test',
 		})
 
 		const file3 = new File({
@@ -299,7 +412,8 @@ describe('Delete action execute tests', () => {
 			source: 'https://cloud.domain.com/remote.php/dav/files/test/baz.txt',
 			owner: 'test',
 			mime: 'text/plain',
-			permissions: Permission.READ | Permission.UPDATE | Permission.DELETE,
+			permissions: Permission.READ | Permission.UPDATE | Permission.WRITE | Permission.DELETE,
+			root: '/files/test',
 		})
 
 		const file4 = new File({
@@ -307,7 +421,8 @@ describe('Delete action execute tests', () => {
 			source: 'https://cloud.domain.com/remote.php/dav/files/test/qux.txt',
 			owner: 'test',
 			mime: 'text/plain',
-			permissions: Permission.READ | Permission.UPDATE | Permission.DELETE,
+			permissions: Permission.READ | Permission.UPDATE | Permission.WRITE | Permission.DELETE,
+			root: '/files/test',
 		})
 
 		const file5 = new File({
@@ -315,10 +430,16 @@ describe('Delete action execute tests', () => {
 			source: 'https://cloud.domain.com/remote.php/dav/files/test/quux.txt',
 			owner: 'test',
 			mime: 'text/plain',
-			permissions: Permission.READ | Permission.UPDATE | Permission.DELETE,
+			permissions: Permission.READ | Permission.UPDATE | Permission.WRITE | Permission.DELETE,
+			root: '/files/test',
 		})
 
-		const exec = await action.execBatch!([file1, file2, file3, file4, file5], view, '/')
+		const exec = await action.execBatch!({
+			nodes: [file1, file2, file3, file4, file5],
+			view,
+			folder: {} as Folder,
+			contents: [],
+		})
 
 		// Enough nodes to trigger a confirmation dialog
 		expect(confirmMock).toBeCalledTimes(1)
@@ -339,7 +460,11 @@ describe('Delete action execute tests', () => {
 		expect(eventBus.emit).toHaveBeenNthCalledWith(5, 'files:node:deleted', file5)
 	})
 
-	test('Delete action batch trashbin disabled', async () => {
+	test('Delete action batch dialog enabled', async () => {
+		// Enable the confirmation dialog
+		eventBus.emit('files:config:updated', { key: 'show_dialog_deletion', value: true })
+		expect(shouldAskForConfirmation()).toBe(true)
+
 		vi.spyOn(axios, 'delete')
 		vi.spyOn(eventBus, 'emit')
 		vi.spyOn(capabilities, 'getCapabilities').mockImplementation(() => {
@@ -350,7 +475,6 @@ describe('Delete action execute tests', () => {
 
 		// Emulate the confirmation dialog to always confirm
 		const confirmMock = vi.fn().mockImplementation((a, b, c, resolve) => resolve(true))
-		// @ts-expect-error We only mock what needed
 		window.OC = { dialogs: { confirmDestructive: confirmMock } }
 
 		const file1 = new File({
@@ -358,7 +482,8 @@ describe('Delete action execute tests', () => {
 			source: 'https://cloud.domain.com/remote.php/dav/files/test/foo.txt',
 			owner: 'test',
 			mime: 'text/plain',
-			permissions: Permission.READ | Permission.UPDATE | Permission.DELETE,
+			permissions: Permission.READ | Permission.UPDATE | Permission.WRITE | Permission.DELETE,
+			root: '/files/test',
 		})
 
 		const file2 = new File({
@@ -366,10 +491,16 @@ describe('Delete action execute tests', () => {
 			source: 'https://cloud.domain.com/remote.php/dav/files/test/bar.txt',
 			owner: 'test',
 			mime: 'text/plain',
-			permissions: Permission.READ | Permission.UPDATE | Permission.DELETE,
+			permissions: Permission.READ | Permission.UPDATE | Permission.WRITE | Permission.DELETE,
+			root: '/files/test',
 		})
 
-		const exec = await action.execBatch!([file1, file2], view, '/')
+		const exec = await action.execBatch!({
+			nodes: [file1, file2],
+			view,
+			folder: {} as Folder,
+			contents: [],
+		})
 
 		// Will trigger a confirmation dialog because trashbin app is disabled
 		expect(confirmMock).toBeCalledTimes(1)
@@ -382,10 +513,14 @@ describe('Delete action execute tests', () => {
 		expect(eventBus.emit).toBeCalledTimes(2)
 		expect(eventBus.emit).toHaveBeenNthCalledWith(1, 'files:node:deleted', file1)
 		expect(eventBus.emit).toHaveBeenNthCalledWith(2, 'files:node:deleted', file2)
+
+		eventBus.emit('files:config:updated', { key: 'show_dialog_deletion', value: false })
 	})
 
 	test('Delete fails', async () => {
-		vi.spyOn(axios, 'delete').mockImplementation(() => { throw new Error('Mock error') })
+		vi.spyOn(axios, 'delete').mockImplementation(() => {
+			throw new Error('Mock error')
+		})
 		vi.spyOn(logger, 'error').mockImplementation(() => vi.fn())
 		vi.spyOn(eventBus, 'emit')
 
@@ -394,10 +529,16 @@ describe('Delete action execute tests', () => {
 			source: 'https://cloud.domain.com/remote.php/dav/files/test/foobar.txt',
 			owner: 'test',
 			mime: 'text/plain',
-			permissions: Permission.READ | Permission.UPDATE | Permission.DELETE,
+			permissions: Permission.READ | Permission.UPDATE | Permission.WRITE | Permission.DELETE,
+			root: '/files/test',
 		})
 
-		const exec = await action.exec(file, view, '/')
+		const exec = await action.exec({
+			nodes: [file],
+			view,
+			folder: {} as Folder,
+			contents: [],
+		})
 
 		expect(exec).toBe(false)
 		expect(axios.delete).toBeCalledTimes(1)
@@ -407,7 +548,10 @@ describe('Delete action execute tests', () => {
 		expect(logger.error).toBeCalledTimes(1)
 	})
 
-	test('Delete is cancelled', async () => {
+	test('Delete is cancelled with dialog enabled', async () => {
+		// Enable the confirmation dialog
+		eventBus.emit('files:config:updated', { key: 'show_dialog_deletion', value: true })
+
 		vi.spyOn(axios, 'delete')
 		vi.spyOn(eventBus, 'emit')
 		vi.spyOn(capabilities, 'getCapabilities').mockImplementation(() => {
@@ -418,7 +562,6 @@ describe('Delete action execute tests', () => {
 
 		// Emulate the confirmation dialog to always confirm
 		const confirmMock = vi.fn().mockImplementation((a, b, c, resolve) => resolve(false))
-		// @ts-expect-error We only mock what needed
 		window.OC = { dialogs: { confirmDestructive: confirmMock } }
 
 		const file1 = new File({
@@ -426,10 +569,16 @@ describe('Delete action execute tests', () => {
 			source: 'https://cloud.domain.com/remote.php/dav/files/test/foo.txt',
 			owner: 'test',
 			mime: 'text/plain',
-			permissions: Permission.READ | Permission.UPDATE | Permission.DELETE,
+			permissions: Permission.READ | Permission.UPDATE | Permission.WRITE | Permission.DELETE,
+			root: '/files/test',
 		})
 
-		const exec = await action.execBatch!([file1], view, '/')
+		const exec = await action.execBatch!({
+			nodes: [file1],
+			view,
+			folder: {} as Folder,
+			contents: [],
+		})
 
 		expect(confirmMock).toBeCalledTimes(1)
 
@@ -437,5 +586,7 @@ describe('Delete action execute tests', () => {
 		expect(axios.delete).toBeCalledTimes(0)
 
 		expect(eventBus.emit).toBeCalledTimes(0)
+
+		eventBus.emit('files:config:updated', { key: 'show_dialog_deletion', value: false })
 	})
 })

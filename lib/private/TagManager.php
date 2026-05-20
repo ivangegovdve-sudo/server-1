@@ -13,9 +13,11 @@ use OCP\DB\QueryBuilder\IQueryBuilder;
 use OCP\EventDispatcher\Event;
 use OCP\EventDispatcher\IEventDispatcher;
 use OCP\EventDispatcher\IEventListener;
+use OCP\Files\IRootFolder;
 use OCP\IDBConnection;
 use OCP\ITagManager;
 use OCP\ITags;
+use OCP\IUserManager;
 use OCP\IUserSession;
 use OCP\User\Events\UserDeletedEvent;
 use Psr\Log\LoggerInterface;
@@ -28,9 +30,11 @@ class TagManager implements ITagManager, IEventListener {
 	public function __construct(
 		private TagMapper $mapper,
 		private IUserSession $userSession,
+		private IUserManager $userManager,
 		private IDBConnection $connection,
 		private LoggerInterface $logger,
 		private IEventDispatcher $dispatcher,
+		private IRootFolder $rootFolder,
 	) {
 	}
 
@@ -43,10 +47,11 @@ class TagManager implements ITagManager, IEventListener {
 	 * @param boolean $includeShared Whether to include tags for items shared with this user by others.
 	 * @param string $userId user for which to retrieve the tags, defaults to the currently
 	 *                       logged in user
-	 * @return \OCP\ITags
+	 * @return ?ITags
 	 *
 	 * since 20.0.0 $includeShared isn't used anymore
 	 */
+	#[\Override]
 	public function load($type, $defaultTags = [], $includeShared = false, $userId = null) {
 		if (is_null($userId)) {
 			$user = $this->userSession->getUser();
@@ -56,7 +61,8 @@ class TagManager implements ITagManager, IEventListener {
 			}
 			$userId = $this->userSession->getUser()->getUId();
 		}
-		return new Tags($this->mapper, $userId, $type, $this->logger, $this->connection, $this->dispatcher, $this->userSession, $defaultTags);
+		$userFolder = $this->rootFolder->getUserFolder($userId);
+		return new Tags($this->mapper, $userId, $type, $this->logger, $this->connection, $this->dispatcher, $this->userManager, $userFolder, $defaultTags);
 	}
 
 	/**
@@ -75,13 +81,14 @@ class TagManager implements ITagManager, IEventListener {
 			->andWhere($query->expr()->eq('c.type', $query->createNamedParameter($objectType)))
 			->andWhere($query->expr()->eq('c.category', $query->createNamedParameter(ITags::TAG_FAVORITE)));
 
-		$result = $query->execute();
+		$result = $query->executeQuery();
 		$users = $result->fetchAll(\PDO::FETCH_COLUMN);
 		$result->closeCursor();
 
 		return $users;
 	}
 
+	#[\Override]
 	public function handle(Event $event): void {
 		if (!($event instanceof UserDeletedEvent)) {
 			return;

@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-import type { User } from '@nextcloud/cypress'
-import { getRowForFile, navigateToFolder, selectAllFiles, triggerActionForFile } from './FilesUtils.ts'
+import type { User } from '@nextcloud/e2e-test-server/cypress'
+
+import { getRowForFile, navigateToFolder, selectAllFiles, triggerActionForFile, triggerSelectionAction } from './FilesUtils.ts'
 
 describe('files: Delete files using file actions', { testIsolation: true }, () => {
 	let user: User
@@ -49,12 +50,7 @@ describe('files: Delete files using file actions', { testIsolation: true }, () =
 
 		// select all
 		selectAllFiles()
-		cy.get('[data-cy-files-list-selection-actions]')
-			.findByRole('button', { name: 'Actions' })
-			.click()
-		cy.get('[data-cy-files-list-selection-action="delete"]')
-			.findByRole('menuitem', { name: /^Delete files/ })
-			.click()
+		triggerSelectionAction('delete')
 
 		// see dialog for confirmation
 		cy.findByRole('dialog', { name: 'Confirm deletion' })
@@ -64,7 +60,7 @@ describe('files: Delete files using file actions', { testIsolation: true }, () =
 		cy.wait('@deleteFile')
 		cy.get('@deleteFile.all')
 			.should('have.length', 5)
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 			.should((all: any) => {
 				for (const call of all) {
 					expect(call.response.statusCode).to.equal(204)

@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2018 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -12,16 +15,14 @@ use OCP\Migration\IOutput;
 use OCP\Migration\IRepairStep;
 
 class ClearGeneratedAvatarCache implements IRepairStep {
-	protected AvatarManager $avatarManager;
-	private IConfig $config;
-	private IJobList $jobList;
-
-	public function __construct(IConfig $config, AvatarManager $avatarManager, IJobList $jobList) {
-		$this->config = $config;
-		$this->avatarManager = $avatarManager;
-		$this->jobList = $jobList;
+	public function __construct(
+		private readonly IConfig $config,
+		protected readonly AvatarManager $avatarManager,
+		private readonly IJobList $jobList,
+	) {
 	}
 
+	#[\Override]
 	public function getName(): string {
 		return 'Clear every generated avatar';
 	}
@@ -37,6 +38,7 @@ class ClearGeneratedAvatarCache implements IRepairStep {
 		return version_compare($versionFromBeforeUpdate, '27.0.0', '<');
 	}
 
+	#[\Override]
 	public function run(IOutput $output): void {
 		if ($this->shouldRun()) {
 			try {

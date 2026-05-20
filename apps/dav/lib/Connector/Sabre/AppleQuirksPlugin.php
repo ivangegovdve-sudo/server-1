@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2023 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -39,6 +40,7 @@ class AppleQuirksPlugin extends ServerPlugin {
 	 *
 	 * @return void
 	 */
+	#[\Override]
 	public function initialize(Server $server) {
 		$server->on('beforeMethod:REPORT', [$this, 'beforeReport'], 0);
 		$server->on('report', [$this, 'report'], 0);

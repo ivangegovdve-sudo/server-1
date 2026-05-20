@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -27,6 +29,7 @@ class CheckCore extends Base {
 	/**
 	 * {@inheritdoc }
 	 */
+	#[\Override]
 	protected function configure() {
 		parent::configure();
 		$this
@@ -37,6 +40,7 @@ class CheckCore extends Base {
 	/**
 	 * {@inheritdoc }
 	 */
+	#[\Override]
 	protected function execute(InputInterface $input, OutputInterface $output): int {
 		if (!$this->checker->isCodeCheckEnforced()) {
 			$output->writeln('<comment>integrity:check-core can not be used on git checkouts</comment>');

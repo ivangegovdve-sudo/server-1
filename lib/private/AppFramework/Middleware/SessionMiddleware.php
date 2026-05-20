@@ -14,38 +14,21 @@ use OCP\AppFramework\Http\Attribute\UseSession;
 use OCP\AppFramework\Http\Response;
 use OCP\AppFramework\Middleware;
 use OCP\ISession;
-use ReflectionMethod;
 
 class SessionMiddleware extends Middleware {
-	/** @var ControllerMethodReflector */
-	private $reflector;
-
-	/** @var ISession */
-	private $session;
-
-	public function __construct(ControllerMethodReflector $reflector,
-		ISession $session) {
-		$this->reflector = $reflector;
-		$this->session = $session;
+	public function __construct(
+		private ControllerMethodReflector $reflector,
+		private ISession $session,
+	) {
 	}
 
 	/**
 	 * @param Controller $controller
 	 * @param string $methodName
 	 */
+	#[\Override]
 	public function beforeController($controller, $methodName) {
-		/**
-		 * Annotation deprecated with Nextcloud 26
-		 */
-		$hasAnnotation = $this->reflector->hasAnnotation('UseSession');
-		if ($hasAnnotation) {
-			$this->session->reopen();
-			return;
-		}
-
-		$reflectionMethod = new ReflectionMethod($controller, $methodName);
-		$hasAttribute = !empty($reflectionMethod->getAttributes(UseSession::class));
-		if ($hasAttribute) {
+		if ($this->reflector->hasAnnotationOrAttribute('UseSession', UseSession::class)) {
 			$this->session->reopen();
 		}
 	}
@@ -56,19 +39,9 @@ class SessionMiddleware extends Middleware {
 	 * @param Response $response
 	 * @return Response
 	 */
+	#[\Override]
 	public function afterController($controller, $methodName, Response $response) {
-		/**
-		 * Annotation deprecated with Nextcloud 26
-		 */
-		$hasAnnotation = $this->reflector->hasAnnotation('UseSession');
-		if ($hasAnnotation) {
-			$this->session->close();
-			return $response;
-		}
-
-		$reflectionMethod = new ReflectionMethod($controller, $methodName);
-		$hasAttribute = !empty($reflectionMethod->getAttributes(UseSession::class));
-		if ($hasAttribute) {
+		if ($this->reflector->hasAnnotationOrAttribute('UseSession', UseSession::class)) {
 			$this->session->close();
 		}
 

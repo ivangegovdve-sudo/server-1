@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2023 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-only
@@ -71,6 +72,7 @@ class LostControllerTest extends TestCase {
 	/** @var Limiter|MockObject */
 	private $limiter;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -686,10 +688,10 @@ class LostControllerTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider dataTwoUsersWithSameEmailOneDisabled
 	 * @param bool $userEnabled1
 	 * @param bool $userEnabled2
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataTwoUsersWithSameEmailOneDisabled')]
 	public function testTwoUsersWithSameEmailOneDisabled(bool $userEnabled1, bool $userEnabled2): void {
 		$user1 = $this->createMock(IUser::class);
 		$user1->method('getEMailAddress')

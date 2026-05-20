@@ -14,17 +14,13 @@ use OCP\EventDispatcher\IEventDispatcher;
 use Psr\Log\LoggerInterface;
 
 class LoggedInCheckCommand extends ALoginCommand {
-	/** @var LoggerInterface */
-	private $logger;
-	/** @var IEventDispatcher */
-	private $dispatcher;
-
-	public function __construct(LoggerInterface $logger,
-		IEventDispatcher $dispatcher) {
-		$this->logger = $logger;
-		$this->dispatcher = $dispatcher;
+	public function __construct(
+		private LoggerInterface $logger,
+		private IEventDispatcher $dispatcher,
+	) {
 	}
 
+	#[\Override]
 	public function process(LoginData $loginData): LoginResult {
 		if ($loginData->getUser() === false) {
 			$loginName = $loginData->getUsername();
@@ -35,7 +31,7 @@ class LoggedInCheckCommand extends ALoginCommand {
 
 			$this->dispatcher->dispatchTyped(new LoginFailed($loginName, $password));
 
-			return LoginResult::failure($loginData, LoginController::LOGIN_MSG_INVALIDPASSWORD);
+			return LoginResult::failure(LoginController::LOGIN_MSG_INVALIDPASSWORD);
 		}
 
 		return $this->processNextOrFinishSuccessfully($loginData);

@@ -25,11 +25,13 @@ class LoadAdditionalScriptsListener implements IEventListener {
 	) {
 	}
 
+	#[\Override]
 	public function handle(Event $event): void {
 		if (!$event instanceof LoadAdditionalScriptsEvent) {
 			return;
 		}
 		Util::addInitScript(Application::APP_ID, 'init');
+		Util::addStyle(Application::APP_ID, 'init');
 
 		$restrictSystemTagsCreationToAdmin = $this->appConfig->getValueBool(Application::APP_ID, 'restrict_creation_to_admin', false);
 		$this->initialState->provideInitialState('restrictSystemTagsCreationToAdmin', $restrictSystemTagsCreationToAdmin);

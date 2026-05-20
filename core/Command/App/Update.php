@@ -27,6 +27,7 @@ class Update extends Command {
 		parent::__construct();
 	}
 
+	#[\Override]
 	protected function configure(): void {
 		$this
 			->setName('app:update')
@@ -49,6 +50,12 @@ class Update extends Command {
 				'show update(s) without updating'
 			)
 			->addOption(
+				'showcurrent',
+				null,
+				InputOption::VALUE_NONE,
+				'show currently installed version'
+			)
+			->addOption(
 				'allow-unstable',
 				null,
 				InputOption::VALUE_NONE,
@@ -57,9 +64,11 @@ class Update extends Command {
 		;
 	}
 
+	#[\Override]
 	protected function execute(InputInterface $input, OutputInterface $output): int {
 		$singleAppId = $input->getArgument('app-id');
 		$updateFound = false;
+		$showOnly = $input->getOption('showonly') || $input->getOption('showcurrent');
 
 		if ($singleAppId) {
 			$apps = [$singleAppId];
@@ -69,7 +78,7 @@ class Update extends Command {
 				$output->writeln($singleAppId . ' not installed');
 				return 1;
 			}
-		} elseif ($input->getOption('all') || $input->getOption('showonly')) {
+		} elseif ($input->getOption('all') || $showOnly) {
 			$apps = $this->manager->getAllAppsInAppsFolders();
 		} else {
 			$output->writeln('<error>Please specify an app to update or "--all" to update all updatable apps"</error>');
@@ -81,9 +90,13 @@ class Update extends Command {
 			$newVersion = $this->installer->isUpdateAvailable($appId, $input->getOption('allow-unstable'));
 			if ($newVersion) {
 				$updateFound = true;
-				$output->writeln($appId . ' new version available: ' . $newVersion);
+				$message = $appId . ' new version available: ' . $newVersion;
+				if ($input->getOption('showcurrent')) {
+					$message .= ' (current version: ' . $this->manager->getAppVersion($appId) . ')';
+				}
+				$output->writeln($message);
 
-				if (!$input->getOption('showonly')) {
+				if (!$showOnly) {
 					try {
 						$result = $this->installer->updateAppstoreApp($appId, $input->getOption('allow-unstable'));
 					} catch (\Exception $e) {

@@ -11,16 +11,16 @@ namespace OC\AppFramework\Middleware;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Response;
 use OCP\AppFramework\Middleware;
+use OCP\Constants;
 use OCP\IRequest;
 
 class NotModifiedMiddleware extends Middleware {
-	/** @var IRequest */
-	private $request;
-
-	public function __construct(IRequest $request) {
-		$this->request = $request;
+	public function __construct(
+		private IRequest $request,
+	) {
 	}
 
+	#[\Override]
 	public function afterController($controller, $methodName, Response $response) {
 		$etagHeader = $this->request->getHeader('IF_NONE_MATCH');
 		if ($etagHeader !== '' && $response->getETag() !== null && trim($etagHeader) === '"' . $response->getETag() . '"') {
@@ -29,7 +29,7 @@ class NotModifiedMiddleware extends Middleware {
 		}
 
 		$modifiedSinceHeader = $this->request->getHeader('IF_MODIFIED_SINCE');
-		if ($modifiedSinceHeader !== '' && $response->getLastModified() !== null && trim($modifiedSinceHeader) === $response->getLastModified()->format(\DateTimeInterface::RFC7231)) {
+		if ($modifiedSinceHeader !== '' && $response->getLastModified() !== null && trim($modifiedSinceHeader) === $response->getLastModified()->format(Constants::DATE_RFC7231)) {
 			$response->setStatus(Http::STATUS_NOT_MODIFIED);
 			return $response;
 		}

@@ -39,6 +39,7 @@ class LocalTimeProviderTest extends TestCase {
 
 	private LocalTimeProvider $provider;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -110,9 +111,7 @@ class LocalTimeProviderTest extends TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider dataTestProcess
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataTestProcess')]
 	public function testProcess(bool $hasCurrentUser, ?string $currentUserTZ, ?string $targetUserTZ, string $expected): void {
 		$entry = $this->createMock(IEntry::class);
 		$entry->expects($this->once())

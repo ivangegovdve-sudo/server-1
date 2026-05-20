@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2017 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -23,6 +26,7 @@ class PersonalSection implements IIconSection {
 	 * @returns string
 	 * @since 13.0.0
 	 */
+	#[\Override]
 	public function getIcon() {
 		return $this->urlGenerator->imagePath('core', 'actions/share.svg');
 	}
@@ -34,6 +38,7 @@ class PersonalSection implements IIconSection {
 	 * @returns string
 	 * @since 9.1
 	 */
+	#[\Override]
 	public function getID() {
 		return 'sharing';
 	}
@@ -45,6 +50,7 @@ class PersonalSection implements IIconSection {
 	 * @return string
 	 * @since 9.1
 	 */
+	#[\Override]
 	public function getName() {
 		return $this->l->t('Sharing');
 	}
@@ -57,6 +63,7 @@ class PersonalSection implements IIconSection {
 	 * E.g.: 70
 	 * @since 9.1
 	 */
+	#[\Override]
 	public function getPriority() {
 		return 15;
 	}

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -31,6 +32,7 @@ use OCP\Files\Events\Node\NodeRenamedEvent;
 use OCP\Files\Events\Node\NodeTouchedEvent;
 use OCP\Files\Events\Node\NodeWrittenEvent;
 use OCP\Files\Node;
+use OCP\IAppConfig;
 use OCP\ICacheFactory;
 use OCP\IUserManager;
 use OCP\Server;
@@ -43,10 +45,10 @@ use Test\Traits\UserTrait;
 /**
  * Class HookConnectorTest
  *
- * @group DB
  *
  * @package Test\Files\Node
  */
+#[\PHPUnit\Framework\Attributes\Group('DB')]
 class HookConnectorTest extends TestCase {
 	use UserTrait;
 	use MountProviderTrait;
@@ -65,6 +67,7 @@ class HookConnectorTest extends TestCase {
 	/** @var string */
 	private $userId;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 		$this->userId = $this->getUniqueID();
@@ -87,11 +90,13 @@ class HookConnectorTest extends TestCase {
 			$this->createMock(IUserManager::class),
 			$this->createMock(IEventDispatcher::class),
 			$cacheFactory,
+			$this->createMock(IAppConfig::class),
 		);
 		$this->eventDispatcher = Server::get(IEventDispatcher::class);
 		$this->logger = Server::get(LoggerInterface::class);
 	}
 
+	#[\Override]
 	protected function tearDown(): void {
 		parent::tearDown();
 		\OC_Hook::clear('OC_Filesystem');
@@ -152,8 +157,8 @@ class HookConnectorTest extends TestCase {
 	/**
 	 * @param callable $operation
 	 * @param string $expectedHook
-	 * @dataProvider viewToNodeProvider
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('viewToNodeProvider')]
 	public function testViewToNode(callable $operation, $expectedHook, $expectedLegacyEvent, $expectedEvent): void {
 		$connector = new HookConnector($this->root, $this->view, $this->eventDispatcher, $this->logger);
 		$connector->viewToNode();
@@ -221,8 +226,8 @@ class HookConnectorTest extends TestCase {
 	/**
 	 * @param callable $operation
 	 * @param string $expectedHook
-	 * @dataProvider viewToNodeProviderCopyRename
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('viewToNodeProviderCopyRename')]
 	public function testViewToNodeCopyRename(callable $operation, $expectedHook, $expectedLegacyEvent, $expectedEvent): void {
 		$connector = new HookConnector($this->root, $this->view, $this->eventDispatcher, $this->logger);
 		$connector->viewToNode();

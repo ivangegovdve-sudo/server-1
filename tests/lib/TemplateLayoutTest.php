@@ -13,35 +13,48 @@ use OC\InitialStateService;
 use OC\TemplateLayout;
 use OCP\App\IAppManager;
 use OCP\AppFramework\Http\TemplateResponse;
+use OCP\IAppConfig;
 use OCP\IConfig;
 use OCP\INavigationManager;
+use OCP\IRequest;
 use OCP\ServerVersion;
 use OCP\Template\ITemplateManager;
 use PHPUnit\Framework\MockObject\MockObject;
 
 class TemplateLayoutTest extends \Test\TestCase {
 	private IConfig&MockObject $config;
+	private IAppConfig&MockObject $appConfig;
 	private IAppManager&MockObject $appManager;
 	private InitialStateService&MockObject $initialState;
 	private INavigationManager&MockObject $navigationManager;
 	private ITemplateManager&MockObject $templateManager;
 	private ServerVersion&MockObject $serverVersion;
+	private IRequest&MockObject $request;
 
 	private TemplateLayout $templateLayout;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
 		$this->config = $this->createMock(IConfig::class);
+		$this->appConfig = $this->createMock(IAppConfig::class);
 		$this->appManager = $this->createMock(IAppManager::class);
 		$this->initialState = $this->createMock(InitialStateService::class);
 		$this->navigationManager = $this->createMock(INavigationManager::class);
 		$this->templateManager = $this->createMock(ITemplateManager::class);
 		$this->serverVersion = $this->createMock(ServerVersion::class);
+		$this->request = $this->createMock(IRequest::class);
 	}
 
-	/** @dataProvider dataVersionHash */
-	public function testVersionHash($path, $file, $installed, $debug, $expected): void {
+	#[\PHPUnit\Framework\Attributes\DataProvider('dataVersionHash')]
+	public function testVersionHash(
+		string|false $path,
+		string|false $file,
+		bool $installed,
+		bool $debug,
+		string $expected,
+	): void {
 		$this->appManager->expects(self::any())
 			->method('getAppVersion')
 			->willReturnCallback(fn ($appId) => match ($appId) {
@@ -56,23 +69,28 @@ class TemplateLayoutTest extends \Test\TestCase {
 		$this->config->expects(self::atLeastOnce())
 			->method('getSystemValueBool')
 			->willReturnMap([
-				['installed', false, $installed],
-				['debug', false, $debug],
+				['installed', $installed],
+				['debug', $debug],
 			]);
 		$this->config->expects(self::any())
 			->method('getAppValue')
 			->with('theming', 'cachebuster', '0')
 			->willReturn('42');
 
+		$this->request->method('getPathInfo')
+			->willReturn('/' . $path);
+
 		$this->templateLayout = $this->getMockBuilder(TemplateLayout::class)
 			->onlyMethods(['getAppNamefromPath'])
 			->setConstructorArgs([
 				$this->config,
+				$this->appConfig,
 				$this->appManager,
 				$this->initialState,
 				$this->navigationManager,
 				$this->templateManager,
 				$this->serverVersion,
+				$this->request,
 			])
 			->getMock();
 

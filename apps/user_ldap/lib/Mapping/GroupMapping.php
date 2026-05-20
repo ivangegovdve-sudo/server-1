@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2019-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -17,6 +19,7 @@ class GroupMapping extends AbstractMapping {
 	 * returns the DB table name which holds the mappings
 	 * @return string
 	 */
+	#[\Override]
 	protected function getTableName(bool $includePrefix = true) {
 		$p = $includePrefix ? '*PREFIX*' : '';
 		return $p . 'ldap_group_mapping';

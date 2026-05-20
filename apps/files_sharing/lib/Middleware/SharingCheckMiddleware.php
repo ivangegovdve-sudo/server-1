@@ -47,13 +47,14 @@ class SharingCheckMiddleware extends Middleware {
 	 * @throws NotFoundException
 	 * @throws S2SException
 	 */
+	#[\Override]
 	public function beforeController($controller, $methodName): void {
 		if (!$this->isSharingEnabled()) {
 			throw new NotFoundException('Sharing is disabled.');
 		}
 
-		if ($controller instanceof ExternalSharesController &&
-			!$this->externalSharesChecks()) {
+		if ($controller instanceof ExternalSharesController
+			&& !$this->externalSharesChecks()) {
 			throw new S2SException('Federated sharing not allowed');
 		}
 	}
@@ -67,6 +68,7 @@ class SharingCheckMiddleware extends Middleware {
 	 * @return Response
 	 * @throws \Exception
 	 */
+	#[\Override]
 	public function afterException($controller, $methodName, \Exception $exception): Response {
 		if (is_a($exception, NotFoundException::class)) {
 			return new NotFoundResponse();
@@ -84,13 +86,13 @@ class SharingCheckMiddleware extends Middleware {
 	 * @return bool
 	 */
 	private function externalSharesChecks(): bool {
-		if (!$this->reflector->hasAnnotation('NoIncomingFederatedSharingRequired') &&
-			$this->config->getAppValue('files_sharing', 'incoming_server2server_share_enabled', 'yes') !== 'yes') {
+		if (!$this->reflector->hasAnnotation('NoIncomingFederatedSharingRequired')
+			&& $this->config->getAppValue('files_sharing', 'incoming_server2server_share_enabled', 'yes') !== 'yes') {
 			return false;
 		}
 
-		if (!$this->reflector->hasAnnotation('NoOutgoingFederatedSharingRequired') &&
-			$this->config->getAppValue('files_sharing', 'outgoing_server2server_share_enabled', 'yes') !== 'yes') {
+		if (!$this->reflector->hasAnnotation('NoOutgoingFederatedSharingRequired')
+			&& $this->config->getAppValue('files_sharing', 'outgoing_server2server_share_enabled', 'yes') !== 'yes') {
 			return false;
 		}
 

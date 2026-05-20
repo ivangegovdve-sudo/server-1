@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -24,6 +26,7 @@ class Status extends Base {
 		parent::__construct('status');
 	}
 
+	#[\Override]
 	protected function configure() {
 		parent::configure();
 
@@ -37,6 +40,7 @@ class Status extends Base {
 			);
 	}
 
+	#[\Override]
 	protected function execute(InputInterface $input, OutputInterface $output): int {
 		$maintenanceMode = $this->config->getSystemValueBool('maintenance', false);
 		$needUpgrade = Util::needUpgrade();

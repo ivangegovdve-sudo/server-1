@@ -9,23 +9,18 @@ declare(strict_types=1);
 namespace OC\Repair\NC16;
 
 use OC\Collaboration\Resources\Manager;
-use OCP\Collaboration\Resources\IManager;
 use OCP\IConfig;
 use OCP\Migration\IOutput;
 use OCP\Migration\IRepairStep;
 
 class ClearCollectionsAccessCache implements IRepairStep {
-	/** @var IConfig */
-	private $config;
-
-	/** @var Manager */
-	private $manager;
-
-	public function __construct(IConfig $config, IManager $manager) {
-		$this->config = $config;
-		$this->manager = $manager;
+	public function __construct(
+		private readonly IConfig $config,
+		private readonly Manager $manager,
+	) {
 	}
 
+	#[\Override]
 	public function getName(): string {
 		return 'Clear access cache of projects';
 	}
@@ -35,6 +30,7 @@ class ClearCollectionsAccessCache implements IRepairStep {
 		return version_compare($versionFromBeforeUpdate, '17.0.0.3', '<=');
 	}
 
+	#[\Override]
 	public function run(IOutput $output): void {
 		if ($this->shouldRun()) {
 			$this->manager->invalidateAccessCacheForAllCollections();

@@ -8,32 +8,45 @@ declare(strict_types=1);
 
 namespace OCA\Files_Sharing\Config;
 
-use NCU\Config\Lexicon\ConfigLexiconEntry;
-use NCU\Config\Lexicon\ConfigLexiconStrictness;
-use NCU\Config\Lexicon\IConfigLexicon;
-use NCU\Config\ValueType;
+use OCP\Config\Lexicon\Entry;
+use OCP\Config\Lexicon\ILexicon;
+use OCP\Config\Lexicon\Strictness;
+use OCP\Config\ValueType;
 
 /**
  * Config Lexicon for files_sharing.
  *
  * Please Add & Manage your Config Keys in that file and keep the Lexicon up to date!
  *
- * {@see IConfigLexicon}
+ * {@see ILexicon}
  */
-class ConfigLexicon implements IConfigLexicon {
+class ConfigLexicon implements ILexicon {
 	public const SHOW_FEDERATED_AS_INTERNAL = 'show_federated_shares_as_internal';
+	public const SHOW_FEDERATED_TO_TRUSTED_AS_INTERNAL = 'show_federated_shares_to_trusted_servers_as_internal';
+	public const EXCLUDE_RESHARE_FROM_EDIT = 'shareapi_exclude_reshare_from_edit';
+	public const UPDATE_CUTOFF_TIME = 'update_cutoff_time';
+	public const USER_NEEDS_SHARE_REFRESH = 'user_needs_share_refresh';
 
-	public function getStrictness(): ConfigLexiconStrictness {
-		return ConfigLexiconStrictness::IGNORE;
+	#[\Override]
+	public function getStrictness(): Strictness {
+		return Strictness::IGNORE;
 	}
 
+	#[\Override]
 	public function getAppConfigs(): array {
 		return [
-			new ConfigLexiconEntry(self::SHOW_FEDERATED_AS_INTERNAL, ValueType::BOOL, false, 'shows federated shares as internal shares', true),
+			new Entry(self::SHOW_FEDERATED_AS_INTERNAL, ValueType::BOOL, false, 'shows federated shares as internal shares', true),
+			new Entry(self::SHOW_FEDERATED_TO_TRUSTED_AS_INTERNAL, ValueType::BOOL, false, 'shows federated shares to trusted servers as internal shares', true),
+			new Entry(self::EXCLUDE_RESHARE_FROM_EDIT, ValueType::BOOL, false, 'Exclude reshare permission from "Allow editing" bundled permissions'),
+
+			new Entry(self::UPDATE_CUTOFF_TIME, ValueType::FLOAT, 3.0, 'Maximum time in second during which we update the share data immediately before switching to only marking the user'),
 		];
 	}
 
+	#[\Override]
 	public function getUserConfigs(): array {
-		return [];
+		return [
+			new Entry(self::USER_NEEDS_SHARE_REFRESH, ValueType::BOOL, true, 'whether a user needs to have the receiving share data refreshed for possible changes'),
+		];
 	}
 }

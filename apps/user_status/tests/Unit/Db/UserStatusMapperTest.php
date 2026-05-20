@@ -22,7 +22,7 @@ class UserStatusMapperTest extends TestCase {
 
 		// make sure that DB is empty
 		$qb = self::$realDatabase->getQueryBuilder();
-		$qb->delete('user_status')->execute();
+		$qb->delete('user_status')->executeStatement();
 
 		$this->mapper = new UserStatusMapper(self::$realDatabase);
 	}
@@ -134,9 +134,7 @@ class UserStatusMapperTest extends TestCase {
 		$this->mapper->insert($userStatus2);
 	}
 
-	/**
-	 * @dataProvider clearStatusesOlderThanDataProvider
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'clearStatusesOlderThanDataProvider')]
 	public function testClearStatusesOlderThan(string $status, bool $isUserDefined, int $timestamp, bool $expectsClean): void {
 		$oldStatus = UserStatus::fromParams([
 			'userId' => 'john.doe',
@@ -233,9 +231,7 @@ class UserStatusMapperTest extends TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider dataCreateBackupStatus
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataCreateBackupStatus')]
 	public function testCreateBackupStatus(bool $hasStatus, bool $hasBackup, bool $backupCreated): void {
 		if ($hasStatus) {
 			$userStatus1 = new UserStatus();

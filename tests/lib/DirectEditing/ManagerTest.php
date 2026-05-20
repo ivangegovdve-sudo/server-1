@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2019-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -27,52 +28,63 @@ use PHPUnit\Framework\MockObject\MockObject;
 use Test\TestCase;
 
 class CreateEmpty extends ACreateEmpty {
+	#[\Override]
 	public function getId(): string {
 		return 'createEmpty';
 	}
 
+	#[\Override]
 	public function getName(): string {
 		return 'create empty file';
 	}
 
+	#[\Override]
 	public function getExtension(): string {
 		return '.txt';
 	}
 
+	#[\Override]
 	public function getMimetype(): string {
 		return 'text/plain';
 	}
 }
 
 class Editor implements IEditor {
+	#[\Override]
 	public function getId(): string {
 		return 'testeditor';
 	}
 
+	#[\Override]
 	public function getName(): string {
 		return 'Test editor';
 	}
 
+	#[\Override]
 	public function getMimetypes(): array {
 		return [ 'text/plain' ];
 	}
 
 
+	#[\Override]
 	public function getMimetypesOptional(): array {
 		return [];
 	}
 
+	#[\Override]
 	public function getCreators(): array {
 		return [
 			new CreateEmpty()
 		];
 	}
 
+	#[\Override]
 	public function isSecure(): bool {
 		return false;
 	}
 
 
+	#[\Override]
 	public function open(IToken $token): Response {
 		return new DataResponse('edit page');
 	}
@@ -82,8 +94,8 @@ class Editor implements IEditor {
  * Class ManagerTest
  *
  * @package Test\DirectEditing
- * @group DB
  */
+#[\PHPUnit\Framework\Attributes\Group('DB')]
 class ManagerTest extends TestCase {
 	private $manager;
 	/**
@@ -119,6 +131,7 @@ class ManagerTest extends TestCase {
 	 */
 	private $encryptionManager;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 

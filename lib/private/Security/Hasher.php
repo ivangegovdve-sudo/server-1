@@ -62,6 +62,7 @@ class Hasher implements IHasher {
 	 * @param string $message Message to generate hash from
 	 * @return string Hash of the message with appended version parameter
 	 */
+	#[\Override]
 	public function hash(string $message): string {
 		$alg = $this->getPrefferedAlgorithm();
 
@@ -106,8 +107,8 @@ class Hasher implements IHasher {
 
 		// Verify whether it matches a legacy PHPass or SHA1 string
 		$hashLength = \strlen($hash);
-		if (($hashLength === 60 && password_verify($message . $this->legacySalt, $hash)) ||
-			($hashLength === 40 && hash_equals($hash, sha1($message)))) {
+		if (($hashLength === 60 && password_verify($message . $this->legacySalt, $hash))
+			|| ($hashLength === 40 && hash_equals($hash, sha1($message)))) {
 			$newHash = $this->hash($message);
 			return true;
 		}
@@ -115,8 +116,8 @@ class Hasher implements IHasher {
 		// Verify whether it matches a legacy PHPass or SHA1 string
 		// Retry with empty passwordsalt for cases where it was not set
 		$hashLength = \strlen($hash);
-		if (($hashLength === 60 && password_verify($message, $hash)) ||
-			($hashLength === 40 && hash_equals($hash, sha1($message)))) {
+		if (($hashLength === 60 && password_verify($message, $hash))
+			|| ($hashLength === 40 && hash_equals($hash, sha1($message)))) {
 			$newHash = $this->hash($message);
 			return true;
 		}
@@ -150,6 +151,7 @@ class Hasher implements IHasher {
 	 * @param null|string &$newHash Reference will contain the updated hash if necessary. Update the existing hash with this one.
 	 * @return bool Whether $hash is a valid hash of $message
 	 */
+	#[\Override]
 	public function verify(string $message, string $hash, &$newHash = null): bool {
 		$splittedHash = $this->splitHash($hash);
 
@@ -191,6 +193,7 @@ class Hasher implements IHasher {
 		return $default;
 	}
 
+	#[\Override]
 	public function validate(string $prefixedHash): bool {
 		$splitHash = $this->splitHash($prefixedHash);
 		if (empty($splitHash)) {

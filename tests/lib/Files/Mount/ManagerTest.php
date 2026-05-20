@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -12,6 +13,7 @@ use OC\Files\SetupManagerFactory;
 use OC\Files\Storage\Temporary;
 
 class LongId extends Temporary {
+	#[\Override]
 	public function getId(): string {
 		return 'long:' . str_repeat('foo', 50) . parent::getId();
 	}
@@ -23,6 +25,7 @@ class ManagerTest extends \Test\TestCase {
 	 */
 	private $manager;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 		$this->manager = new \OC\Files\Mount\Manager($this->createMock(SetupManagerFactory::class));
@@ -51,6 +54,24 @@ class ManagerTest extends \Test\TestCase {
 		$mount3 = new MountPoint($storage, '/foo/bar');
 		$this->manager->addMount($mount3);
 		$this->assertEquals([$mount1, $mount3], $this->manager->findByStorageId($id));
+	}
+
+	public function testBinarySearch(): void {
+		$sortedArray = [
+			'a' => false,
+			'aa' => false,
+			'b' => false,
+			'bb' => false,
+			'bba' => true,
+			'bbb' => true,
+			'bdc' => false,
+		];
+		$sortedKey = array_keys($sortedArray);
+		$result = $this->invokePrivate($this->manager, 'binarySearch', [$sortedArray, $sortedKey, 'bb']);
+		$this->assertEquals(2, count($result));
+		foreach ($result as $entry) {
+			$this->assertTrue($entry);
+		}
 	}
 
 	public function testLong(): void {

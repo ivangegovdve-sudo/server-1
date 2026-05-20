@@ -32,13 +32,13 @@ class ClearOldStatusesBackgroundJob extends TimedJob {
 	) {
 		parent::__construct($time);
 
-		// Run every time the cron is run
-		$this->setInterval(0);
+		$this->setInterval(60);
 	}
 
 	/**
 	 * @inheritDoc
 	 */
+	#[\Override]
 	protected function run($argument) {
 		$now = $this->time->getTime();
 

@@ -8,17 +8,22 @@ declare(strict_types=1);
  */
 
 use OC\Profiler\BuiltInProfiler;
+use OC\Security\CSP\ContentSecurityPolicyNonceManager;
 use OC\Share20\GroupDeletedListener;
 use OC\Share20\Hooks;
 use OC\Share20\UserDeletedListener;
 use OC\Share20\UserRemovedListener;
+use OC\User\DisabledUserException;
 use OCP\EventDispatcher\IEventDispatcher;
 use OCP\Files\Events\BeforeFileSystemSetupEvent;
 use OCP\Group\Events\GroupDeletedEvent;
 use OCP\Group\Events\UserRemovedEvent;
+use OCP\IAppConfig;
 use OCP\IConfig;
+use OCP\IInitialStateService;
 use OCP\ILogger;
 use OCP\IRequest;
+use OCP\ISession;
 use OCP\IURLGenerator;
 use OCP\IUserSession;
 use OCP\Security\Bruteforce\IThrottler;
@@ -41,6 +46,7 @@ require_once 'public/Constants.php';
 class OC {
 	/**
 	 * The installation path for Nextcloud  on the server (e.g. /srv/http/nextcloud)
+	 * @internal Use auto-loaded $serverRoot with DI instead.
 	 */
 	public static string $SERVERROOT = '';
 	/**
@@ -82,7 +88,7 @@ class OC {
 	public static function initPaths(): void {
 		if (defined('PHPUNIT_CONFIG_DIR')) {
 			self::$configDir = OC::$SERVERROOT . '/' . PHPUNIT_CONFIG_DIR . '/';
-		} elseif (defined('PHPUNIT_RUN') and PHPUNIT_RUN and is_dir(OC::$SERVERROOT . '/tests/config/')) {
+		} elseif (defined('PHPUNIT_RUN') && PHPUNIT_RUN && is_dir(OC::$SERVERROOT . '/tests/config/')) {
 			self::$configDir = OC::$SERVERROOT . '/tests/config/';
 		} elseif ($dir = getenv('NEXTCLOUD_CONFIG_DIR')) {
 			self::$configDir = rtrim($dir, '/') . '/';
@@ -114,8 +120,8 @@ class OC {
 		if (substr($scriptName, -1) == '/') {
 			$scriptName .= 'index.php';
 			//make sure suburi follows the same rules as scriptName
-			if (substr(OC::$SUBURI, -9) != 'index.php') {
-				if (substr(OC::$SUBURI, -1) != '/') {
+			if (substr(OC::$SUBURI, -9) !== 'index.php') {
+				if (substr(OC::$SUBURI, -1) !== '/') {
 					OC::$SUBURI = OC::$SUBURI . '/';
 				}
 				OC::$SUBURI = OC::$SUBURI . 'index.php';
@@ -128,7 +134,7 @@ class OC {
 			if (substr($scriptName, 0 - strlen(OC::$SUBURI)) === OC::$SUBURI) {
 				OC::$WEBROOT = substr($scriptName, 0, 0 - strlen(OC::$SUBURI));
 
-				if (OC::$WEBROOT != '' && OC::$WEBROOT[0] !== '/') {
+				if (OC::$WEBROOT !== '' && OC::$WEBROOT[0] !== '/') {
 					OC::$WEBROOT = '/' . OC::$WEBROOT;
 				}
 			} else {
@@ -141,8 +147,8 @@ class OC {
 
 			// Resolve /nextcloud to /nextcloud/ to ensure to always have a trailing
 			// slash which is required by URL generation.
-			if (isset($_SERVER['REQUEST_URI']) && $_SERVER['REQUEST_URI'] === \OC::$WEBROOT &&
-					substr($_SERVER['REQUEST_URI'], -1) !== '/') {
+			if (isset($_SERVER['REQUEST_URI']) && $_SERVER['REQUEST_URI'] === \OC::$WEBROOT
+					&& substr($_SERVER['REQUEST_URI'], -1) !== '/') {
 				header('Location: ' . \OC::$WEBROOT . '/');
 				exit();
 			}
@@ -233,7 +239,7 @@ class OC {
 
 	public static function checkMaintenanceMode(\OC\SystemConfig $systemConfig): void {
 		// Allow ajax update script to execute without being stopped
-		if (((bool)$systemConfig->getValue('maintenance', false)) && OC::$SUBURI != '/core/ajax/update.php') {
+		if (((bool)$systemConfig->getValue('maintenance', false)) && OC::$SUBURI !== '/core/ajax/update.php') {
 			// send http status 503
 			http_response_code(503);
 			header('X-Nextcloud-Maintenance-Mode: 1');
@@ -242,6 +248,7 @@ class OC {
 			// render error page
 			$template = Server::get(ITemplateManager::class)->getTemplate('', 'update.user', 'guest');
 			\OCP\Util::addScript('core', 'maintenance');
+			\OCP\Util::addScript('core', 'common');
 			\OCP\Util::addStyle('core', 'guest');
 			$template->printPage();
 			die();
@@ -285,50 +292,52 @@ class OC {
 				$tooBig = ($totalUsers > 50);
 			}
 		}
-		$ignoreTooBigWarning = isset($_GET['IKnowThatThisIsABigInstanceAndTheUpdateRequestCouldRunIntoATimeoutAndHowToRestoreABackup']) &&
-			$_GET['IKnowThatThisIsABigInstanceAndTheUpdateRequestCouldRunIntoATimeoutAndHowToRestoreABackup'] === 'IAmSuperSureToDoThis';
+		$ignoreTooBigWarning = isset($_GET['IKnowThatThisIsABigInstanceAndTheUpdateRequestCouldRunIntoATimeoutAndHowToRestoreABackup'])
+			&& $_GET['IKnowThatThisIsABigInstanceAndTheUpdateRequestCouldRunIntoATimeoutAndHowToRestoreABackup'] === 'IAmSuperSureToDoThis';
 
+		Util::addTranslations('core');
+		Util::addScript('core', 'common');
+		Util::addScript('core', 'main');
+		Util::addScript('core', 'update');
+
+		$initialState = Server::get(IInitialStateService::class);
+		$serverVersion = Server::get(\OCP\ServerVersion::class);
 		if ($disableWebUpdater || ($tooBig && !$ignoreTooBigWarning)) {
 			// send http status 503
 			http_response_code(503);
 			header('Retry-After: 120');
 
-			$serverVersion = \OCP\Server::get(\OCP\ServerVersion::class);
+			$urlGenerator = Server::get(IURLGenerator::class);
+			$initialState->provideInitialState('core', 'updaterView', 'adminCli');
+			$initialState->provideInitialState('core', 'updateInfo', [
+				'cliUpgradeLink' => $cliUpgradeLink ?: $urlGenerator->linkToDocs('admin-cli-upgrade'),
+				'productName' => self::getProductName(),
+				'version' => $serverVersion->getVersionString(),
+				'tooBig' => $tooBig,
+			]);
 
 			// render error page
-			$template = Server::get(ITemplateManager::class)->getTemplate('', 'update.use-cli', 'guest');
-			$template->assign('productName', 'nextcloud'); // for now
-			$template->assign('version', $serverVersion->getVersionString());
-			$template->assign('tooBig', $tooBig);
-			$template->assign('cliUpgradeLink', $cliUpgradeLink);
-
-			$template->printPage();
+			Server::get(ITemplateManager::class)
+				->getTemplate('', 'update', 'guest')
+				->printPage();
 			die();
 		}
 
 		// check whether this is a core update or apps update
 		$installedVersion = $systemConfig->getValue('version', '0.0.0');
-		$currentVersion = implode('.', \OCP\Util::getVersion());
+		$currentVersion = implode('.', $serverVersion->getVersion());
 
 		// if not a core upgrade, then it's apps upgrade
 		$isAppsOnlyUpgrade = version_compare($currentVersion, $installedVersion, '=');
 
 		$oldTheme = $systemConfig->getValue('theme');
 		$systemConfig->setValue('theme', '');
-		\OCP\Util::addScript('core', 'common');
-		\OCP\Util::addScript('core', 'main');
-		\OCP\Util::addTranslations('core');
-		\OCP\Util::addScript('core', 'update');
 
 		/** @var \OC\App\AppManager $appManager */
 		$appManager = Server::get(\OCP\App\IAppManager::class);
 
-		$tmpl = Server::get(ITemplateManager::class)->getTemplate('', 'update.admin', 'guest');
-		$tmpl->assign('version', \OCP\Server::get(\OCP\ServerVersion::class)->getVersionString());
-		$tmpl->assign('isAppsOnlyUpgrade', $isAppsOnlyUpgrade);
-
 		// get third party apps
-		$ocVersion = \OCP\Util::getVersion();
+		$ocVersion = $serverVersion->getVersion();
 		$ocVersion = implode('.', $ocVersion);
 		$incompatibleApps = $appManager->getIncompatibleApps($ocVersion);
 		$incompatibleOverwrites = $systemConfig->getValue('app_install_overwrite', []);
@@ -349,16 +358,41 @@ class OC {
 			throw new \OCP\HintException('Application ' . implode(', ', $incompatibleShippedApps) . ' is not present or has a non-compatible version with this server. Please check the apps directory.', $hint);
 		}
 
-		$tmpl->assign('appsToUpgrade', $appManager->getAppsNeedingUpgrade($ocVersion));
-		$tmpl->assign('incompatibleAppsList', $incompatibleDisabledApps);
+		$appConfig = Server::get(IAppConfig::class);
+		$appsToUpgrade = array_map(function ($app) use (&$appConfig) {
+			return [
+				'id' => $app['id'],
+				'name' => $app['name'],
+				'version' => $app['version'],
+				'oldVersion' => $appConfig->getValueString($app['id'], 'installed_version'),
+			];
+		}, $appManager->getAppsNeedingUpgrade($ocVersion));
+
+		$params = [
+			'appsToUpgrade' => $appsToUpgrade,
+			'incompatibleAppsList' => $incompatibleDisabledApps,
+			'isAppsOnlyUpgrade' => $isAppsOnlyUpgrade,
+			'oldTheme' => $oldTheme,
+			'productName' => self::getProductName(),
+			'version' => $serverVersion->getVersionString(),
+		];
+
+		$initialState->provideInitialState('core', 'updaterView', 'admin');
+		$initialState->provideInitialState('core', 'updateInfo', $params);
+		Server::get(ITemplateManager::class)
+			->getTemplate('', 'update', 'guest')
+			->printPage();
+	}
+
+	private static function getProductName(): string {
+		$productName = 'Nextcloud';
 		try {
 			$defaults = new \OC_Defaults();
-			$tmpl->assign('productName', $defaults->getName());
+			$productName = $defaults->getName();
 		} catch (Throwable $error) {
-			$tmpl->assign('productName', 'Nextcloud');
+			// ignore
 		}
-		$tmpl->assign('oldTheme', $oldTheme);
-		$tmpl->printPage();
+		return $productName;
 	}
 
 	public static function initSession(): void {
@@ -382,13 +416,6 @@ class OC {
 		// prevents javascript from accessing php session cookies
 		ini_set('session.cookie_httponly', 'true');
 
-		// Do not initialize sessions for 'status.php' requests
-		// Monitoring endpoints can quickly flood session handlers
-		// and 'status.php' doesn't require sessions anyway
-		if (str_ends_with($request->getScriptName(), '/status.php')) {
-			return;
-		}
-
 		// set the cookie path to the Nextcloud directory
 		$cookie_path = OC::$WEBROOT ? : '/';
 		ini_set('session.cookie_path', $cookie_path);
@@ -397,6 +424,14 @@ class OC {
 		$cookie_domain = self::$config->getValue('cookie_domain', '');
 		if ($cookie_domain) {
 			ini_set('session.cookie_domain', $cookie_domain);
+		}
+
+		// Do not initialize sessions for 'status.php' requests
+		// Monitoring endpoints can quickly flood session handlers
+		// and 'status.php' doesn't require sessions anyway
+		// We still need to run the ini_set above so that same-site cookies use the correct configuration.
+		if (str_ends_with($request->getScriptName(), '/status.php')) {
+			return;
 		}
 
 		// Let the session name be changed in the initSession Hook
@@ -444,14 +479,14 @@ class OC {
 	}
 
 	private static function getSessionLifeTime(): int {
-		return Server::get(\OC\AllConfig::class)->getSystemValueInt('session_lifetime', 60 * 60 * 24);
+		return Server::get(IConfig::class)->getSystemValueInt('session_lifetime', 60 * 60 * 24);
 	}
 
 	/**
 	 * @return bool true if the session expiry should only be done by gc instead of an explicit timeout
 	 */
 	public static function hasSessionRelaxedExpiry(): bool {
-		return Server::get(\OC\AllConfig::class)->getSystemValueBool('session_relaxed_expiry', false);
+		return Server::get(IConfig::class)->getSystemValueBool('session_relaxed_expiry', false);
 	}
 
 	/**
@@ -576,6 +611,41 @@ class OC {
 		}
 	}
 
+	/**
+	 * This function adds some security related headers to all requests served via base.php
+	 * The implementation of this function has to happen here to ensure that all third-party
+	 * components (e.g. SabreDAV) also benefit from this headers.
+	 */
+	private static function addSecurityHeaders(): void {
+		/**
+		 * FIXME: Content Security Policy for legacy components. This
+		 * can be removed once \OCP\AppFramework\Http\Response from the AppFramework
+		 * is used everywhere.
+		 * @see \OCP\AppFramework\Http\Response::getHeaders
+		 */
+		$policy = 'default-src \'self\'; '
+			. 'script-src \'self\' \'nonce-' . Server::get(ContentSecurityPolicyNonceManager::class)->getNonce() . '\'; '
+			. 'style-src \'self\' \'unsafe-inline\'; '
+			. 'frame-src *; '
+			. 'img-src * data: blob:; '
+			. 'font-src \'self\' data:; '
+			. 'media-src *; '
+			. 'connect-src *; '
+			. 'object-src \'none\'; '
+			. 'base-uri \'self\'; ';
+		header('Content-Security-Policy:' . $policy);
+
+		// Send fallback headers for installations that don't have the possibility to send
+		// custom headers on the webserver side
+		if (getenv('modHeadersAvailable') !== 'true') {
+			header('Referrer-Policy: no-referrer'); // https://www.w3.org/TR/referrer-policy/
+			header('X-Content-Type-Options: nosniff'); // Disable sniffing the content type for IE
+			header('X-Frame-Options: SAMEORIGIN'); // Disallow iFraming from other domains
+			header('X-Permitted-Cross-Domain-Policies: none'); // https://www.adobe.com/devnet/adobe-media-server/articles/cross-domain-xml-for-streaming.html
+			header('X-Robots-Tag: noindex, nofollow'); // https://developers.google.com/webmasters/control-crawl-index/docs/robots_meta_tag
+		}
+	}
+
 	public static function init(): void {
 		// First handle PHP configuration and copy auth headers to the expected
 		// $_SERVER variable before doing anything Server object related
@@ -660,7 +730,7 @@ class OC {
 		$config = Server::get(IConfig::class);
 		if (!defined('PHPUNIT_RUN')) {
 			$errorHandler = new OC\Log\ErrorHandler(
-				\OCP\Server::get(\Psr\Log\LoggerInterface::class),
+				Server::get(\Psr\Log\LoggerInterface::class),
 			);
 			$exceptionHandler = [$errorHandler, 'onException'];
 			if ($config->getSystemValueBool('debug', false)) {
@@ -699,9 +769,10 @@ class OC {
 		self::checkConfig();
 		self::checkInstalled($systemConfig);
 
-		OC_Response::addSecurityHeaders();
-
-		self::performSameSiteCookieProtection($config);
+		if (!self::$CLI) {
+			self::addSecurityHeaders();
+			self::performSameSiteCookieProtection($config);
+		}
 
 		if (!defined('OC_CONSOLE')) {
 			$eventLogger->start('check_server', 'Run a few configuration checks');
@@ -744,7 +815,7 @@ class OC {
 
 		// User and Groups
 		if (!$systemConfig->getValue('installed', false)) {
-			self::$server->getSession()->set('user_id', '');
+			Server::get(ISession::class)->set('user_id', '');
 		}
 
 		$eventLogger->start('setup_backends', 'Setup group and user backends');
@@ -780,8 +851,6 @@ class OC {
 		// Make sure that the application class is not loaded before the database is setup
 		if ($systemConfig->getValue('installed', false)) {
 			$appManager->loadApp('settings');
-			/* Run core application registration */
-			$bootstrapCoordinator->runLazyRegistration('core');
 		}
 
 		//make sure temporary files are cleaned up
@@ -850,16 +919,46 @@ class OC {
 			$eventLogger->end('request');
 		});
 
-		register_shutdown_function(function () {
+		register_shutdown_function(function () use ($config) {
 			$memoryPeak = memory_get_peak_usage();
-			$logLevel = match (true) {
-				$memoryPeak > 500_000_000 => ILogger::FATAL,
-				$memoryPeak > 400_000_000 => ILogger::ERROR,
-				$memoryPeak > 300_000_000 => ILogger::WARN,
-				default => null,
-			};
-			if ($logLevel !== null) {
+			$debugModeEnabled = $config->getSystemValueBool('debug', false);
+			$memoryLimit = null;
+
+			if (!$debugModeEnabled) {
+				// Use the memory helper to get the real memory limit in bytes if debug mode is disabled
+				try {
+					$memoryInfo = new \OC\MemoryInfo();
+					$memoryLimit = $memoryInfo->getMemoryLimit();
+				} catch (Throwable $e) {
+					// Ignore any errors and fall back to hardcoded thresholds
+				}
+			}
+
+			// Check if a memory limit is configured and can be retrieved and determine log level if debug mode is disabled
+			if (!$debugModeEnabled && $memoryLimit !== null && $memoryLimit !== -1) {
+				$logLevel = match (true) {
+					$memoryPeak > $memoryLimit * 0.9 => ILogger::FATAL,
+					$memoryPeak > $memoryLimit * 0.75 => ILogger::ERROR,
+					$memoryPeak > $memoryLimit * 0.5 => ILogger::WARN,
+					default => null,
+				};
+
+				$memoryLimitIni = @ini_get('memory_limit');
+				$message = 'Request used ' . Util::humanFileSize($memoryPeak) . ' of memory. Memory limit: ' . ($memoryLimitIni ?: 'unknown');
+			} else {
+				// Fall back to hardcoded thresholds if memory_limit cannot be determined or if debug mode is enabled
+				$logLevel = match (true) {
+					$memoryPeak > 500_000_000 => ILogger::FATAL,
+					$memoryPeak > 400_000_000 => ILogger::ERROR,
+					$memoryPeak > 300_000_000 => ILogger::WARN,
+					default => null,
+				};
+
 				$message = 'Request used more than 300 MB of RAM: ' . Util::humanFileSize($memoryPeak);
+			}
+
+			// Log the message
+			if ($logLevel !== null) {
 				$logger = Server::get(LoggerInterface::class);
 				$logger->log($logLevel, $message, ['app' => 'core']);
 			}
@@ -934,7 +1033,7 @@ class OC {
 				if (empty($restrictions)) {
 					continue;
 				}
-				$key = array_search($group->getGID(), $restrictions);
+				$key = array_search($group->getGID(), $restrictions, true);
 				unset($restrictions[$key]);
 				$restrictions = array_values($restrictions);
 				if (empty($restrictions)) {
@@ -980,13 +1079,14 @@ class OC {
 
 		// Check if Nextcloud is installed or in maintenance (update) mode
 		if (!$systemConfig->getValue('installed', false)) {
-			\OC::$server->getSession()->clear();
+			Server::get(ISession::class)->clear();
 			$controller = Server::get(\OC\Core\Controller\SetupController::class);
 			$controller->run($_POST);
 			exit();
 		}
 
 		$request = Server::get(IRequest::class);
+		$request->throwDecodingExceptionIfAny();
 		$requestPath = $request->getRawPathInfo();
 		if ($requestPath === '/heartbeat') {
 			return;
@@ -1025,7 +1125,27 @@ class OC {
 				// OAuth needs to support basic auth too, so the login is not valid
 				// inside Nextcloud and the Login exception would ruin it.
 				if ($request->getRawPathInfo() !== '/apps/oauth2/api/v1/token') {
-					self::handleLogin($request);
+					try {
+						self::handleLogin($request);
+					} catch (DisabledUserException $e) {
+						// Disabled users would not be seen as logged in and
+						// trying to log them in would fail, so the login
+						// exception is ignored for the themed stylesheets and
+						// images.
+						if ($request->getRawPathInfo() !== '/apps/theming/theme/default.css'
+							&& $request->getRawPathInfo() !== '/apps/theming/theme/light.css'
+							&& $request->getRawPathInfo() !== '/apps/theming/theme/dark.css'
+							&& $request->getRawPathInfo() !== '/apps/theming/theme/light-highcontrast.css'
+							&& $request->getRawPathInfo() !== '/apps/theming/theme/dark-highcontrast.css'
+							&& $request->getRawPathInfo() !== '/apps/theming/theme/opendyslexic.css'
+							&& $request->getRawPathInfo() !== '/apps/theming/image/background'
+							&& $request->getRawPathInfo() !== '/apps/theming/image/logo'
+							&& $request->getRawPathInfo() !== '/apps/theming/image/logoheader'
+							&& !str_starts_with($request->getRawPathInfo(), '/apps/theming/favicon')
+							&& !str_starts_with($request->getRawPathInfo(), '/apps/theming/icon')) {
+							throw $e;
+						}
+					}
 				}
 			}
 		}
@@ -1074,7 +1194,9 @@ class OC {
 		// Redirect to the default app or login only as an entry point
 		if ($requestPath === '') {
 			// Someone is logged in
-			if (Server::get(IUserSession::class)->isLoggedIn()) {
+			$userSession = Server::get(IUserSession::class);
+			if ($userSession->isLoggedIn()) {
+				header('X-User-Id: ' . $userSession->getUser()?->getUID());
 				header('Location: ' . Server::get(IURLGenerator::class)->linkToDefaultPageUrl());
 			} else {
 				// Not handled and not logged in

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2019-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -12,11 +13,12 @@ use OC\Preview\TXT;
 /**
  * Class TXTTest
  *
- * @group DB
  *
  * @package Test\Preview
  */
+#[\PHPUnit\Framework\Attributes\Group('DB')]
 class TXTTest extends Provider {
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 

@@ -12,13 +12,12 @@ use OC\Hooks\PublicEmitter;
 use OCP\IUserManager;
 
 class PreLoginHookCommand extends ALoginCommand {
-	/** @var IUserManager */
-	private $userManager;
-
-	public function __construct(IUserManager $userManager) {
-		$this->userManager = $userManager;
+	public function __construct(
+		private IUserManager $userManager,
+	) {
 	}
 
+	#[\Override]
 	public function process(LoginData $loginData): LoginResult {
 		if ($this->userManager instanceof PublicEmitter) {
 			$this->userManager->emit(

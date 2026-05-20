@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -12,10 +13,9 @@ use OCP\Constants;
 use OCP\Share\IShare;
 
 /**
- * @group SLOWDB
- *
  * @package OCA\Files_Sharing\Tests
  */
+#[\PHPUnit\Framework\Attributes\Group(name: 'SLOWDB')]
 class GroupEtagPropagationTest extends PropagationTestCase {
 	/**
 	 * "user1" creates /test, /test/sub and shares with group1

@@ -1,4 +1,5 @@
 <?php
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -8,8 +9,9 @@
 namespace Test;
 
 use OC\App\AppManager;
-use OC\App\InfoParser;
+use OC\App\DependencyAnalyzer;
 use OC\AppConfig;
+use OC\Config\ConfigManager;
 use OCP\EventDispatcher\IEventDispatcher;
 use OCP\IAppConfig;
 use OCP\ICacheFactory;
@@ -25,299 +27,14 @@ use Psr\Log\LoggerInterface;
 
 /**
  * Class AppTest
- *
- * @group DB
  */
+#[\PHPUnit\Framework\Attributes\Group('DB')]
 class AppTest extends \Test\TestCase {
 	public const TEST_USER1 = 'user1';
 	public const TEST_USER2 = 'user2';
 	public const TEST_USER3 = 'user3';
 	public const TEST_GROUP1 = 'group1';
 	public const TEST_GROUP2 = 'group2';
-
-	public static function appVersionsProvider(): array {
-		return [
-			// exact match
-			[
-				'6.0.0.0',
-				[
-					'requiremin' => '6.0',
-					'requiremax' => '6.0',
-				],
-				true
-			],
-			// in-between match
-			[
-				'6.0.0.0',
-				[
-					'requiremin' => '5.0',
-					'requiremax' => '7.0',
-				],
-				true
-			],
-			// app too old
-			[
-				'6.0.0.0',
-				[
-					'requiremin' => '5.0',
-					'requiremax' => '5.0',
-				],
-				false
-			],
-			// app too new
-			[
-				'5.0.0.0',
-				[
-					'requiremin' => '6.0',
-					'requiremax' => '6.0',
-				],
-				false
-			],
-			// only min specified
-			[
-				'6.0.0.0',
-				[
-					'requiremin' => '6.0',
-				],
-				true
-			],
-			// only min specified fail
-			[
-				'5.0.0.0',
-				[
-					'requiremin' => '6.0',
-				],
-				false
-			],
-			// only min specified legacy
-			[
-				'6.0.0.0',
-				[
-					'require' => '6.0',
-				],
-				true
-			],
-			// only min specified legacy fail
-			[
-				'4.0.0.0',
-				[
-					'require' => '6.0',
-				],
-				false
-			],
-			// only max specified
-			[
-				'5.0.0.0',
-				[
-					'requiremax' => '6.0',
-				],
-				true
-			],
-			// only max specified fail
-			[
-				'7.0.0.0',
-				[
-					'requiremax' => '6.0',
-				],
-				false
-			],
-			// variations of versions
-			// single OC number
-			[
-				'4',
-				[
-					'require' => '4.0',
-				],
-				true
-			],
-			// multiple OC number
-			[
-				'4.3.1',
-				[
-					'require' => '4.3',
-				],
-				true
-			],
-			// single app number
-			[
-				'4',
-				[
-					'require' => '4',
-				],
-				true
-			],
-			// single app number fail
-			[
-				'4.3',
-				[
-					'require' => '5',
-				],
-				false
-			],
-			// complex
-			[
-				'5.0.0',
-				[
-					'require' => '4.5.1',
-				],
-				true
-			],
-			// complex fail
-			[
-				'4.3.1',
-				[
-					'require' => '4.3.2',
-				],
-				false
-			],
-			// two numbers
-			[
-				'4.3.1',
-				[
-					'require' => '4.4',
-				],
-				false
-			],
-			// one number fail
-			[
-				'4.3.1',
-				[
-					'require' => '5',
-				],
-				false
-			],
-			// pre-alpha app
-			[
-				'5.0.3',
-				[
-					'require' => '4.93',
-				],
-				true
-			],
-			// pre-alpha OC
-			[
-				'6.90.0.2',
-				[
-					'require' => '6.90',
-				],
-				true
-			],
-			// pre-alpha OC max
-			[
-				'6.90.0.2',
-				[
-					'requiremax' => '7',
-				],
-				true
-			],
-			// expect same major number match
-			[
-				'5.0.3',
-				[
-					'require' => '5',
-				],
-				true
-			],
-			// expect same major number match
-			[
-				'5.0.3',
-				[
-					'requiremax' => '5',
-				],
-				true
-			],
-			// dependencies versions before require*
-			[
-				'6.0.0.0',
-				[
-					'requiremin' => '5.0',
-					'requiremax' => '7.0',
-					'dependencies' => [
-						'owncloud' => [
-							'@attributes' => [
-								'min-version' => '7.0',
-								'max-version' => '7.0',
-							],
-						],
-					],
-				],
-				false
-			],
-			[
-				'6.0.0.0',
-				[
-					'requiremin' => '5.0',
-					'requiremax' => '7.0',
-					'dependencies' => [
-						'owncloud' => [
-							'@attributes' => [
-								'min-version' => '5.0',
-								'max-version' => '5.0',
-							],
-						],
-					],
-				],
-				false
-			],
-			[
-				'6.0.0.0',
-				[
-					'requiremin' => '5.0',
-					'requiremax' => '5.0',
-					'dependencies' => [
-						'owncloud' => [
-							'@attributes' => [
-								'min-version' => '5.0',
-								'max-version' => '7.0',
-							],
-						],
-					],
-				],
-				true
-			],
-			[
-				'9.2.0.0',
-				[
-					'dependencies' => [
-						'owncloud' => [
-							'@attributes' => [
-								'min-version' => '9.0',
-								'max-version' => '9.1',
-							],
-						],
-						'nextcloud' => [
-							'@attributes' => [
-								'min-version' => '9.1',
-								'max-version' => '9.2',
-							],
-						],
-					],
-				],
-				true
-			],
-			[
-				'9.2.0.0',
-				[
-					'dependencies' => [
-						'nextcloud' => [
-							'@attributes' => [
-								'min-version' => '9.1',
-								'max-version' => '9.2',
-							],
-						],
-					],
-				],
-				true
-			],
-		];
-	}
-
-	/**
-	 * @dataProvider appVersionsProvider
-	 */
-	public function testIsAppCompatible($ocVersion, $appInfo, $expectedResult): void {
-		$this->assertEquals($expectedResult, \OC_App::isAppCompatible($ocVersion, $appInfo));
-	}
 
 	/**
 	 * Tests that the app order is correct
@@ -347,6 +64,7 @@ class AppTest extends \Test\TestCase {
 					'app3',
 					'appforgroup1',
 					'appforgroup12',
+					'appstore',
 					'cloud_federation_api',
 					'dav',
 					'federatedfilesharing',
@@ -371,6 +89,7 @@ class AppTest extends \Test\TestCase {
 					'app3',
 					'appforgroup12',
 					'appforgroup2',
+					'appstore',
 					'cloud_federation_api',
 					'dav',
 					'federatedfilesharing',
@@ -396,6 +115,7 @@ class AppTest extends \Test\TestCase {
 					'appforgroup1',
 					'appforgroup12',
 					'appforgroup2',
+					'appstore',
 					'cloud_federation_api',
 					'dav',
 					'federatedfilesharing',
@@ -421,6 +141,7 @@ class AppTest extends \Test\TestCase {
 					'appforgroup1',
 					'appforgroup12',
 					'appforgroup2',
+					'appstore',
 					'cloud_federation_api',
 					'dav',
 					'federatedfilesharing',
@@ -446,6 +167,7 @@ class AppTest extends \Test\TestCase {
 					'appforgroup1',
 					'appforgroup12',
 					'appforgroup2',
+					'appstore',
 					'cloud_federation_api',
 					'dav',
 					'federatedfilesharing',
@@ -466,9 +188,8 @@ class AppTest extends \Test\TestCase {
 
 	/**
 	 * Test enabled apps
-	 *
-	 * @dataProvider appConfigValuesProvider
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider('appConfigValuesProvider')]
 	public function testEnabledApps($user, $expectedApps, $forceAll): void {
 		$userManager = Server::get(IUserManager::class);
 		$groupManager = Server::get(IGroupManager::class);
@@ -533,11 +254,11 @@ class AppTest extends \Test\TestCase {
 			);
 
 		$apps = \OC_App::getEnabledApps();
-		$this->assertEquals(['files', 'app3', 'cloud_federation_api', 'dav', 'federatedfilesharing', 'lookup_server_connector', 'oauth2', 'profile', 'provisioning_api', 'settings', 'theming', 'twofactor_backupcodes', 'viewer', 'workflowengine'], $apps);
+		$this->assertEquals(['files', 'app3', 'appstore', 'cloud_federation_api', 'dav', 'federatedfilesharing', 'lookup_server_connector', 'oauth2', 'profile', 'provisioning_api', 'settings', 'theming', 'twofactor_backupcodes', 'viewer', 'workflowengine'], $apps);
 
 		// mock should not be called again here
 		$apps = \OC_App::getEnabledApps();
-		$this->assertEquals(['files', 'app3', 'cloud_federation_api', 'dav', 'federatedfilesharing', 'lookup_server_connector', 'oauth2', 'profile', 'provisioning_api', 'settings', 'theming', 'twofactor_backupcodes', 'viewer', 'workflowengine'], $apps);
+		$this->assertEquals(['files', 'app3', 'appstore', 'cloud_federation_api', 'dav', 'federatedfilesharing', 'lookup_server_connector', 'oauth2', 'profile', 'provisioning_api', 'settings', 'theming', 'twofactor_backupcodes', 'viewer', 'workflowengine'], $apps);
 
 		$this->restoreAppConfig();
 		\OC_User::setUserId(null);
@@ -573,6 +294,8 @@ class AppTest extends \Test\TestCase {
 			Server::get(IEventDispatcher::class),
 			Server::get(LoggerInterface::class),
 			Server::get(ServerVersion::class),
+			Server::get(ConfigManager::class),
+			Server::get(DependencyAnalyzer::class),
 		));
 	}
 
@@ -585,60 +308,5 @@ class AppTest extends \Test\TestCase {
 
 		// Remove the cache of the mocked apps list with a forceRefresh
 		\OC_App::getEnabledApps();
-	}
-
-	/**
-	 * Providers for the app data values
-	 */
-	public static function appDataProvider(): array {
-		return [
-			[
-				['description' => " \t  This is a multiline \n test with \n \t \n \n some new lines   "],
-				['description' => "This is a multiline \n test with \n \t \n \n some new lines"],
-			],
-			[
-				['description' => " \t  This is a multiline \n test with \n \t   some new lines   "],
-				['description' => "This is a multiline \n test with \n \t   some new lines"],
-			],
-			[
-				['description' => hex2bin('5065726d657420646520732761757468656e7469666965722064616e732070697769676f20646972656374656d656e74206176656320736573206964656e74696669616e7473206f776e636c6f75642073616e73206c65732072657461706572206574206d657420c3a0206a6f757273206365757820636920656e20636173206465206368616e67656d656e74206465206d6f742064652070617373652e0d0a0d')],
-				['description' => "Permet de s'authentifier dans piwigo directement avec ses identifiants owncloud sans les retaper et met à jours ceux ci en cas de changement de mot de passe."],
-			],
-			[
-				['not-a-description' => " \t  This is a multiline \n test with \n \t   some new lines   "],
-				[
-					'not-a-description' => " \t  This is a multiline \n test with \n \t   some new lines   ",
-					'description' => '',
-				],
-			],
-			[
-				['description' => [100, 'bla']],
-				['description' => ''],
-			],
-		];
-	}
-
-	/**
-	 * Test app info parser
-	 *
-	 * @dataProvider appDataProvider
-	 * @param array $data
-	 * @param array $expected
-	 */
-	public function testParseAppInfo(array $data, array $expected): void {
-		$this->assertSame($expected, \OC_App::parseAppInfo($data));
-	}
-
-	public function testParseAppInfoL10N(): void {
-		$parser = new InfoParser();
-		$data = $parser->parse(\OC::$SERVERROOT . '/tests/data/app/description-multi-lang.xml');
-		$this->assertEquals('English', \OC_App::parseAppInfo($data, 'en')['description']);
-		$this->assertEquals('German', \OC_App::parseAppInfo($data, 'de')['description']);
-	}
-
-	public function testParseAppInfoL10NSingleLanguage(): void {
-		$parser = new InfoParser();
-		$data = $parser->parse(\OC::$SERVERROOT . '/tests/data/app/description-single-lang.xml');
-		$this->assertEquals('English', \OC_App::parseAppInfo($data, 'en')['description']);
 	}
 }

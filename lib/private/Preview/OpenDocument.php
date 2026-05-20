@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -15,6 +17,7 @@ class OpenDocument extends Bundled {
 	/**
 	 * {@inheritDoc}
 	 */
+	#[\Override]
 	public function getMimeType(): string {
 		return '/application\/vnd.oasis.opendocument.*/';
 	}
@@ -23,6 +26,7 @@ class OpenDocument extends Bundled {
 	/**
 	 * @inheritDoc
 	 */
+	#[\Override]
 	public function getThumbnail(File $file, int $maxX, int $maxY): ?IImage {
 		$image = $this->extractThumbnail($file, 'Thumbnails/thumbnail.png');
 		if (($image !== null) && $image->valid()) {

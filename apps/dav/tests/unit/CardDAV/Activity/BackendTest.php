@@ -37,10 +37,7 @@ class BackendTest extends TestCase {
 		$this->userManager = $this->createMock(IUserManager::class);
 	}
 
-	/**
-	 * @return Backend|MockObject
-	 */
-	protected function getBackend(array $methods = []): Backend {
+	protected function getBackend(array $methods = []): Backend|MockObject {
 		if (empty($methods)) {
 			return new Backend(
 				$this->activityManager,
@@ -71,9 +68,7 @@ class BackendTest extends TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider dataCallTriggerAddressBookActivity
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataCallTriggerAddressBookActivity')]
 	public function testCallTriggerAddressBookActivity(string $method, array $payload, string $expectedSubject, array $expectedPayload): void {
 		$backend = $this->getBackend(['triggerAddressbookActivity']);
 		$backend->expects($this->once())
@@ -151,10 +146,10 @@ class BackendTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider dataTriggerAddressBookActivity
 	 * @param string[]|null $shareUsers
 	 * @param string[] $users
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataTriggerAddressBookActivity')]
 	public function testTriggerAddressBookActivity(string $action, array $data, array $shares, array $changedProperties, string $currentUser, string $author, ?array $shareUsers, array $users): void {
 		$backend = $this->getBackend(['getUsersForShares']);
 
@@ -315,10 +310,10 @@ class BackendTest extends TestCase {
 	}
 
 	/**
-	 * @dataProvider dataTriggerCardActivity
 	 * @param string[]|null $shareUsers
 	 * @param string[] $users
 	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataTriggerCardActivity')]
 	public function testTriggerCardActivity(string $action, array $addressBookData, array $shares, array $cardData, string $currentUser, string $author, ?array $shareUsers, array $users): void {
 		$backend = $this->getBackend(['getUsersForShares']);
 
@@ -432,9 +427,7 @@ class BackendTest extends TestCase {
 		];
 	}
 
-	/**
-	 * @dataProvider dataGetUsersForShares
-	 */
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataGetUsersForShares')]
 	public function testGetUsersForShares(array $shares, array $groups, array $expected): void {
 		$backend = $this->getBackend();
 
@@ -464,7 +457,7 @@ class BackendTest extends TestCase {
 
 	/**
 	 * @param string[] $users
-	 * @return IUser[]|MockObject[]
+	 * @return list<IUser&MockObject>
 	 */
 	protected function getUsers(array $users): array {
 		$list = [];
@@ -474,10 +467,7 @@ class BackendTest extends TestCase {
 		return $list;
 	}
 
-	/**
-	 * @return IUser|MockObject
-	 */
-	protected function getUserMock(string $uid): IUser {
+	protected function getUserMock(string $uid): IUser&MockObject {
 		$user = $this->createMock(IUser::class);
 		$user->expects($this->once())
 			->method('getUID')

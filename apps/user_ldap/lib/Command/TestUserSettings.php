@@ -31,6 +31,7 @@ class TestUserSettings extends Command {
 		parent::__construct();
 	}
 
+	#[\Override]
 	protected function configure(): void {
 		$this
 			->setName('ldap:test-user-settings')
@@ -55,6 +56,7 @@ class TestUserSettings extends Command {
 		;
 	}
 
+	#[\Override]
 	protected function execute(InputInterface $input, OutputInterface $output): int {
 		try {
 			$uid = $input->getArgument('user');
@@ -91,9 +93,9 @@ class TestUserSettings extends Command {
 
 			if (!$access->isDNPartOfBase($knownDn, $access->getConnection()->ldapBaseUsers)) {
 				$output->writeln(
-					"User <info>$knownDn</info> is not in one of the configured user bases: <info>" .
-					implode(',', $access->getConnection()->ldapBaseUsers) .
-					'</info>.'
+					"User <info>$knownDn</info> is not in one of the configured user bases: <info>"
+					. implode(',', $access->getConnection()->ldapBaseUsers)
+					. '</info>.'
 				);
 			}
 

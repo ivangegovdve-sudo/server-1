@@ -8,14 +8,13 @@ declare(strict_types=1);
  */
 namespace OCP\Migration\Attributes;
 
-use JsonSerializable;
+use OCP\AppFramework\Attribute\Consumable;
 
 /**
  * generic class related to migration attribute about table changes
- *
- * @since 30.0.0
  */
-class TableMigrationAttribute extends MigrationAttribute implements JsonSerializable {
+#[Consumable(since: '30.0.0')]
+class TableMigrationAttribute extends MigrationAttribute {
 	/**
 	 * @param string $table name of the database table
 	 * @param array $columns list of columns
@@ -57,6 +56,7 @@ class TableMigrationAttribute extends MigrationAttribute implements JsonSerializ
 	 * @return $this
 	 * @since 30.0.0
 	 */
+	#[\Override]
 	public function import(array $data): self {
 		parent::import($data);
 		$this->setColumns($data['columns'] ?? []);
@@ -67,6 +67,7 @@ class TableMigrationAttribute extends MigrationAttribute implements JsonSerializ
 	 * @return array
 	 * @since 30.0.0
 	 */
+	#[\Override]
 	public function jsonSerialize(): array {
 		return array_merge(
 			parent::jsonSerialize(),

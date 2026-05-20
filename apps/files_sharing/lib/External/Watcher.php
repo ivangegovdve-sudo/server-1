@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2019-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -12,6 +15,7 @@ class Watcher extends \OC\Files\Cache\Watcher {
 	 *
 	 * @param string $path
 	 */
+	#[\Override]
 	public function cleanFolder($path) {
 		// not needed, the scanner takes care of this
 	}

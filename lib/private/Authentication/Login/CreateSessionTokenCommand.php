@@ -13,22 +13,20 @@ use OC\User\Session;
 use OCP\IConfig;
 
 class CreateSessionTokenCommand extends ALoginCommand {
-	/** @var IConfig */
-	private $config;
-
-	/** @var Session */
-	private $userSession;
-
-	public function __construct(IConfig $config,
-		Session $userSession) {
-		$this->config = $config;
-		$this->userSession = $userSession;
+	public function __construct(
+		private IConfig $config,
+		private Session $userSession,
+	) {
 	}
 
+	#[\Override]
 	public function process(LoginData $loginData): LoginResult {
-		$tokenType = IToken::REMEMBER;
 		if ($this->config->getSystemValueInt('remember_login_cookie_lifetime', 60 * 60 * 24 * 15) === 0) {
 			$loginData->setRememberLogin(false);
+		}
+		if ($loginData->isRememberLogin()) {
+			$tokenType = IToken::REMEMBER;
+		} else {
 			$tokenType = IToken::DO_NOT_REMEMBER;
 		}
 

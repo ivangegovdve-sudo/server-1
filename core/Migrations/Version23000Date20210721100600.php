@@ -18,6 +18,7 @@ class Version23000Date20210721100600 extends SimpleMigrationStep {
 	 * @param array $options
 	 * @return null|ISchemaWrapper
 	 */
+	#[\Override]
 	public function changeSchema(IOutput $output, Closure $schemaClosure, array $options) {
 		/** @var ISchemaWrapper $schema */
 		$schema = $schemaClosure();
@@ -36,7 +37,7 @@ class Version23000Date20210721100600 extends SimpleMigrationStep {
 				'notnull' => true,
 				'length' => 200,
 			]);
-	
+
 			$table->setPrimaryKey(['id']);
 			$table->addIndex(['group_id'], 'admindel_groupid_idx');
 			return $schema;
