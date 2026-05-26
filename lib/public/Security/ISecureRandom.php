@@ -57,10 +57,10 @@ interface ISecureRandom {
 
 	/**
 	 * Generate a random string of specified length.
-	 * @param int $length The length of the generated string
-	 * @param string $characters An optional list of characters to use if no character list is
-	 *                           specified all valid base64 characters are used.
-	 * @return string
+	 * @param positive-int $length The length of the generated string
+	 * @param non-empty-string $characters An optional list of characters to use if no character list is
+	 *                                     specified all valid base64 characters are used.
+	 * @return non-empty-string
 	 * @since 8.0.0
 	 */
 	public function generate(int $length,
