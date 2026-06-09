@@ -225,8 +225,12 @@ class NavigationManager implements INavigationManager {
 		}
 
 		foreach ($apps as $app) {
-			// skip already loaded apps
+			if ($this->appManager->isAppLoaded($app)) {
+				// the app is not yet booted thus its routes do not yet exist
+				continue;
+			}
 			if (in_array($app, $this->loadedAppInfo)) {
+				// the apps navigations were already resolved
 				continue;
 			}
 
