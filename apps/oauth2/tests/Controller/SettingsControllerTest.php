@@ -23,11 +23,11 @@ use OCP\IUserManager;
 use OCP\Security\ICrypto;
 use OCP\Security\ISecureRandom;
 use OCP\Server;
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\MockObject\MockObject;
 use Psr\Log\LoggerInterface;
 use Test\TestCase;
 
-#[\PHPUnit\Framework\Attributes\Group(name: 'DB')]
 class SettingsControllerTest extends TestCase {
 	/** @var IRequest|\PHPUnit\Framework\MockObject\MockObject */
 	private $request;
@@ -125,6 +125,7 @@ class SettingsControllerTest extends TestCase {
 		], $data);
 	}
 
+	#[Group('DB')]
 	public function testDeleteClient(): void {
 
 		$userManager = Server::get(IUserManager::class);
@@ -190,6 +191,7 @@ class SettingsControllerTest extends TestCase {
 		$user1->delete();
 	}
 
+	#[Group('DB')]
 	public function testDeleteClientPreservesWipePendingToken(): void {
 		$userManager = Server::get(IUserManager::class);
 		$user = $userManager->createUser('test_wipe_preserve', 'test_wipe_preserve');

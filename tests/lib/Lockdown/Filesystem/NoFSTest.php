@@ -14,7 +14,6 @@ use OCP\Authentication\Token\IToken;
 use OCP\Server;
 use Test\Traits\UserTrait;
 
-#[\PHPUnit\Framework\Attributes\Group('DB')]
 class NoFSTest extends \Test\TestCase {
 	use UserTrait;
 

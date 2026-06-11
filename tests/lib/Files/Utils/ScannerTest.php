@@ -21,6 +21,7 @@ use OCP\IDBConnection;
 use OCP\IUser;
 use OCP\IUserManager;
 use OCP\Server;
+use PHPUnit\Framework\Attributes\Group;
 use Psr\Log\LoggerInterface;
 
 class TestScanner extends Scanner {
@@ -48,7 +49,6 @@ class TestScanner extends Scanner {
  *
  * @package Test\Files\Utils
  */
-#[\PHPUnit\Framework\Attributes\Group('DB')]
 class ScannerTest extends \Test\TestCase {
 	/**
 	 * @var \Test\Util\User\Dummy
@@ -71,6 +71,7 @@ class ScannerTest extends \Test\TestCase {
 		parent::tearDown();
 	}
 
+	#[Group('DB')]
 	public function testReuseExistingRoot(): void {
 		$storage = new Temporary([]);
 		$mount = new MountPoint($storage, '');
@@ -99,6 +100,7 @@ class ScannerTest extends \Test\TestCase {
 		$this->assertEquals($oldRoot, $newRoot);
 	}
 
+	#[Group('DB')]
 	public function testReuseExistingFile(): void {
 		$storage = new Temporary([]);
 		$mount = new MountPoint($storage, '');
@@ -127,6 +129,7 @@ class ScannerTest extends \Test\TestCase {
 		$this->assertEquals($old, $new);
 	}
 
+	#[Group('DB')]
 	public function testScanSubMount(): void {
 		$uid = $this->getUniqueID();
 		$this->userBackend->createUser($uid, 'test');
@@ -198,6 +201,7 @@ class ScannerTest extends \Test\TestCase {
 		$scanner->scan($invalidPath);
 	}
 
+	#[Group('DB')]
 	public function testPropagateEtag(): void {
 		$storage = new Temporary([]);
 		$mount = new MountPoint($storage, '');
@@ -228,6 +232,7 @@ class ScannerTest extends \Test\TestCase {
 		$this->assertNotEquals($oldRoot->getEtag(), $newRoot->getEtag());
 	}
 
+	#[Group('DB')]
 	public function testShallow(): void {
 		$storage = new Temporary([]);
 		$mount = new MountPoint($storage, '');
