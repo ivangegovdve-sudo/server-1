@@ -65,6 +65,8 @@ class ExceptionOnLostConnection {
 	 * @throws \Exception
 	 */
 	public function setUp(): void {
+		parent::setUp();
+
 		require_once __DIR__ . '/../../../../lib/base.php';
 		Server::get(IAppManager::class)->loadApps(['user_ldap']);
 
