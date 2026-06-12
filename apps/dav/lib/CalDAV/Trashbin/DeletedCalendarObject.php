@@ -40,6 +40,19 @@ class DeletedCalendarObject implements IACL, ICalendarObject, IRestorable {
 		);
 	}
 
+	private function isShared(): bool {
+		$calendarOwner = $this->objectData['calendarprincipaluri'] ?? null;
+		return $calendarOwner !== null && $calendarOwner !== $this->principalUri;
+	}
+
+	private function canModify(): bool {
+		if (!$this->isShared()) {
+			return true;
+		}
+		// For shared entries, only write sharees may delete/restore.
+		return ($this->objectData['shared_access'] ?? null) === Backend::ACCESS_READ_WRITE;
+	}
+
 	public function getName() {
 		return $this->name;
 	}
@@ -90,6 +103,18 @@ class DeletedCalendarObject implements IACL, ICalendarObject, IRestorable {
 
 	public function getCalendarUri(): string {
 		return $this->objectData['calendaruri'];
+	}
+
+	public function getSourceCalendarUri(): string {
+		return $this->objectData['sourcecalendaruri'] ?? $this->objectData['calendaruri'];
+	}
+
+	public function getCalendarPrincipalUri(): ?string {
+		return $this->objectData['calendarprincipaluri'] ?? null;
+	}
+
+	public function getDelegator(): ?string {
+		return $this->objectData['delegator'] ?? null;
 	}
 
 	public function getACL(): array {

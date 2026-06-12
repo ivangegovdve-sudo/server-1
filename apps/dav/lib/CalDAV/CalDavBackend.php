@@ -1228,21 +1228,14 @@ class CalDavBackend extends AbstractBackend implements SyncSupport, Subscription
 			->andWhere($query->expr()->isNotNull('co.deleted_at'))
 			->andWhere($query->expr()->isNull('c.deleted_at'));
 		$stmt = $query->executeQuery();
-
-		$result = [];
 		while ($row = $stmt->fetch()) {
-			$result[] = [
-				'id' => $row['id'],
-				'uri' => $row['uri'],
-				'lastmodified' => $row['lastmodified'],
-				'etag' => '"' . $row['etag'] . '"',
-				'calendarid' => $row['calendarid'],
-				'calendaruri' => $row['calendaruri'],
-				'size' => (int)$row['size'],
-				'component' => strtolower($row['componenttype']),
-				'classification' => (int)$row['classification'],
-				'{' . \OCA\DAV\DAV\Sharing\Plugin::NS_NEXTCLOUD . '}deleted-at' => $row['deleted_at'] === null ? $row['deleted_at'] : (int)$row['deleted_at'],
-			];
+			if ($this->resultHasMorePermissiveEntry($result, $row['id'], $proxyOverlay)) {
+				continue;
+			}
+			[, $ownerName] = Uri\split($row['calendarprincipaluri']);
+			$isDelegated = $proxyOverlay !== null;
+			$calendarUri = $isDelegated ? $row['calendaruri'] . '_delegated_by_' . $ownerName : $row['calendaruri'];
+			$result[$row['id']] = $this->rowToDeletedCalendarObject($row, $calendarUri, false, $proxyOverlay, $isDelegated ? $principalUri : null);
 		}
 		$stmt->closeCursor();
 
@@ -1260,7 +1253,7 @@ class CalDavBackend extends AbstractBackend implements SyncSupport, Subscription
 		$this->applySharedCalendarFilters($select, $principals, $principalUri);
 
 		$stmt = $select->executeQuery();
-		while ($row = $stmt->fetchAssociative()) {
+		while ($row = $stmt->fetch()) {
 			$effective = $this->effectiveAccess((int)$row['shareaccess'], $proxyOverlay);
 			if ($this->resultHasMorePermissiveEntry($result, $row['id'], $effective)) {
 				continue;
@@ -2710,7 +2703,7 @@ class CalDavBackend extends AbstractBackend implements SyncSupport, Subscription
 			->andWhere($query->expr()->eq('c.principaluri', $query->createNamedParameter($principalUri)))
 			->andWhere($query->expr()->isNotNull('co.deleted_at'));
 		$stmt = $query->executeQuery();
-		$row = $stmt->fetchAssociative();
+		$row = $stmt->fetch();
 		$stmt->closeCursor();
 
 		if ($row) {
@@ -2735,7 +2728,7 @@ class CalDavBackend extends AbstractBackend implements SyncSupport, Subscription
 		$this->applySharedCalendarFilters($select, $principals, $principalUri);
 
 		$stmt = $select->executeQuery();
-		$row = $stmt->fetchAssociative();
+		$row = $stmt->fetch();
 		$stmt->closeCursor();
 
 		if (!$row) {
