@@ -306,6 +306,7 @@ return array(
     'OCP\\Console\\ConsoleEvent' => $baseDir . '/lib/public/Console/ConsoleEvent.php',
     'OCP\\Console\\ReservedOptions' => $baseDir . '/lib/public/Console/ReservedOptions.php',
     'OCP\\Constants' => $baseDir . '/lib/public/Constants.php',
+    'OCP\\Contacts\\ContactsImportOptions' => $baseDir . '/lib/public/Contacts/ContactsImportOptions.php',
     'OCP\\Contacts\\ContactsMenu\\IAction' => $baseDir . '/lib/public/Contacts/ContactsMenu/IAction.php',
     'OCP\\Contacts\\ContactsMenu\\IActionFactory' => $baseDir . '/lib/public/Contacts/ContactsMenu/IActionFactory.php',
     'OCP\\Contacts\\ContactsMenu\\IBulkProvider' => $baseDir . '/lib/public/Contacts/ContactsMenu/IBulkProvider.php',
