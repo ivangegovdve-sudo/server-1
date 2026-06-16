@@ -28,6 +28,9 @@
 			</template>
 			{{ supportedScopes.includes(federationScope.name) ? federationScope.tooltip : federationScope.tooltipDisabled }}
 		</NcActionButton>
+
+		<!-- optional extra actions (e.g. email set-primary / delete) -->
+		<slot />
 	</NcActions>
 </template>
 
