@@ -47,7 +47,14 @@ export const useActiveStore = defineStore('active', () => {
 
 	// Set the active node on the router params
 	watch(activeNode, () => {
-		if (typeof activeNode.value?.fileid !== 'number' || activeNode.value.fileid === activeFolder.value?.fileid) {
+		if (typeof activeNode.value?.fileid !== 'number') {
+			return
+		}
+
+		// Sync even when the active node is the current folder: skipping that case
+		// leaves a stale child fileid in the route, which then gets restored into
+		// the sidebar when it reopens.
+		if (String(activeNode.value.fileid) === String(window.OCP.Files.Router.params?.fileid ?? '')) {
 			return
 		}
 
